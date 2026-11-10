@@ -107,6 +107,7 @@ const TEXT = {
   driveNeedsInternet: 'צריך חיבור לאינטרנט כדי להשתמש בדרייב',
   driveNotReady: 'עוד רגע... אפשר ללחוץ שוב',
   driveCancelled: 'החיבור בוטל',
+  googleWindowBlocked: 'החלון של Google לא נפתח. אפשר ללחוץ שוב',
   driveNoPermission: 'לא התקבלה הרשאה לדרייב',
   driveTryAgain: 'צריך לאשר שוב. אפשר ללחוץ שוב',
   driveError: 'משהו השתבש מול הדרייב. אפשר לנסות שוב',

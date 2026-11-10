@@ -84,7 +84,11 @@ async function prepareGoogle() {
     error_callback: error => {
       const waiting = waitingForToken;
       waitingForToken = null;
-      if (waiting) waiting.reject(new Error(error.type === 'popup_closed' ? TEXT.driveCancelled : TEXT.driveNoPermission));
+      if (!waiting) return;
+      let message = waiting.scope === CALENDAR_SCOPE ? TEXT.calendarNoPermission : TEXT.driveNoPermission;
+      if (error.type === 'popup_closed') message = TEXT.driveCancelled;
+      if (error.type === 'popup_failed_to_open') message = TEXT.googleWindowBlocked;
+      waiting.reject(new Error(message));
     },
   });
 }
