@@ -23,6 +23,10 @@ const TEXT = {
 
   // Home
   seeAll: 'הכל ‹',
+  installTitle: 'להתקין כאפליקציה?',
+  installText: 'אייקון במסך הבית, מסך מלא, ועובד גם בלי אינטרנט.',
+  installButton: 'התקנה',
+  installLater: 'לא עכשיו',
   welcomeTitle: 'ברוכים הבאים!',
   welcomeText: 'כל מה שתשמרו יופיע כאן: תזכורות קרובות ומה שנוסף לאחרונה.',
   welcomeButton: 'להוסיף משהו ראשון',
@@ -232,6 +236,7 @@ async function homeScreen() {
     return `
       <p class="home-date">${today}</p>
       ${searchLink}
+      ${installCard()}
       <div class="card empty welcome">
         <span class="emoji">👋</span>
         <strong>${TEXT.welcomeTitle}</strong><br>${TEXT.welcomeText}
@@ -254,6 +259,7 @@ async function homeScreen() {
   return `
     <p class="home-date">${today}</p>
     ${searchLink}
+    ${installCard()}
 
     ${sectionHead(TEXT.upcoming, '#/group/reminders')}
     ${upcomingHtml}
@@ -546,6 +552,64 @@ window.addEventListener('hashchange', () => {
 
 // Load your own groups first, then draw the first screen
 loadGroups().then(showScreen);
+
+// ============================================================
+// INSTALLABLE APP
+// ============================================================
+
+// Turn on the offline helper (sw.js)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+
+// Chrome tells us when the app can be installed. We keep that
+// "permission" and show our own install card on Home.
+let installPrompt = null;
+
+function isInstalled() {
+  return window.matchMedia('(display-mode: standalone)').matches;
+}
+
+function installDismissed() {
+  try { return localStorage.getItem('installDismissed') === 'yes'; } catch { return false; }
+}
+
+function installCard() {
+  if (!installPrompt || isInstalled() || installDismissed()) return '';
+  return `
+    <div class="card install-card">
+      <span class="emoji">📲</span>
+      <div class="install-text"><strong>${TEXT.installTitle}</strong><br>${TEXT.installText}</div>
+      <div class="install-buttons">
+        <button type="button" class="primary-button" data-install>${TEXT.installButton}</button>
+        <button type="button" class="small-button" data-install-later>${TEXT.installLater}</button>
+      </div>
+    </div>`;
+}
+
+window.addEventListener('beforeinstallprompt', event => {
+  event.preventDefault();  // don't show Chrome's own bar, we have the card
+  installPrompt = event;
+  if (document.body.dataset.page === 'home') showScreen();
+});
+
+window.addEventListener('appinstalled', () => {
+  installPrompt = null;
+  if (document.body.dataset.page === 'home') showScreen();
+});
+
+document.addEventListener('click', async event => {
+  if (event.target.closest('[data-install]') && installPrompt) {
+    installPrompt.prompt();             // Chrome's "Install app?" window
+    await installPrompt.userChoice;
+    installPrompt = null;
+    showScreen();
+  }
+  if (event.target.closest('[data-install-later]')) {
+    try { localStorage.setItem('installDismissed', 'yes'); } catch { /* not important */ }
+    showScreen();
+  }
+});
 
 // Save unsaved typing if you switch apps or close this one
 document.addEventListener('visibilitychange', () => {

@@ -454,6 +454,21 @@ mark {
   color: var(--accent);
 }
 
+/* "Install as an app?" card */
+.install-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  border: 1px solid var(--accent);
+}
+.install-card .emoji { font-size: 32px; }
+.install-text { flex: 1; min-width: 180px; color: var(--muted); }
+.install-text strong { color: var(--text); }
+.install-buttons { display: flex; gap: 8px; width: 100%; }
+.install-buttons .primary-button { flex: 1; padding: 10px; }
+
 .welcome {
   margin-top: 16px;
   line-height: 1.7;

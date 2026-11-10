@@ -10,7 +10,11 @@
   <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
   <title>הפתקים שלי</title>
-  <link rel="stylesheet" href="style.css?v=15">
+  <!-- Makes it installable: name, icon, full screen (see manifest.json) -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -52,15 +56,15 @@
     </a>
   </nav>
 
-  <!-- db.js must load first: app.js uses its functions.
-       ?v=… is a version number: raise it on every update so phones
-       download the new file instead of using an old saved copy. -->
-  <script src="db.js?v=12"></script>
-  <script src="quickadd.js?v=12"></script>
-  <script src="sections.js?v=15"></script>
-  <script src="calendar.js?v=12"></script>
-  <script src="groups.js?v=12"></script>
-  <script src="search.js?v=15"></script>
-  <script src="app.js?v=15"></script>
+  <!-- db.js must load first, app.js last: it uses all the others.
+       (Updates reach the phone through sw.js, which always asks for
+       the newest files first.) -->
+  <script src="db.js"></script>
+  <script src="quickadd.js"></script>
+  <script src="sections.js"></script>
+  <script src="calendar.js"></script>
+  <script src="groups.js"></script>
+  <script src="search.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
