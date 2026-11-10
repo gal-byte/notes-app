@@ -169,7 +169,7 @@ function itemRow(item, meta = '', options = {}) {
     <a class="item-row${options.dim ? ' dim' : ''}" href="#/item/${item.id}" ${filter}>
       ${picture}
       <span class="item-main">
-        <span class="item-title" dir="auto">${escapeHtml(item.title) || TEXT.untitled}</span>
+        <span class="item-title" dir="auto">${options.titleHtml || escapeHtml(item.title) || TEXT.untitled}</span>
         ${meta ? `<span class="item-meta">${meta}</span>` : ''}
       </span>
     </a>

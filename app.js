@@ -17,7 +17,20 @@ const TEXT = {
   noRecent: 'עוד לא הוספת כלום',
 
   searchPlaceholder: 'חיפוש בכל הפתקים…',
-  searchHint: 'אפשר להקליד כדי לחפש בכל הקבוצות',
+  searchHint: 'מחפשים בכל הקבוצות: כותרות, מילים של שירים, מצרכים, הערות ותגיות',
+  searchNoResults: query => `לא נמצא כלום עבור "${query}"`,
+  searchCount: n => n === 1 ? 'תוצאה אחת' : `${n} תוצאות`,
+
+  // Home
+  seeAll: 'הכל ‹',
+  welcomeTitle: 'ברוכים הבאים!',
+  welcomeText: 'כל מה שתשמרו יופיע כאן: תזכורות קרובות ומה שנוסף לאחרונה.',
+  welcomeButton: 'להוסיף משהו ראשון',
+  justNow: 'עכשיו',
+  minutesAgo: n => n === 1 ? 'לפני דקה' : `לפני ${n} דקות`,
+  hoursAgo: n => n === 1 ? 'לפני שעה' : n === 2 ? 'לפני שעתיים' : `לפני ${n} שעות`,
+  yesterday: 'אתמול',
+  daysAgo: n => n === 2 ? 'לפני יומיים' : `לפני ${n} ימים`,
 
   addPlaceholder: 'מה לשמור?',
   addHint: 'כותבים כל דבר, והאפליקציה מנחשת לאיזו קבוצה הוא שייך. אפשר ללחוץ על התווית כדי לשנות.',
@@ -176,31 +189,77 @@ function emptyCard(emoji, message) {
 // "async" means it may wait for the database first.
 // ============================================================
 
+// "לפני 5 דקות" · "אתמול" · "לפני 3 ימים" · "12/10"
+function timeAgo(timestamp) {
+  const minutes = Math.floor((Date.now() - timestamp) / 60000);
+  if (minutes < 1) return TEXT.justNow;
+  if (minutes < 60) return TEXT.minutesAgo(minutes);
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return TEXT.hoursAgo(hours);
+
+  const days = Math.round((todayStart() - new Date(timestamp).setHours(0, 0, 0, 0)) / 86400000);
+  if (days <= 1) return TEXT.yesterday;
+  if (days < 7) return TEXT.daysAgo(days);
+  const date = new Date(timestamp);
+  return `${date.getDate()}/${date.getMonth() + 1}`;
+}
+
+// A section title with a "הכל" link on the other side
+function sectionHead(title, link) {
+  return `
+    <div class="section-head">
+      <h2 class="section-title">${title}</h2>
+      ${link ? `<a class="see-all" href="${link}">${TEXT.seeAll}</a>` : ''}
+    </div>`;
+}
+
 async function homeScreen() {
   const upcoming = await upcomingReminders(5);
-  const recent = await getRecentItems(5);
+  const recent = await getRecentItems(6);
+
+  // Today's date, like "יום שלישי, 10 בנובמבר"
+  const today = new Date().toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  // Looks like a search box; tapping it opens the Search tab
+  const searchLink = `
+    <a class="search-input search-link" href="#/search">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      ${TEXT.searchPlaceholder}
+    </a>`;
+
+  // Brand-new app with nothing in it: a friendly welcome instead of empty boxes
+  if (!upcoming.length && !recent.length) {
+    return `
+      <p class="home-date">${today}</p>
+      ${searchLink}
+      <div class="card empty welcome">
+        <span class="emoji">👋</span>
+        <strong>${TEXT.welcomeTitle}</strong><br>${TEXT.welcomeText}
+        <a class="primary-button welcome-button" href="#/add">＋ ${TEXT.welcomeButton}</a>
+      </div>`;
+  }
 
   const upcomingHtml = upcoming.length
     ? listCard(upcoming.map(r => reminderRow(r, false)))
     : emptyCard('🗓️', TEXT.noUpcoming);
 
   const recentHtml = recent.length
-    ? listCard(recent.map(item => itemRow(item, '', { emoji: findGroup(item.group).emoji })))
+    ? listCard(recent.map(item => {
+        const group = findGroup(item.group);
+        const meta = `${escapeHtml(group.name)} · ${timeAgo(item.createdAt)}`;
+        return itemRow(item, meta, { emoji: group.emoji });
+      }))
     : emptyCard('✨', TEXT.noRecent);
 
   return `
-    <h2 class="section-title">${TEXT.upcoming}</h2>
+    <p class="home-date">${today}</p>
+    ${searchLink}
+
+    ${sectionHead(TEXT.upcoming, '#/group/reminders')}
     ${upcomingHtml}
 
-    <h2 class="section-title">${TEXT.recent}</h2>
+    ${sectionHead(TEXT.recent, '#/add')}
     ${recentHtml}
-  `;
-}
-
-function searchScreen() {
-  return `
-    <input class="search-input" type="search" placeholder="${TEXT.searchPlaceholder}">
-    <p class="empty">${TEXT.searchHint}</p>
   `;
 }
 
@@ -378,7 +437,7 @@ function setupFilters() {
 //   setup – extra code to run after the screen is shown
 async function buildScreen(page, id, extra) {
   if (page === 'search') {
-    return { title: TEXT.search, html: searchScreen(), tab: 'search' };
+    return { title: TEXT.search, html: searchScreen(), tab: 'search', setup: setupSearch };
   }
   if (page === 'add') {
     return { title: TEXT.add, html: await addScreen(), tab: 'add', setup: setupAddScreen };

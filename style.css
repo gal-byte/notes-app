@@ -410,6 +410,60 @@ svg {
 }
 .search-input:focus { border-color: var(--accent); }
 
+/* Search results */
+.search-form { margin-bottom: 4px; }
+.search-count {
+  margin: 12px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* The found words, highlighted */
+mark {
+  padding: 0 1px;
+  color: inherit;
+  background: rgba(255, 196, 0, 0.45);
+  border-radius: 3px;
+}
+
+/* ============================================================
+   HOME
+   ============================================================ */
+.home-date {
+  margin: -4px 0 12px;
+  color: var(--muted);
+}
+
+/* Looks like a search box, but it's a link to the Search tab */
+.search-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+.search-link svg { width: 20px; height: 20px; }
+
+/* Section title with "הכל ‹" on the other side */
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.see-all {
+  font-size: 14px;
+  color: var(--accent);
+}
+
+.welcome {
+  margin-top: 16px;
+  line-height: 1.7;
+}
+.welcome strong { color: var(--text); font-size: 18px; }
+.welcome-button {
+  display: block;
+  margin-top: 16px;
+}
+
 /* ============================================================
    GROUPS GRID
    ============================================================ */
