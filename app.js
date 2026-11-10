@@ -78,6 +78,9 @@ const TEXT = {
   calendarAlready: 'כבר ביומן ✓ אחרי שינוי, "עדכון ביומן" מחליף את האירוע.',
   calendarAdding: 'מוסיף ליומן…',
   calendarAdded: 'נוסף ל-Google Calendar ✓',
+  calendarAddAll: n => n === 1 ? '📅 הוספת תזכורת אחת שעוד לא ביומן' : `📅 הוספת ${n} תזכורות שעוד לא ביומן`,
+  calendarAddingCount: (i, n) => `מוסיף ליומן… ${i} מתוך ${n}`,
+  calendarAddedAll: n => n === 1 ? 'תזכורת אחת נוספה ל-Google Calendar ✓' : `${n} תזכורות נוספו ל-Google Calendar ✓`,
   openInCalendar: 'פתיחה ביומן ‹',
   calendarNeedsTitle: 'צריך כותרת ותאריך לפני הוספה ליומן',
   calendarNoPermission: 'לא התקבלה הרשאה ליומן',
@@ -537,7 +540,8 @@ async function buildScreen(page, id, extra) {
   if (page === 'group' && groupExists(id)) {
     const group = findGroup(id);
     return { title: `${group.emoji} ${group.name}`, html: await groupScreen(group),
-             tab: 'groups', back: '#/groups' };
+             tab: 'groups', back: '#/groups',
+             setup: group.id === 'reminders' ? setupRemindersScreen : null };
   }
   if (page === 'new' && groupExists(id)) {
     // "#/new/reminders/2026-11-20" → a new reminder already set to that day

@@ -212,6 +212,15 @@ function remindersList(items) {
   const past = all.filter(r => !r.next || r.next < today).sort((a, b) => (b.next || 0) - (a.next || 0));
 
   let html = '';
+  // Upcoming reminders that aren't in Google Calendar yet get one button for all
+  const missing = notInCalendar(items).length;
+  if (missing) {
+    html += `
+      <div class="calendar-box">
+        <button type="button" class="small-button wide" data-calendar-all>${TEXT.calendarAddAll(missing)}</button>
+        <p class="backup-status" id="calendar-all-status"></p>
+      </div>`;
+  }
   if (upcoming.length) {
     html += `<h2 class="section-title">${TEXT.upcomingTitle}</h2>`;
     html += listCard(upcoming.map(r => reminderRow(r, false)));
@@ -221,6 +230,52 @@ function remindersList(items) {
     html += listCard(past.map(r => reminderRow(r, true)));
   }
   return html;
+}
+
+// Upcoming reminders (with a title and date) not yet sent to Google Calendar
+function notInCalendar(items) {
+  const today = todayStart();
+  return items.filter(item => {
+    if (item.inCalendar || !item.title || !item.date) return false;
+    const next = nextOccurrence(item);
+    return next && next >= today;
+  });
+}
+
+// The "add all to calendar" button on the reminders screen
+function setupRemindersScreen() {
+  const button = document.querySelector('[data-calendar-all]');
+  if (!button) return;
+  const status = document.getElementById('calendar-all-status');
+  prepareGoogle().catch(error => { status.textContent = error.message; });
+
+  button.addEventListener('click', async () => {
+    // Ask Google first, straight from the tap
+    const tokenReady = getGoogleToken(CALENDAR_SCOPE);
+    button.disabled = true;
+    status.textContent = TEXT.calendarAdding;
+    let added = 0;
+    try {
+      await tokenReady;
+      const items = notInCalendar(await getItemsInGroup('reminders'));
+      for (const item of items) {
+        status.textContent = TEXT.calendarAddingCount(added + 1, items.length);
+        const event = await addToGoogleCalendar(item);
+        await updateItem(item.id, { calendarEventId: event.id, inCalendar: true });
+        added++;
+      }
+      status.textContent = TEXT.calendarAddedAll(added);
+      button.hidden = true;
+    } catch (error) {
+      status.textContent = added
+        ? `${TEXT.calendarAddedAll(added)}. ${error.message || TEXT.calendarError}`
+        : (error.message || TEXT.calendarError);
+      button.disabled = false;
+      const left = notInCalendar(await getItemsInGroup('reminders')).length;
+      if (left) button.textContent = TEXT.calendarAddAll(left);
+      else button.hidden = true;
+    }
+  });
 }
 
 function songsList(items) {
