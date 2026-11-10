@@ -1,12 +1,14 @@
 // ============================================================
-// GOOGLE DRIVE
-// Saves the backup to ONE file in your Google Drive and replaces
-// it every time, instead of making a new copy.
+// GOOGLE (Drive + Calendar)
+//   • Drive: saves the backup to ONE file in your Google Drive and
+//     replaces it every time, instead of making a new copy.
+//   • Calendar: adds a reminder straight into Google Calendar
+//     (birthdays as real 🎂 birthdays).
 //
 // How the permission works:
 //   • You sign in with Google once and tap "Allow".
-//   • The app may only see files it created itself ("drive.file"),
-//     nothing else in your Drive.
+//   • Drive: the app may only see files it created itself.
+//   • Calendar: the app may add and change events on your own calendars.
 //   • Google's permission lasts about an hour. After that, the next
 //     tap shows a quick Google window again (one tap).
 //
@@ -16,11 +18,13 @@
 
 const GOOGLE_CLIENT_ID = '890625758034-11qu7ingkpuo4keb6kdu2q164ti50029.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events.owned';
 const DRIVE_BACKUP_NAME = 'notes-app-backup.json';
 
 let tokenClient = null;   // Google's sign-in helper
 let accessToken = null;   // the "permission ticket" for the next hour
 let tokenExpiresAt = 0;
+let grantedResponse = null;  // what Google said yes to (Drive, Calendar or both)
 let waitingForToken = null;
 
 // Remembered on this device: did you connect Drive before?
@@ -55,25 +59,26 @@ function loadGoogleSignIn() {
   return googleScriptPromise;
 }
 
-// Get ready ahead of time (when the backup screen opens), because
-// the Google window must open straight from a tap – browsers block
-// windows that open later.
-async function prepareDrive() {
+// Get ready ahead of time (when a screen with Google buttons opens),
+// because the Google window must open straight from a tap – browsers
+// block windows that open later.
+async function prepareGoogle() {
   await loadGoogleSignIn();
   if (tokenClient) return;
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: GOOGLE_CLIENT_ID,
-    scope: DRIVE_SCOPE,
+    scope: `${DRIVE_SCOPE} ${CALENDAR_SCOPE}`,
     callback: response => {
       const waiting = waitingForToken;
       waitingForToken = null;
       if (!waiting) return;
-      if (response.error || !google.accounts.oauth2.hasGrantedAllScopes(response, DRIVE_SCOPE)) {
-        waiting.reject(new Error(TEXT.driveNoPermission));
+      if (response.error || !google.accounts.oauth2.hasGrantedAllScopes(response, waiting.scope)) {
+        waiting.reject(new Error(waiting.scope === CALENDAR_SCOPE ? TEXT.calendarNoPermission : TEXT.driveNoPermission));
         return;
       }
       accessToken = response.access_token;
       tokenExpiresAt = Date.now() + (Number(response.expires_in) - 60) * 1000;
+      grantedResponse = response;
       waiting.resolve(accessToken);
     },
     error_callback: error => {
@@ -83,20 +88,30 @@ async function prepareDrive() {
     },
   });
 }
+const prepareDrive = prepareGoogle;  // older name, used by the backup screen
 
-// Call this first thing when a Drive button is tapped
-function getDriveToken() {
-  if (accessToken && Date.now() < tokenExpiresAt) return Promise.resolve(accessToken);
+// Call this first thing when a Google button is tapped.
+// scope = DRIVE_SCOPE or CALENDAR_SCOPE (which permission is needed)
+function getGoogleToken(scope) {
+  const stillValid = accessToken && Date.now() < tokenExpiresAt;
+  if (stillValid && grantedResponse && google.accounts.oauth2.hasGrantedAllScopes(grantedResponse, scope)) {
+    return Promise.resolve(accessToken);
+  }
   if (!tokenClient) return Promise.reject(new Error(TEXT.driveNotReady));
   return new Promise((resolve, reject) => {
-    waitingForToken = { resolve, reject };
-    // First time: show the full "Allow" screen. Later: as quick as possible.
+    waitingForToken = { resolve, reject, scope };
+    // First time: show the full "Allow" screen. Later: as quick as possible
+    // (Google still asks if a new permission, like Calendar, is needed).
     tokenClient.requestAccessToken({ prompt: driveConnected() ? '' : 'consent' });
   });
 }
 
-// Talk to Drive with the permission ticket
-async function driveFetch(url, options = {}) {
+function getDriveToken() {
+  return getGoogleToken(DRIVE_SCOPE);
+}
+
+// Talk to Google with the permission ticket
+async function googleFetch(url, options = {}, errorText = TEXT.driveError) {
   const response = await fetch(url, {
     ...options,
     headers: { ...(options.headers || {}), Authorization: `Bearer ${accessToken}` },
@@ -105,8 +120,90 @@ async function driveFetch(url, options = {}) {
     accessToken = null;  // ticket expired: the next tap gets a new one
     throw new Error(TEXT.driveTryAgain);
   }
-  if (!response.ok) throw new Error(TEXT.driveError);
+  if (!response.ok) throw new Error(errorText);
   return response;
+}
+const driveFetch = googleFetch;
+
+// ---------- Google Calendar ----------
+
+// Yearly reminders with "יום הולדת" become real Google birthdays
+function isBirthday(item) {
+  return item.repeatYearly && /יום\s*הולדת|יומולדת/.test(item.title || '');
+}
+
+// Turn a reminder into a Google Calendar event
+function calendarEventFor(item) {
+  const pad = n => String(n).padStart(2, '0');
+  const dayAfter = iso => {
+    const date = parseISODate(iso);
+    date.setDate(date.getDate() + 1);
+    return toISODate(date);
+  };
+  // Born on 29 February: Google wants a special yearly rule
+  const yearly = item.date.slice(5) === '02-29'
+    ? 'RRULE:FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=-1'
+    : 'RRULE:FREQ=YEARLY';
+
+  // Google's rules for birthdays: all-day, one day, yearly,
+  // private, shown as "free", and nothing else
+  if (isBirthday(item)) {
+    return {
+      eventType: 'birthday',
+      summary: item.title,
+      start: { date: item.date },
+      end: { date: dayAfter(item.date) },
+      recurrence: [yearly],
+      visibility: 'private',
+      transparency: 'transparent',
+    };
+  }
+
+  const event = { summary: item.title || '', description: item.text || '' };
+  if (item.time) {
+    // A one-hour event in your phone's time zone
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const start = parseISODate(item.date);
+    const [hours, minutes] = item.time.split(':').map(Number);
+    start.setHours(hours, minutes);
+    const end = new Date(start.getTime() + 60 * 60000);
+    const local = date => `${toISODate(date)}T${pad(date.getHours())}:${pad(date.getMinutes())}:00`;
+    event.start = { dateTime: local(start), timeZone };
+    event.end = { dateTime: local(end), timeZone };
+  } else {
+    event.start = { date: item.date };
+    event.end = { date: dayAfter(item.date) };
+  }
+  if (item.repeatYearly) event.recurrence = [yearly];
+  return event;
+}
+
+// Add a reminder to your main Google Calendar. If it was added before,
+// the old event is replaced (so changes to the reminder are updated).
+// Returns the new event ({ id, htmlLink, ... }).
+async function addToGoogleCalendar(item) {
+  const events = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+  if (item.calendarEventId) {
+    try {
+      await googleFetch(`${events}/${encodeURIComponent(item.calendarEventId)}`, { method: 'DELETE' });
+    } catch { /* already deleted in the calendar – fine */ }
+  }
+  const response = await googleFetch(events, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(calendarEventFor(item)),
+  }, TEXT.calendarError);
+  return response.json();
+}
+
+// Used by the buttons: ask Google (from the tap), add, remember the event
+async function sendReminderToCalendar(item, status) {
+  const tokenReady = getGoogleToken(CALENDAR_SCOPE);  // must be first, straight from the tap
+  status(TEXT.calendarAdding);
+  await tokenReady;
+  const event = await addToGoogleCalendar(item);
+  await updateItem(item.id, { calendarEventId: event.id, inCalendar: true });
+  return event;
 }
 
 // Find our backup file (the app can only see files it created)

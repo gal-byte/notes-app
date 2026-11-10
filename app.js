@@ -74,7 +74,14 @@ const TEXT = {
 
   // Calendar button + daily summary
   addToCalendar: '📅 הוספה ל-Google Calendar',
-  inCalendar: '📅 נוסף ליומן ✓ (אפשר להוסיף שוב)',
+  calendarUpdate: '📅 עדכון ביומן',
+  calendarAlready: 'כבר ביומן ✓ אחרי שינוי, "עדכון ביומן" מחליף את האירוע.',
+  calendarAdding: 'מוסיף ליומן…',
+  calendarAdded: 'נוסף ל-Google Calendar ✓',
+  openInCalendar: 'פתיחה ביומן ‹',
+  calendarNeedsTitle: 'צריך כותרת ותאריך לפני הוספה ליומן',
+  calendarNoPermission: 'לא התקבלה הרשאה ליומן',
+  calendarError: 'משהו השתבש מול היומן. אפשר לנסות שוב',
   toCalendarShort: '📅 ליומן',
   notifyTitle: 'סיכום יומי',
   notifyExplain: 'פעם ביום, בבוקר: הודעה אחת עם התזכורות של היום. ביום בלי תזכורות לא תגיע הודעה. להתראה בשעה מדויקת, לחצו "הוספה ל-Google Calendar" בתזכורת.',
@@ -422,22 +429,27 @@ function setupAddScreen() {
     chat.innerHTML = await chatBubbles();
     scrollToBottom();
 
-    // Reminders also get a "📅 ליומן" link (send it to Google Calendar)
-    const calendarLink = group === 'reminders'
-      ? `<a id="toast-calendar" href="${escapeHtml(googleCalendarUrl(item))}" target="_blank" rel="noopener">${TEXT.toCalendarShort}</a>`
+    // Reminders also get "📅 ליומן" (add straight to Google Calendar)
+    const calendarButton = group === 'reminders'
+      ? `<button type="button" id="toast-calendar">${TEXT.toCalendarShort}</button>`
       : '';
     showToast(`<span>${TEXT.savedIn(findGroup(group))}</span>
-               <span class="toast-actions">${calendarLink}
+               <span class="toast-actions">${calendarButton}
                <button type="button" id="undo-button">${TEXT.undo}</button></span>`);
     document.getElementById('undo-button').addEventListener('click', async () => {
       await deleteItem(item.id);
       toast.hidden = true;
       chat.innerHTML = await chatBubbles();
     });
-    if (calendarLink) {
-      document.getElementById('toast-calendar').addEventListener('click', () => {
-        updateItem(item.id, { inCalendar: true });
-        toast.hidden = true;
+    if (calendarButton) {
+      document.getElementById('toast-calendar').addEventListener('click', async () => {
+        clearTimeout(toastTimer);  // keep the message open while adding
+        try {
+          await sendReminderToCalendar(item, text => { toast.innerHTML = `<span>${text}</span>`; });
+          showToast(`<span>${TEXT.calendarAdded}</span>`);
+        } catch (error) {
+          showToast(`<span>${escapeHtml(error.message || TEXT.calendarError)}</span>`);
+        }
       });
     }
   });
@@ -446,6 +458,9 @@ function setupAddScreen() {
   form.addEventListener('mousedown', event => {
     if (event.target.closest('button')) event.preventDefault();
   });
+
+  // Load Google's sign-in now, so "📅 ליומן" can open its window from the tap
+  prepareGoogle().catch(() => { /* offline: shown on tap */ });
 
   scrollToBottom();
 }

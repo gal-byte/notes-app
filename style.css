@@ -749,6 +749,8 @@ body[data-page="add"] #screen {
   border-radius: 12px;
 }
 .toast-actions { display: flex; gap: 14px; align-items: center; }
+.calendar-box { display: flex; flex-direction: column; gap: 6px; }
+.calendar-box .backup-status a { color: inherit; font-weight: 600; }
 .toast a { font-weight: 700; color: inherit; text-decoration: underline; }
 .toast button {
   padding: 0;

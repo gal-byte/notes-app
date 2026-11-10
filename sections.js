@@ -110,40 +110,6 @@ function bySoonest(a, b) {
   return (a.next - b.next) || (a.item.time || '').localeCompare(b.item.time || '');
 }
 
-// A link that opens Google Calendar's "new event" page, already
-// filled in: title, date (and time), notes, and a yearly repeat
-// for birthdays. You only tap "Save" there.
-function googleCalendarUrl(item) {
-  const pad = n => String(n).padStart(2, '0');
-  const stamp = date => `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}`;
-  const start = parseISODate(item.date);
-  let dates;
-
-  if (item.time) {
-    // With a time: a one-hour event, like 20261111T173000/20261111T183000
-    const [hours, minutes] = item.time.split(':').map(Number);
-    start.setHours(hours, minutes);
-    const end = new Date(start.getTime() + 60 * 60000);
-    const withTime = date => `${stamp(date)}T${pad(date.getHours())}${pad(date.getMinutes())}00`;
-    dates = `${withTime(start)}/${withTime(end)}`;
-  } else {
-    // No time: an all-day event (ends the next day, that's how Google wants it)
-    const nextDay = new Date(start);
-    nextDay.setDate(nextDay.getDate() + 1);
-    dates = `${stamp(start)}/${stamp(nextDay)}`;
-  }
-
-  const params = new URLSearchParams({
-    action: 'TEMPLATE',
-    text: item.title || '',
-    dates,
-    details: item.text || '',
-    ctz: Intl.DateTimeFormat().resolvedOptions().timeZone,  // your phone's time zone
-  });
-  if (item.repeatYearly) params.set('recur', 'RRULE:FREQ=YEARLY');
-  return `https://calendar.google.com/calendar/render?${params}`;
-}
-
 // The next few reminders, soonest first (used by Home)
 async function upcomingReminders(limit) {
   const today = todayStart();
@@ -411,11 +377,14 @@ function editorHtml() {
     `<option value="${g.id}" ${g.id === group ? 'selected' : ''}>${groupTitle(g)}</option>`
   ).join('');
 
-  // Reminders get a button that sends them to Google Calendar
+  // Reminders get a button that adds them straight to Google Calendar
   const calendarButton = group === 'reminders' ? `
-    <a class="small-button wide center" href="#" target="_blank" rel="noopener" data-calendar>
-      ${draft.inCalendar ? TEXT.inCalendar : TEXT.addToCalendar}
-    </a>` : '';
+    <div class="calendar-box">
+      <button type="button" class="small-button wide" data-calendar>
+        ${draft.calendarEventId ? TEXT.calendarUpdate : TEXT.addToCalendar}
+      </button>
+      <p class="backup-status" id="calendar-status">${draft.calendarEventId ? TEXT.calendarAlready : ''}</p>
+    </div>` : '';
 
   return `
     <form class="editor" id="editor">
@@ -499,15 +468,24 @@ function setupItemScreen() {
 
   // Buttons inside the form
   form.addEventListener('click', async event => {
-    // "Add to Google Calendar": fill in the link with what's on screen
-    // right now, let the browser open it, and remember it was added
-    const calendarLink = event.target.closest('[data-calendar]');
-    if (calendarLink) {
-      if (!editor.draft.date) { event.preventDefault(); return; }
-      calendarLink.href = googleCalendarUrl(editor.draft);
-      editor.draft.inCalendar = true;
-      calendarLink.textContent = TEXT.inCalendar;
-      saveSoon();
+    // "Add to Google Calendar": send what's on screen right now
+    const calendarButton = event.target.closest('[data-calendar]');
+    if (calendarButton) {
+      const calendarStatus = document.getElementById('calendar-status');
+      if (!editor.id || !editor.draft.date) {
+        calendarStatus.textContent = TEXT.calendarNeedsTitle;
+        return;
+      }
+      try {
+        const added = await sendReminderToCalendar({ ...editor.draft, id: editor.id },
+          text => { calendarStatus.textContent = text; });
+        editor.draft.calendarEventId = added.id;
+        editor.draft.inCalendar = true;
+        calendarButton.textContent = TEXT.calendarUpdate;
+        calendarStatus.innerHTML = `${TEXT.calendarAdded} <a href="${escapeHtml(added.htmlLink)}" target="_blank" rel="noopener">${TEXT.openInCalendar}</a>`;
+      } catch (error) {
+        calendarStatus.textContent = error.message || TEXT.calendarError;
+      }
       return;
     }
 
@@ -584,4 +562,8 @@ function setupItemScreen() {
   });
 
   form.querySelectorAll('textarea').forEach(autoGrow);
+
+  // Reminders: load Google's sign-in now, so the calendar button can
+  // open Google's window straight from the tap
+  if (editor.group === 'reminders') prepareGoogle().catch(() => { /* offline: shown on tap */ });
 }
