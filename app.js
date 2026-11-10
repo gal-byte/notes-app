@@ -37,7 +37,7 @@ const TEXT = {
   groupNameHint: 'למשל: מתנות, ספרים, רעיונות',
   groupEmoji: 'אימוג׳י',
   groupShortcut: 'קיצור להוספה מהירה (לא חובה)',
-  groupShortcutHint: 'למשל: ר  ←  ואז כותבים "ר: ..."',
+  groupShortcutHint: 'למשל: ר (ואז כותבים ר: ופריט)',
   groupOrder: 'מיקום ברשימה',
   moveEarlier: '→ הזזה קדימה',
   moveLater: 'הזזה אחורה ←',
