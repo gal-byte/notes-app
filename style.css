@@ -119,6 +119,27 @@ svg {
 }
 .empty .emoji { font-size: 40px; display: block; margin-bottom: 8px; }
 
+/* A list of items inside a card, with thin lines between rows */
+.card.list { padding: 0 16px; }
+
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.item-row:last-child { border-bottom: none; }
+.item-row .emoji { font-size: 20px; }
+
+.item-title {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;  /* long titles end with "…" */
+}
+
 /* Search box */
 .search-input {
   width: 100%;
@@ -151,6 +172,7 @@ svg {
   font-weight: 600;
 }
 .group-tile .emoji { font-size: 30px; }
+.group-tile .count { font-size: 13px; font-weight: 400; color: var(--muted); margin-top: -6px; }
 .group-tile:active { transform: scale(0.97); }
 
 /* ============================================================

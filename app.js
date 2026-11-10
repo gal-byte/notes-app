@@ -22,6 +22,9 @@ const TEXT = {
   addComingSoon: 'כאן תופיע תיבת ההוספה המהירה',
   calendarComingSoon: 'כאן יופיע לוח השנה',
   emptyGroup: 'אין עדיין פריטים בקבוצה הזו',
+
+  // A function, because the word changes with the number
+  itemCount: n => n === 0 ? 'ריק' : n === 1 ? 'פריט אחד' : `${n} פריטים`,
 };
 
 // ============================================================
@@ -37,22 +40,58 @@ const GROUPS = [
   { id: 'inbox',     name: 'לא ממוין', emoji: '📥' },
 ];
 
+function findGroup(id) {
+  return GROUPS.find(group => group.id === id);
+}
+
+// ============================================================
+// HELPERS FOR SHOWING ITEMS
+// ============================================================
+
+// Makes text safe to put inside HTML. Without this, typing
+// something like "<b>" in a note would break the page.
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text ?? '';
+  return div.innerHTML;
+}
+
+// One line in a list. dir="auto" lets English titles show
+// correctly inside the Hebrew layout.
+function itemRow(item, showGroupEmoji) {
+  const group = findGroup(item.group);
+  const emoji = showGroupEmoji ? `<span class="emoji">${group ? group.emoji : '📝'}</span>` : '';
+  return `
+    <div class="item-row">
+      ${emoji}
+      <span class="item-title" dir="auto">${escapeHtml(item.title)}</span>
+    </div>
+  `;
+}
+
+function itemList(items, showGroupEmoji) {
+  return `<div class="card list">${items.map(item => itemRow(item, showGroupEmoji)).join('')}</div>`;
+}
+
+function emptyCard(emoji, message) {
+  return `<div class="card empty"><span class="emoji">${emoji}</span>${message}</div>`;
+}
+
 // ============================================================
 // SCREENS
 // Each function returns the HTML for one screen.
+// "async" means it may wait for the database first.
 // ============================================================
 
-function homeScreen() {
+async function homeScreen() {
+  const recent = await getRecentItems(5);
+
   return `
     <h2 class="section-title">${TEXT.upcoming}</h2>
-    <div class="card empty">
-      <span class="emoji">🗓️</span>${TEXT.noUpcoming}
-    </div>
+    ${emptyCard('🗓️', TEXT.noUpcoming)}
 
     <h2 class="section-title">${TEXT.recent}</h2>
-    <div class="card empty">
-      <span class="emoji">✨</span>${TEXT.noRecent}
-    </div>
+    ${recent.length ? itemList(recent, true) : emptyCard('✨', TEXT.noRecent)}
   `;
 }
 
@@ -79,24 +118,24 @@ function calendarScreen() {
   `;
 }
 
-function groupsScreen() {
+async function groupsScreen() {
+  const counts = await countItemsPerGroup();
+
   // Build one tile per group, then join them into one piece of HTML
   const tiles = GROUPS.map(group => `
     <a class="group-tile" href="#/group/${group.id}">
       <span class="emoji">${group.emoji}</span>
       ${group.name}
+      <span class="count">${TEXT.itemCount(counts[group.id] || 0)}</span>
     </a>
   `).join('');
 
   return `<div class="groups-grid">${tiles}</div>`;
 }
 
-function groupScreen(group) {
-  return `
-    <div class="card empty">
-      <span class="emoji">${group.emoji}</span>${TEXT.emptyGroup}
-    </div>
-  `;
+async function groupScreen(group) {
+  const items = await getItemsInGroup(group.id);
+  return items.length ? itemList(items, false) : emptyCard(group.emoji, TEXT.emptyGroup);
 }
 
 // ============================================================
@@ -106,7 +145,13 @@ function groupScreen(group) {
 // This also makes the phone's back button work for free.
 // ============================================================
 
-function showScreen() {
+// Counts screen changes. If you tap quickly, an older screen
+// that's still loading must not replace the newer one.
+let latestScreen = 0;
+
+async function showScreen() {
+  const thisScreen = ++latestScreen;
+
   // "#/group/songs" → ["group", "songs"]
   const [page, id] = location.hash.replace('#/', '').split('/');
 
@@ -126,19 +171,21 @@ function showScreen() {
     html = calendarScreen();
   } else if (page === 'groups') {
     title = TEXT.groups;
-    html = groupsScreen();
-  } else if (page === 'group' && GROUPS.find(g => g.id === id)) {
-    const group = GROUPS.find(g => g.id === id);
+    html = await groupsScreen();
+  } else if (page === 'group' && findGroup(id)) {
+    const group = findGroup(id);
     title = `${group.emoji} ${group.name}`;
-    html = groupScreen(group);
+    html = await groupScreen(group);
     tab = 'groups';
     showBack = true;
   } else {
     // Anything unknown (or no hash at all) → home
     title = TEXT.appName;
-    html = homeScreen();
+    html = await homeScreen();
     tab = 'home';
   }
+
+  if (thisScreen !== latestScreen) return;  // a newer screen took over
 
   document.getElementById('screen-title').textContent = title;
   document.getElementById('screen').innerHTML = html;
@@ -161,3 +208,6 @@ document.querySelectorAll('[data-text]').forEach(element => {
 // Draw the right screen now, and every time the address changes
 window.addEventListener('hashchange', showScreen);
 showScreen();
+
+// Ask the phone to keep our data safe (see db.js)
+askForPersistentStorage();
