@@ -27,8 +27,13 @@ const QUICK_ADD_RULES = {
     ['movies',    ['סרט', 'סדרה', 'לראות', 'נטפליקס', 'netflix',
                    'המלצה', 'בהמלצת', 'המליץ', 'המליצה', 'ממליץ', 'ממליצה']],
     ['recipes',   ['מתכון', 'כוס', 'כוסות', 'כף', 'כפות', 'כפית', 'כפיות', 'גרם', 'לאפות', 'לבשל', 'עוגה', 'תנור']],
-    ['songs',     ['שיר', 'פזמון', 'לחן', 'בית ראשון']],
+    ['songs',     ['שיר', 'פזמון', 'לחן', 'בית ראשון', 'טיוטה', 'טיוטא']],
   ],
+
+  // Song status words. Only noticed at the start or end of the first line,
+  // so "לב גמור שבור" stays a title. (Only טיוטה also means "this is a song",
+  // see the songs keywords above.)
+  songStatus: { 'רעיון': 'idea', 'טיוטה': 'draft', 'טיוטא': 'draft', 'גמור': 'done', 'מוכן': 'done' },
 
   // Reminders with these words repeat every year
   yearlyWords: ['יום הולדת', 'יומולדת', 'יום נישואין', 'יום השנה'],
@@ -297,6 +302,21 @@ function analyzeQuickAdd(text, chosenGroup = null, now = new Date()) {
     if (rest) fields.text = rest;
   } else if (group === 'songs') {
     fields.status = 'idea';
+    const words = Object.keys(QUICK_ADD_RULES.songStatus).join('|');
+    const atStart = title.match(new RegExp(`^(${words})\\s*[-–:,]?\\s+(\\S)`));
+    const atEnd = title.match(new RegExp(`\\s+[-–:,]?\\s*(${words})$`));
+    if (atEnd) {
+      // "הים הכחול - טיוטה"
+      fields.status = QUICK_ADD_RULES.songStatus[atEnd[1]];
+      title = removeFromTitle(title, atEnd[0]);
+    } else if (atStart) {
+      fields.status = QUICK_ADD_RULES.songStatus[atStart[1]];
+      // "רעיון לשיר על הים" reads as a sentence, so keep it whole.
+      // Otherwise remove the word: "טיוטה: הים הכחול" → "הים הכחול"
+      if (!(atStart[1] === 'רעיון' && atStart[2] === 'ל')) {
+        title = title.slice(atStart[0].length - 1);
+      }
+    }
     if (rest) fields.lyrics = rest;
   } else if (group === 'movies') {
     fields.list = 'watchlist';

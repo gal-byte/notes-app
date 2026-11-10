@@ -169,6 +169,7 @@ function groupLabel(groupId, fields) {
   let label = groupTitle(group);
   if (fields.date) label += ` · ${formatDate(fields.date)}`;
   if (fields.time) label += ` · ${fields.time}`;
+  if (groupId === 'songs' && SONG_STATUS[fields.status]) label += ` · ${SONG_STATUS[fields.status]}`;
   if (fields.repeatYearly) label += ` · ${TEXT.everyYear}`;
   return label;
 }
