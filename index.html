@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<!-- lang="he" = Hebrew, dir="rtl" = text flows right-to-left -->
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <!-- Makes the page fit phone screens instead of looking zoomed-out -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>הפתקים שלי</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      background: #f5f5f7;
+      color: #1d1d1f;
+    }
+    /* Dark mode: follows the phone's setting automatically */
+    @media (prefers-color-scheme: dark) {
+      body { background: #1c1c1e; color: #f5f5f7; }
+    }
+    h1 { font-size: 2rem; margin: 0 0 0.5rem; }
+    p  { margin: 0; opacity: 0.7; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>שלום! 👋</h1>
+    <p>האפליקציה שלי עובדת</p>
+  </main>
+</body>
+</html>
