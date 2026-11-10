@@ -107,11 +107,12 @@ function findDate(text, now) {
     if (date) return { date, matched: m[0].slice(m[1].length), unsure };
   }
 
-  // 12 במרץ · 12 מרץ 2027
-  m = text.match(new RegExp(`${before}(\\d{1,2})\\s+[בל]?(${MONTH_NAMES.join('|')}|מרס)(?:\\s+(\\d{4}))?${EDGE_AFTER}`));
+  // 12 במרץ · 12 מרץ
+  // (no year here on purpose: in "12 במרץ 2030" the 2030 is a time, 20:30)
+  m = text.match(new RegExp(`${before}(\\d{1,2})\\s+[בל]?(${MONTH_NAMES.join('|')}|מרס)${EDGE_AFTER}`));
   if (m) {
     const month = m[3] === 'מרס' ? 3 : MONTH_NAMES.indexOf(m[3]) + 1;
-    const date = makeDate(+m[2], month, m[4] ? +m[4] : undefined, today);
+    const date = makeDate(+m[2], month, undefined, today);
     if (date) return { date, matched: m[0].slice(m[1].length) };
   }
 
@@ -124,30 +125,74 @@ function findDate(text, now) {
     return { date, matched: m[0].slice(m[1].length) };
   }
 
-  // ביום שלישי · בשבת  → the next one (a week ahead if it's today)
-  m = text.match(new RegExp(`(^|\\s)(?:ב?יום\\s+(${WEEKDAY_NAMES.join('|')})|בשבת)${EDGE_AFTER}`));
+  // A day of the week:
+  //   "שישי הזה" / "שבת הזאת"   → this week's (today counts)
+  //   "שישי הבא" / "שבת הבאה"   → next week's (a week after this week's)
+  //   "ביום שישי" / "בשישי"     → the coming one (next week's if it's today)
+  // ("בשני" / "בראשון" alone are left out: they also mean "in two" / "at first")
+  const days = WEEKDAY_NAMES.join('|');
+  m = text.match(new RegExp(
+    `(^|\\s)(?:ב?(?:יום\\s+)?(${days}|שבת)\\s+(הזה|הזאת|הזו|הבא|הבאה)` +  // שישי הבא · יום שבת הזה
+    `|ב?יום\\s+(${days}|שבת)` +                                         // ביום שישי
+    `|ב(שלישי|רביעי|חמישי|שישי|שבת))${EDGE_AFTER}`                     // בשישי · בשבת
+  ));
   if (m) {
-    const weekday = m[2] ? WEEKDAY_NAMES.indexOf(m[2]) : 6;
+    const name = m[2] || m[4] || m[5];
+    const which = m[3];  // הזה / הבא / nothing
+    const weekday = name === 'שבת' ? 6 : WEEKDAY_NAMES.indexOf(name);
+    const thisWeek = (weekday - today.getDay() + 7) % 7;  // 0 = today
+
+    let ahead;
+    if (which === 'הבא' || which === 'הבאה') ahead = thisWeek + 7;
+    else if (which) ahead = thisWeek;   // הזה / הזאת
+    else ahead = thisWeek || 7;         // plain: the coming one
+
     const date = new Date(today);
-    const ahead = (weekday - today.getDay() + 7) % 7 || 7;
     date.setDate(date.getDate() + ahead);
+    return { date, matched: m[0].slice(m[1].length) };
+  }
+
+  // שבוע הבא · בשבוע הבא → a week from today
+  m = text.match(new RegExp(`(^|\\s)(?:ב)?שבוע\\s+הבא${EDGE_AFTER}`));
+  if (m) {
+    const date = new Date(today);
+    date.setDate(date.getDate() + 7);
     return { date, matched: m[0].slice(m[1].length) };
   }
 
   return null;
 }
 
-// Find a time: "17:30" · "ב-17:30" · "בשעה 9" · "בשעה 9:15"
-// Returns { time: "09:15", matched } or null.
+// Words after a 4-digit number that mean it's NOT a time ("1500 שקל")
+const NOT_A_TIME_AFTER = ['ש"ח', 'ש״ח', 'שח', 'שקל', 'שקלים', '₪', 'גרם', 'קילו', 'ק"ג', 'ק״ג',
+                          'מ"ל', 'מ״ל', 'ליטר', 'מטר', 'שנה', 'שנים', 'דקות', 'שעות', 'קלוריות'];
+
+// Find a time. Returns { time: "09:15", matched, unsure } or null.
+//   "17:30" · "ב-17:30" · "בשעה 9" · "בשעה 9:15" · "1020" (= 10:20)
 function findTime(text) {
-  const m = text.match(new RegExp(`(^|\\s)(?:ב[-־]?|בשעה\\s+|שעה\\s+)?(\\d{1,2}):(\\d{2})${EDGE_AFTER}`))
-         || text.match(new RegExp(`(^|\\s)(?:בשעה|שעה)\\s+(\\d{1,2})()${EDGE_AFTER}`));
+  const before = '(^|\\s)(?:ב[-־]?|בשעה\\s+|שעה\\s+)?';
+  let unsure = false;
+
+  let m = text.match(new RegExp(`${before}(\\d{1,2}):(\\d{2})${EDGE_AFTER}`))
+       || text.match(new RegExp(`(^|\\s)(?:בשעה|שעה)\\s+(\\d{1,2})()${EDGE_AFTER}`));
+
+  if (!m) {
+    // Four digits with no colon, like "1020". Could also be a price or
+    // an amount ("1500 שקל", "1000 גרם"), so check the next word.
+    m = text.match(new RegExp(`${before}(\\d{2})(\\d{2})${EDGE_AFTER}`));
+    if (m) {
+      const nextWord = text.slice(m.index + m[0].length).trim().split(/\s+/)[0] || '';
+      if (NOT_A_TIME_AFTER.includes(nextWord)) return null;
+      unsure = true;
+    }
+  }
   if (!m) return null;
+
   const hours = Number(m[2]);
   const minutes = Number(m[3] || 0);
   if (hours > 23 || minutes > 59) return null;
   const time = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-  return { time, matched: m[0].slice(m[1].length) };
+  return { time, matched: m[0].slice(m[1].length), unsure };
 }
 
 // ---------- Main function ----------
@@ -188,7 +233,12 @@ function analyzeQuickAdd(text, chosenGroup = null, now = new Date()) {
   }
 
   // A time ("17:30") also means it's a reminder
-  const foundTime = findTime(title);
+  // (look for it after taking the date out, so "12 במרץ 2027" isn't 20:27)
+  let foundTime = findTime(foundDate ? title.replace(foundDate.matched, ' ') : title);
+  // "1000 קמח" in a recipe → the words say recipe, so "1000" isn't 10:00
+  if (foundTime && foundTime.unsure && wordGroup && wordGroup !== 'reminders') {
+    foundTime = null;
+  }
   const guessed = (foundDate || foundTime) ? 'reminders' : (wordGroup || 'inbox');
 
   const group = chosenGroup || shortcutGroup || guessed;

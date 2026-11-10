@@ -97,7 +97,7 @@ function escapeHtml(text) {
   return String(text ?? '').replace(/[&<>"']/g, char => safe[char]);
 }
 
-// "2026-03-12" → "היום" / "מחר" / "12/3" / "12/3/2027"
+// "2026-03-12" → "היום" / "מחר" / "יום שישי 13/11" / "12/3" / "12/3/2027"
 function formatDate(isoDate) {
   const [year, month, day] = isoDate.split('-').map(Number);
   const date = new Date(year, month - 1, day);
@@ -107,7 +107,14 @@ function formatDate(isoDate) {
 
   if (daysAway === 0) return TEXT.today;
   if (daysAway === 1) return TEXT.tomorrow;
-  return year === today.getFullYear() ? `${day}/${month}` : `${day}/${month}/${year}`;
+
+  const short = year === today.getFullYear() ? `${day}/${month}` : `${day}/${month}/${year}`;
+  // Within the next two weeks, also say the weekday ("יום שישי 20/11"),
+  // so it's clear which Friday was meant
+  if (daysAway > 1 && daysAway < 14) {
+    return `${date.toLocaleDateString('he-IL', { weekday: 'long' })} ${short}`;
+  }
+  return short;
 }
 
 // Small label like "🎂 תזכורות · מחר · כל שנה"
@@ -284,10 +291,6 @@ function setupAddScreen() {
     if (event.target.closest('button')) event.preventDefault();
   });
 
-  // While typing, hide the bottom tabs to leave more room
-  textBox.addEventListener('focus', () => document.body.classList.add('typing'));
-  textBox.addEventListener('blur', () => document.body.classList.remove('typing'));
-
   scrollToBottom();
 }
 
@@ -398,7 +401,6 @@ async function showScreen() {
   document.getElementById('screen-title').textContent = screen.title;
   document.getElementById('screen').innerHTML = screen.html;
   document.body.dataset.page = screen.tab;  // lets style.css style each screen
-  document.body.classList.remove('typing');
   document.title = screen.title === TEXT.appName ? screen.title : `${screen.title} · ${TEXT.appName}`;
 
   const backButton = document.getElementById('back-button');
