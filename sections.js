@@ -279,9 +279,11 @@ async function itemScreen(id) {
   return editorHtml();
 }
 
-function newItemScreen(groupId) {
+// startDate (optional) comes from the calendar, like "2026-11-20"
+function newItemScreen(groupId, startDate) {
   const defaults = NEW_ITEM_DEFAULTS[groupId];
   editor = { id: null, group: groupId, draft: defaults ? defaults() : {} };
+  if (startDate && /^\d{4}-\d{2}-\d{2}$/.test(startDate)) editor.draft.date = startDate;
   return editorHtml();
 }
 

@@ -361,6 +361,102 @@ svg {
 .group-tile:active { transform: scale(0.97); }
 
 /* ============================================================
+   CALENDAR
+   ============================================================ */
+.cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.cal-title {
+  margin: 0;
+  font-size: 20px;
+}
+
+.cal-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  color: var(--accent);
+  background: var(--card);
+  border: none;
+  border-radius: 50%;
+}
+
+.cal-today-button {
+  display: block;
+  margin: 0 auto 8px;
+}
+
+.cal-grid-card { padding: 10px 8px; }
+
+/* 7 equal columns. Because the page is right-to-left,
+   the first column (Sunday) is on the right. */
+.cal-weekdays,
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+}
+
+.cal-weekdays {
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.cal-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  aspect-ratio: 1;   /* square boxes */
+  padding: 0;
+  font-size: 16px;
+  color: var(--text);
+  background: none;
+  border: none;
+  border-radius: 12px;
+}
+
+.cal-day.today span:first-child {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.cal-day.selected {
+  color: var(--accent-text);
+  background: var(--accent);
+}
+.cal-day.selected span:first-child { color: var(--accent-text); }
+
+/* Little dots under days that have reminders */
+.cal-dots {
+  display: flex;
+  gap: 3px;
+  height: 6px;
+}
+.cal-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.cal-day.selected .cal-dots i { background: var(--accent-text); }
+
+.cal-empty {
+  margin: 0 0 12px;
+  color: var(--muted);
+}
+
+.cal-new { margin-top: 12px; }
+
+/* ============================================================
    ADD SCREEN (chat)
    ============================================================ */
 

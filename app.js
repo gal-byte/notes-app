@@ -29,7 +29,13 @@ const TEXT = {
   tomorrow: 'מחר',
   everyYear: 'כל שנה',
 
-  calendarComingSoon: 'כאן יופיע לוח השנה',
+  // Calendar
+  weekdaysShort: ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'],
+  prevMonth: 'החודש הקודם',
+  nextMonth: 'החודש הבא',
+  noRemindersThisDay: 'אין תזכורות ביום הזה',
+  newReminderThisDay: 'תזכורת ביום הזה',
+
   emptyGroup: 'אין עדיין פריטים בקבוצה הזו',
 
   // Lists
@@ -285,14 +291,6 @@ function setupAddScreen() {
   scrollToBottom();
 }
 
-function calendarScreen() {
-  return `
-    <div class="card empty">
-      <span class="emoji">📅</span>${TEXT.calendarComingSoon}
-    </div>
-  `;
-}
-
 async function groupsScreen() {
   const counts = await countItemsPerGroup();
 
@@ -339,7 +337,7 @@ function setupFilters() {
 //   tab   – which bottom tab to highlight
 //   back  – where the back arrow goes (no back arrow if missing)
 //   setup – extra code to run after the screen is shown
-async function buildScreen(page, id) {
+async function buildScreen(page, id, extra) {
   if (page === 'search') {
     return { title: TEXT.search, html: searchScreen(), tab: 'search' };
   }
@@ -347,7 +345,7 @@ async function buildScreen(page, id) {
     return { title: TEXT.add, html: await addScreen(), tab: 'add', setup: setupAddScreen };
   }
   if (page === 'calendar') {
-    return { title: TEXT.calendar, html: calendarScreen(), tab: 'calendar' };
+    return { title: TEXT.calendar, html: await calendarScreen(), tab: 'calendar', setup: setupCalendar };
   }
   if (page === 'groups') {
     return { title: TEXT.groups, html: await groupsScreen(), tab: 'groups' };
@@ -358,8 +356,9 @@ async function buildScreen(page, id) {
              tab: 'groups', back: '#/groups' };
   }
   if (page === 'new' && groupExists(id)) {
+    // "#/new/reminders/2026-11-20" → a new reminder already set to that day
     const group = findGroup(id);
-    return { title: `${group.emoji} ${group.name}`, html: newItemScreen(id),
+    return { title: `${group.emoji} ${group.name}`, html: newItemScreen(id, extra),
              tab: 'groups', back: `#/group/${id}`, setup: setupItemScreen };
   }
   if (page === 'item') {
@@ -391,8 +390,8 @@ async function showScreen() {
   const oldPhotoUrls = takePhotoUrls();
 
   // "#/group/songs" → ["group", "songs"]
-  const [page, id] = location.hash.replace('#/', '').split('/');
-  const screen = await buildScreen(page, id);
+  const [page, id, extra] = location.hash.replace('#/', '').split('/');
+  const screen = await buildScreen(page, id, extra);
 
   if (thisScreen !== latestScreen) return;  // a newer screen took over
 
