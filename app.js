@@ -69,8 +69,23 @@ const TEXT = {
     : `למחוק את הקבוצה "${name}"? ${count === 1 ? 'הפריט שבה יעבור' : `${count} הפריטים שבה יעברו`} ל"לא ממוין".`,
 
   // Backup
-  backupScreenTitle: 'גיבוי ושחזור',
-  backupLink: '💾 גיבוי ושחזור',
+  backupScreenTitle: 'הגדרות וגיבוי',
+  backupLink: '⚙️ הגדרות וגיבוי',
+
+  // Calendar button + daily summary
+  addToCalendar: '📅 הוספה ל-Google Calendar',
+  inCalendar: '📅 נוסף ליומן ✓ (אפשר להוסיף שוב)',
+  toCalendarShort: '📅 ליומן',
+  notifyTitle: 'סיכום יומי',
+  notifyExplain: 'פעם ביום, בבוקר: הודעה אחת עם התזכורות של היום. ביום בלי תזכורות לא תגיע הודעה. להתראה בשעה מדויקת, לחצו "הוספה ל-Google Calendar" בתזכורת.',
+  notifyTurnOn: '🔔 הפעלת הסיכום היומי',
+  notifyTurnOff: 'כיבוי',
+  notifyTest: 'שליחת הודעת ניסיון',
+  notifyTestSent: 'נשלחה ✓',
+  notifyOn: 'פועל ✓ הסיכום יגיע פעם ביום',
+  notifyOnOpenOnly: 'פועל ✓ הטלפון לא מאפשר עדיין בדיקה ברקע, אז הסיכום יופיע כשפותחים את האפליקציה. (באפליקציה מותקנת זה בדרך כלל מסתדר אחרי כמה ימי שימוש.)',
+  notifyBlocked: 'ההתראות חסומות. אפשר לאשר אותן בהגדרות של Chrome ← הגדרות אתר ← התראות.',
+  notifyUnsupported: 'הדפדפן הזה לא תומך בהתראות.',
 
   // Google Drive
   driveExplain: 'שומר את הגיבוי בקובץ אחד בדרייב שלך ומחליף אותו בכל גיבוי. האפליקציה רואה רק את הקובץ שהיא עצמה יצרה.',
@@ -407,13 +422,24 @@ function setupAddScreen() {
     chat.innerHTML = await chatBubbles();
     scrollToBottom();
 
+    // Reminders also get a "📅 ליומן" link (send it to Google Calendar)
+    const calendarLink = group === 'reminders'
+      ? `<a id="toast-calendar" href="${escapeHtml(googleCalendarUrl(item))}" target="_blank" rel="noopener">${TEXT.toCalendarShort}</a>`
+      : '';
     showToast(`<span>${TEXT.savedIn(findGroup(group))}</span>
-               <button type="button" id="undo-button">${TEXT.undo}</button>`);
+               <span class="toast-actions">${calendarLink}
+               <button type="button" id="undo-button">${TEXT.undo}</button></span>`);
     document.getElementById('undo-button').addEventListener('click', async () => {
       await deleteItem(item.id);
       toast.hidden = true;
       chat.innerHTML = await chatBubbles();
     });
+    if (calendarLink) {
+      document.getElementById('toast-calendar').addEventListener('click', () => {
+        updateItem(item.id, { inCalendar: true });
+        toast.hidden = true;
+      });
+    }
   });
 
   // Keep the keyboard open when tapping buttons in the box
@@ -594,6 +620,9 @@ window.addEventListener('hashchange', () => {
 
 // Load your own groups first, then draw the first screen
 loadGroups().then(showScreen);
+
+// Today's reminders summary, if it's on and wasn't shown yet today (see daily.js)
+checkDailySummaryOnOpen();
 
 // ============================================================
 // INSTALLABLE APP

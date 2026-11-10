@@ -748,6 +748,8 @@ body[data-page="add"] #screen {
   background: var(--text);
   border-radius: 12px;
 }
+.toast-actions { display: flex; gap: 14px; align-items: center; }
+.toast a { font-weight: 700; color: inherit; text-decoration: underline; }
 .toast button {
   padding: 0;
   font-weight: 700;

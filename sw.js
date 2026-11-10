@@ -13,6 +13,9 @@
 // This file only handles the app itself.
 // ============================================================
 
+// The daily summary code (shared with the app)
+importScripts('daily.js');
+
 const CACHE = 'notes-app';
 const WAIT_FOR_NETWORK_MS = 3000;
 
@@ -29,6 +32,7 @@ const APP_FILES = [
   'groups.js',
   'search.js',
   'drive.js',
+  'daily.js',
   'backup.js',
   'app.js',
   'manifest.json',
@@ -49,6 +53,21 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil(self.clients.claim());  // take care of open pages too
+});
+
+// About once a day Android wakes this helper (if the summary is on)
+self.addEventListener('periodicsync', event => {
+  if (event.tag === 'daily-summary') event.waitUntil(showDailySummary(self.registration));
+});
+
+// Tapping the notification opens the app (or brings it to the front)
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    if (windows.length) return windows[0].focus();
+    return self.clients.openWindow(event.notification.data?.url || './');
+  })());
 });
 
 // Every time the app asks for a file

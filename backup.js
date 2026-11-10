@@ -188,6 +188,7 @@ async function backupScreen() {
 
   return `
     ${driveCard()}
+    ${await notificationsCard()}
     <p class="backup-facts center">${TEXT.backupCounts(items.length, photos)} · ${lastText}</p>
     <p class="muted center">${persisted ? TEXT.storageProtected : TEXT.storageNotProtected}</p>
   `;
@@ -195,6 +196,92 @@ async function backupScreen() {
 
 function setupBackupScreen() {
   setupDriveCard();
+  setupNotificationsCard();
+}
+
+// ---------- Daily summary switch (see daily.js) ----------
+
+function dailySummaryOn() {
+  try { return localStorage.getItem('dailySummary') === 'on'; } catch { return false; }
+}
+
+function notificationsSupported() {
+  return typeof Notification !== 'undefined' && 'serviceWorker' in navigator;
+}
+
+// Ask Android to wake the app about once a day in the background.
+// Returns true if it agreed. (Usually only for an installed app.)
+async function turnOnBackgroundCheck() {
+  const registration = await navigator.serviceWorker.ready;
+  if (!('periodicSync' in registration)) return false;
+  try {
+    const permission = await navigator.permissions.query({ name: 'periodic-background-sync' });
+    if (permission.state !== 'granted') return false;
+    await registration.periodicSync.register('daily-summary', { minInterval: 12 * 60 * 60 * 1000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function notificationsCard() {
+  if (!notificationsSupported()) {
+    return `<div class="card backup-card"><h2 class="card-title">🔔 ${TEXT.notifyTitle}</h2>
+            <p class="muted">${TEXT.notifyUnsupported}</p></div>`;
+  }
+  const on = dailySummaryOn() && Notification.permission === 'granted';
+  const background = on && await turnOnBackgroundCheck();
+
+  const buttons = on
+    ? `<button type="button" class="small-button wide" data-notify="test">${TEXT.notifyTest}</button>
+       <button type="button" class="link-button" data-notify="off">${TEXT.notifyTurnOff}</button>`
+    : `<button type="button" class="primary-button" data-notify="on">${TEXT.notifyTurnOn}</button>`;
+
+  return `
+    <div class="card backup-card">
+      <h2 class="card-title">🔔 ${TEXT.notifyTitle}</h2>
+      <p class="muted">${TEXT.notifyExplain}</p>
+      ${on ? `<p class="backup-facts">${background ? TEXT.notifyOn : TEXT.notifyOnOpenOnly}</p>` : ''}
+      ${buttons}
+      <p class="backup-status" id="notify-status"></p>
+    </div>`;
+}
+
+function setupNotificationsCard() {
+  const status = document.getElementById('notify-status');
+  document.querySelectorAll('[data-notify]').forEach(button => {
+    button.addEventListener('click', async () => {
+      const action = button.dataset.notify;
+
+      if (action === 'on') {
+        const permission = await Notification.requestPermission();  // Android's "Allow notifications?"
+        if (permission !== 'granted') {
+          status.textContent = TEXT.notifyBlocked;
+          return;
+        }
+        try { localStorage.setItem('dailySummary', 'on'); } catch { /* not important */ }
+        showScreen();
+      }
+
+      if (action === 'off') {
+        try { localStorage.removeItem('dailySummary'); } catch { /* not important */ }
+        const registration = await navigator.serviceWorker.ready;
+        if ('periodicSync' in registration) await registration.periodicSync.unregister('daily-summary');
+        showScreen();
+      }
+
+      if (action === 'test') {
+        const result = await showDailySummary(await navigator.serviceWorker.ready, { force: true });
+        status.textContent = result === 'shown' ? TEXT.notifyTestSent : TEXT.notifyBlocked;
+      }
+    });
+  });
+}
+
+// When the app opens: show today's summary if it wasn't shown yet
+async function checkDailySummaryOnOpen() {
+  if (!notificationsSupported() || !dailySummaryOn()) return;
+  showDailySummary(await navigator.serviceWorker.ready);
 }
 
 // Used by "restore from Drive": show what will change → confirm → merge
