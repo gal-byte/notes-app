@@ -201,9 +201,9 @@ svg {
   gap: 10px;
 }
 
-/* "input.emoji-input" (not just ".emoji-input") so it beats the general
-   text-box rule that makes every box full width */
-.field input.emoji-input {
+/* Written extra-specific on purpose, so it beats the general
+   text-box rule further down that makes every box full width */
+.field .emoji-row input.emoji-input {
   flex-shrink: 0;
   width: 64px;
   height: 64px;
