@@ -1,8 +1,8 @@
 // ============================================================
 // BACKUP & RESTORE
 //
-// Backup: puts everything into one file and opens the phone's
-// Share menu, so you can send it to Google Drive (or anywhere).
+// Backup: puts everything into one file, which drive.js saves to
+// your Google Drive (always the same file, replaced each time).
 //
 // Restore = smart merge, so it works between phone and tablet:
 //   • items you don't have yet        → added
@@ -74,36 +74,7 @@ async function createBackupFile(withPhotos) {
     items,
   };
 
-  // The file is named .txt on purpose: Android's Share menu only
-  // accepts some kinds of files, and .json isn't one of them.
-  // Inside it's normal JSON text.
-  const date = toISODate(new Date());
-  const name = withPhotos ? `notes-backup-${date}.txt` : `notes-backup-text-${date}.txt`;
-  return new File([JSON.stringify(backup)], name, { type: 'text/plain' });
-}
-
-// Open the Share menu. If this browser can't share files,
-// download the file instead.
-// Returns 'shared', 'downloaded' or 'cancelled'.
-async function shareOrDownload(file) {
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: file.name });
-      return 'shared';
-    } catch (error) {
-      if (error.name === 'AbortError') return 'cancelled';  // you closed the Share menu
-      // Any other problem: fall back to downloading
-    }
-  }
-  const url = URL.createObjectURL(file);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = file.name;
-  document.body.append(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
-  return 'downloaded';
+  return new File([JSON.stringify(backup)], DRIVE_BACKUP_NAME, { type: 'application/json' });
 }
 
 // ---------- Restoring (smart merge) ----------
@@ -217,60 +188,16 @@ async function backupScreen() {
 
   return `
     ${driveCard()}
-
-    <div class="card backup-card">
-      <h2 class="card-title">📤 ${TEXT.backupTitle}</h2>
-      <p class="muted">${TEXT.backupExplain}</p>
-      <p class="backup-facts">${TEXT.backupCounts(items.length, photos)} · ${lastText}</p>
-      <button type="button" class="primary-button" data-backup="full">${TEXT.backupFull}</button>
-      <button type="button" class="small-button wide" data-backup="text">${TEXT.backupTextOnly}</button>
-      <p class="backup-status" id="backup-status"></p>
-    </div>
-
-    <div class="card backup-card">
-      <h2 class="card-title">📂 ${TEXT.restoreTitle}</h2>
-      <p class="muted">${TEXT.restoreExplain}</p>
-      <label class="small-button wide center">${TEXT.restoreButton}
-        <input type="file" id="restore-file" accept=".txt,.json,text/plain,application/json" hidden>
-      </label>
-      <p class="backup-status" id="restore-status"></p>
-    </div>
-
+    <p class="backup-facts center">${TEXT.backupCounts(items.length, photos)} · ${lastText}</p>
     <p class="muted center">${persisted ? TEXT.storageProtected : TEXT.storageNotProtected}</p>
   `;
 }
 
 function setupBackupScreen() {
-  const backupStatus = document.getElementById('backup-status');
-  const restoreStatus = document.getElementById('restore-status');
-
-  // Backup buttons
-  document.querySelectorAll('[data-backup]').forEach(button => {
-    button.addEventListener('click', async () => {
-      backupStatus.textContent = TEXT.backupPreparing;
-      const file = await createBackupFile(button.dataset.backup === 'full');
-      const result = await shareOrDownload(file);
-      if (result === 'cancelled') {
-        backupStatus.textContent = TEXT.backupCancelled;
-      } else {
-        rememberBackup();
-        backupStatus.textContent = (result === 'shared' ? TEXT.backupShared : TEXT.backupDownloaded)
-          + ` (${formatSize(file.size)})`;
-      }
-    });
-  });
-
-  // Restore: pick a file → show what will change → confirm → merge
-  document.getElementById('restore-file').addEventListener('change', async event => {
-    const file = event.target.files[0];
-    event.target.value = '';  // allow picking the same file again later
-    if (file) await restoreBackupFile(file, restoreStatus);
-  });
-
   setupDriveCard();
 }
 
-// Used by both "pick a file" and "restore from Drive"
+// Used by "restore from Drive": show what will change → confirm → merge
 async function restoreBackupFile(file, status) {
   try {
     const backup = await readBackupFile(file);
