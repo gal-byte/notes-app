@@ -38,7 +38,7 @@ const TEXT = {
 
   addPlaceholder: 'מה לשמור?',
   addHint: 'כותבים כל דבר, והאפליקציה מנחשת לאיזו קבוצה הוא שייך. אפשר ללחוץ על התווית כדי לשנות.',
-  addShortcuts: 'קיצורים:<br>ת: תזכורת · ש: שיר<br>ס: סרט · מ: מתכון',
+  addShortcuts: 'קיצורים:<br>ת: תזכורת · ש: שיר · מ: מתכון<br>ס: סרט · סד: סדרה<br>"ראיתי" / "סיימתי" / "4 כוכבים" → כבר נצפה',
   send: 'שליחה',
   undo: 'ביטול',
   savedIn: group => `נשמר ב־${groupTitle(group)}`,
@@ -170,6 +170,7 @@ const BUILT_IN_GROUPS = [
   { id: 'reminders', name: 'תזכורות', emoji: '🎂' },
   { id: 'songs',     name: 'שירים',   emoji: '🎵' },
   { id: 'movies',    name: 'סרטים',   emoji: '🎬' },
+  { id: 'shows',     name: 'סדרות',   emoji: '📺' },
   { id: 'recipes',   name: 'מתכונים', emoji: '🍲' },
   { id: 'inbox',     name: 'לא ממוין', emoji: '📥' },
 ];
@@ -230,6 +231,10 @@ function groupLabel(groupId, fields) {
   if (fields.time) label += ` · ${fields.time}`;
   if (groupId === 'songs' && SONG_STATUS[fields.status]) label += ` · ${SONG_STATUS[fields.status]}`;
   if (fields.repeatYearly) label += ` · ${TEXT.everyYear}`;
+  // Movies and shows: show the list when it isn't "to watch", plus stars
+  const lists = groupId === 'shows' ? SHOW_LISTS : groupId === 'movies' ? MOVIE_LISTS : null;
+  if (lists && fields.list && fields.list !== 'watchlist') label += ` · ${lists[fields.list]}`;
+  if (lists && fields.rating) label += ` · ${'★'.repeat(fields.rating)}`;
   return label;
 }
 

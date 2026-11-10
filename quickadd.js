@@ -16,6 +16,7 @@ const QUICK_ADD_RULES = {
     'ת': 'reminders', 'תזכורת': 'reminders',
     'ש': 'songs',     'שיר': 'songs',
     'ס': 'movies',    'סרט': 'movies',
+    'סד': 'shows',    'סדרה': 'shows',
     'מ': 'recipes',   'מתכון': 'recipes',
   },
 
@@ -24,7 +25,8 @@ const QUICK_ADD_RULES = {
   // so 'סרט' also catches 'הסרט' and 'לסרט'.
   keywords: [
     ['reminders', ['יום הולדת', 'יומולדת', 'תזכורת', 'להזכיר', 'תזכיר', 'פגישה', 'תור', 'יום נישואין']],
-    ['movies',    ['סרט', 'סדרה', 'לראות', 'נטפליקס', 'netflix',
+    ['shows',     ['סדרה', 'סדרות', 'סדרת', 'עונה', 'עונות']],
+    ['movies',    ['סרט', 'לראות', 'נטפליקס', 'netflix',
                    'המלצה', 'בהמלצת', 'המליץ', 'המליצה', 'ממליץ', 'ממליצה']],
     ['recipes',   ['מתכון', 'כוס', 'כוסות', 'כף', 'כפות', 'כפית', 'כפיות', 'גרם', 'לאפות', 'לבשל', 'עוגה', 'תנור']],
     ['songs',     ['שיר', 'פזמון', 'לחן', 'בית ראשון', 'טיוטה', 'טיוטא']],
@@ -35,6 +37,14 @@ const QUICK_ADD_RULES = {
   // see the songs keywords above.)
   songStatus: { 'רעיון': 'idea', 'טיוטה': 'draft', 'טיוטא': 'draft', 'גמור': 'done', 'מוכן': 'done' },
 
+  // Movies and shows: words that mean "I finished it" → ✔️ ראיתי / סיימתי
+  watchedWords: ['כבר ראיתי', 'ראיתי כבר', 'ראיתי', 'ראינו', 'צפיתי', 'צפינו',
+                 'סיימתי', 'סיימנו', 'גמרתי', 'גמרנו', 'נצפה'],
+  // Shows only: words that mean "I'm in the middle of it" → ▶️ בצפייה
+  watchingWords: ['באמצע', 'רואה עכשיו', 'רואים עכשיו', 'התחלתי', 'התחלנו', 'בצפייה'],
+  // Words removed from the start of a movie/show name: "סרט דיונה" → "דיונה"
+  movieFillerWords: ['על', 'לראות', 'את', 'סרט', 'הסרט', 'סדרה', 'הסדרה', 'סדרת', 'סדרות'],
+
   // Reminders with these words repeat every year
   yearlyWords: ['יום הולדת', 'יומולדת', 'יום נישואין', 'יום השנה'],
 
@@ -42,7 +52,7 @@ const QUICK_ADD_RULES = {
   //   "המלצה של דנה" / "בהמלצת דנה"  (name after)
   //   "דנה המליצה" / "יוסי ממליץ"     (name before)
   recommendedBy: [
-    /(?:המלצה של|בהמלצת|המליץ|המליצה|ממליץ|ממליצה)\s+([^\s,.!?]+)/,
+    /(?:המלצה של|בהמלצת|המליץ|המליצה|ממליץ|ממליצה)\s+(?!(?:על|את|לי|לנו)(?:\s|$))([^\s,.!?]+)/,
     /([^\s,.!?]+)\s+(?:המליץ|המליצה|ממליץ|ממליצה)(?=$|[\s,.!?])/,
   ],
 };
@@ -59,6 +69,17 @@ const EDGE_AFTER = '(?=$|[\\s,.!?:;()"\'\\-])';
 function hasWord(text, word) {
   const pattern = word.split(' ').join('\\s+');
   return new RegExp(`${EDGE_BEFORE}[והבלמשכ]{0,2}${pattern}${EDGE_AFTER}`, 'i').test(text);
+}
+
+// The first of these words found in the text (with a ו prefix allowed,
+// "וסיימתי"), exactly as written there – or null
+function findWord(text, words) {
+  for (const word of words) {
+    const pattern = word.split(' ').join('\\s+');
+    const match = text.match(new RegExp(`${EDGE_BEFORE}(ו?${pattern})${EDGE_AFTER}`));
+    if (match) return match[1];
+  }
+  return null;
 }
 
 function hasAnyWord(text, words) {
@@ -269,6 +290,11 @@ function analyzeQuickAdd(text, chosenGroup = null, now = new Date()) {
   if (foundDate && foundDate.unsure && wordGroup && wordGroup !== 'reminders') {
     foundDate = null;
   }
+  // "5/5" next to a movie or show is a rating, not the 5th of May
+  const movieOrShow = ['movies', 'shows'].includes(shortcutGroup || wordGroup);
+  if (foundDate && movieOrShow && /^\s*[1-5]\s*\/\s*5\s*$/.test(foundDate.matched)) {
+    foundDate = null;
+  }
 
   // A time ("17:30") also means it's a reminder
   // (look for it after taking the date out, so "12 במרץ 2027" isn't 20:27)
@@ -340,7 +366,7 @@ function analyzeQuickAdd(text, chosenGroup = null, now = new Date()) {
       }
     }
     if (lyrics) fields.lyrics = lyrics;
-  } else if (group === 'movies') {
+  } else if (group === 'movies' || group === 'shows') {
     fields.list = 'watchlist';
     for (const pattern of QUICK_ADD_RULES.recommendedBy) {
       const rec = title.match(pattern);
@@ -350,6 +376,30 @@ function analyzeQuickAdd(text, chosenGroup = null, now = new Date()) {
         break;
       }
     }
+    // "4 כוכבים", "4/5", "4 מתוך 5" → rating (and you've seen it)
+    const rating = title.match(/(?:^|\s)([1-5])\s*(?:כוכבים|כוכב|⭐|\/\s*5|מתוך\s*5)(?=$|[\s,.!?])/);
+    if (rating) {
+      fields.rating = Number(rating[1]);
+      fields.list = 'watched';
+      title = removeFromTitle(title, rating[0]);
+    }
+    // "ראיתי", "סיימתי"… → finished. "באמצע" → watching (shows only)
+    const watched = findWord(title, QUICK_ADD_RULES.watchedWords);
+    const watching = group === 'shows' && findWord(title, QUICK_ADD_RULES.watchingWords);
+    if (watched) {
+      fields.list = 'watched';
+      title = removeFromTitle(title, watched);
+    } else if (watching) {
+      if (!rating) fields.list = 'watching';
+      title = removeFromTitle(title, watching);
+    }
+    // "סרט דיונה" / "לראות את הסדרה שוגון" → just the name
+    const fillers = QUICK_ADD_RULES.movieFillerWords;
+    const atEnd = fillers.filter(word => !['על', 'את', 'לראות'].includes(word));
+    title = title
+      .replace(new RegExp(`^(?:(?:${fillers.join('|')})(?:\\s+|\\s*[-–:,]\\s*))+`), '')
+      .replace(new RegExp(`(?:\\s+|\\s*[-–:,]\\s*)(?:${atEnd.join('|')})$`), '');
+    title = removeFromTitle(title, '');
     if (rest) fields.text = rest;
   } else if (group === 'recipes') {
     if (rest) fields.ingredients = rest;  // lines after the name = ingredients

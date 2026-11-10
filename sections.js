@@ -7,6 +7,7 @@
 
 const SONG_STATUS = { idea: '💡 רעיון', draft: '✏️ טיוטה', done: '✅ גמור' };
 const MOVIE_LISTS = { watchlist: '🍿 לראות', watched: '✔️ ראיתי' };
+const SHOW_LISTS = { watchlist: '🍿 לראות', watching: '▶️ בצפייה', watched: '✔️ סיימתי' };
 
 const TITLE_FIELD = { key: 'title', type: 'text', label: 'כותרת' };
 const NOTES_FIELD = { key: 'text', type: 'textarea', label: 'הערות' };
@@ -28,6 +29,13 @@ const FIELDS = {
   movies: [
     TITLE_FIELD,
     { key: 'list', type: 'choice', label: 'רשימה', options: MOVIE_LISTS },
+    { key: 'recommendedBy', type: 'text', label: 'מי המליץ' },
+    { key: 'rating', type: 'rating', label: 'הדירוג שלי' },
+    NOTES_FIELD,
+  ],
+  shows: [
+    TITLE_FIELD,
+    { key: 'list', type: 'choice', label: 'רשימה', options: SHOW_LISTS },
     { key: 'recommendedBy', type: 'text', label: 'מי המליץ' },
     { key: 'rating', type: 'rating', label: 'הדירוג שלי' },
     NOTES_FIELD,
@@ -56,6 +64,7 @@ const NEW_ITEM_DEFAULTS = {
   reminders: () => ({ date: toISODate(new Date()), repeatYearly: false }),
   songs: () => ({ status: 'idea' }),
   movies: () => ({ list: 'watchlist' }),
+  shows: () => ({ list: 'watchlist' }),
 };
 
 function fieldsFor(groupId) {
@@ -110,12 +119,22 @@ function bySoonest(a, b) {
   return (a.next - b.next) || (a.item.time || '').localeCompare(b.item.time || '');
 }
 
+// Is this reminder still ahead? Today's reminders with a time leave
+// the "upcoming" lists once the time has passed (the calendar keeps them).
+function stillAhead({ item, next }, now = new Date()) {
+  if (!next) return false;
+  const today = todayStart();
+  if (next > today) return true;
+  if (next < today || !item.time) return next >= today;
+  const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  return item.time > nowTime;
+}
+
 // The next few reminders, soonest first (used by Home)
 async function upcomingReminders(limit) {
-  const today = todayStart();
   return (await getItemsInGroup('reminders'))
     .map(item => ({ item, next: nextOccurrence(item) }))
-    .filter(r => r.next && r.next >= today)
+    .filter(r => stillAhead(r))
     .sort(bySoonest)
     .slice(0, limit);
 }
@@ -206,10 +225,9 @@ function reminderRow({ item, next }, isPast) {
 }
 
 function remindersList(items) {
-  const today = todayStart();
   const all = items.map(item => ({ item, next: nextOccurrence(item) }));
-  const upcoming = all.filter(r => r.next && r.next >= today).sort(bySoonest);
-  const past = all.filter(r => !r.next || r.next < today).sort((a, b) => (b.next || 0) - (a.next || 0));
+  const upcoming = all.filter(r => stillAhead(r)).sort(bySoonest);
+  const past = all.filter(r => !stillAhead(r)).sort((a, b) => (b.next || 0) - (a.next || 0));
 
   let html = '';
   if (upcoming.length) {
@@ -285,8 +303,9 @@ function songsList(items) {
       itemRow(item, SONG_STATUS[item.status] || '', { filter: item.status || '' })));
 }
 
-function moviesList(items) {
-  return filterChips(MOVIE_LISTS, 'watchlist') +
+// Movies and shows look the same, only the lists differ
+function moviesList(items, lists = MOVIE_LISTS) {
+  return filterChips(lists, 'watchlist') +
     listCard(items.map(item => {
       const meta = [
         item.recommendedBy ? TEXT.recommendedBy(escapeHtml(item.recommendedBy)) : '',
@@ -337,7 +356,11 @@ async function groupScreen(group) {
   }
   if (!items.length) return buttons + emptyCard(escapeHtml(group.emoji), TEXT.emptyGroup);
 
-  const lists = { reminders: remindersList, songs: songsList, movies: moviesList, recipes: recipesList };
+  const lists = {
+    reminders: remindersList, songs: songsList, recipes: recipesList,
+    movies: items => moviesList(items, MOVIE_LISTS),
+    shows: items => moviesList(items, SHOW_LISTS),
+  };
   const makeList = lists[group.id] || plainList;
   return buttons + makeList(items);
 }
@@ -378,7 +401,7 @@ function fieldHtml(field, value) {
 
     case 'textarea':
       return `<label class="field">${label}
-        <textarea ${key} dir="auto" rows="${field.big ? 8 : 3}" ${placeholder}>${escapeHtml(value)}</textarea></label>`;
+        <textarea ${key} dir="auto" rows="${field.big ? 8 : 3}" ${field.big ? 'class="big"' : ''} ${placeholder}>${escapeHtml(value)}</textarea></label>`;
 
     case 'date':
       return `<label class="field">${label}
