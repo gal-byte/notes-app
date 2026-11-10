@@ -39,9 +39,17 @@ const FIELDS = {
     { key: 'ingredients', type: 'textarea', label: 'מצרכים', hint: 'מצרך בכל שורה' },
     { key: 'steps', type: 'textarea', label: 'אופן ההכנה', hint: 'שלב בכל שורה' },
   ],
-  // Every other group (לא ממוין, and your own groups later)
+  // לא ממוין
   default: [TITLE_FIELD, NOTES_FIELD],
 };
+
+// Groups you create yourself: a title, text, tags and an optional photo
+const CUSTOM_GROUP_FIELDS = [
+  TITLE_FIELD,
+  NOTES_FIELD,
+  { key: 'tags', type: 'text', label: 'תגיות', hint: 'מופרדות בפסיק' },
+  { key: 'photo', type: 'photo', label: 'תמונה' },
+];
 
 // Starting values for a brand-new item (functions, so "today" is always fresh)
 const NEW_ITEM_DEFAULTS = {
@@ -51,7 +59,8 @@ const NEW_ITEM_DEFAULTS = {
 };
 
 function fieldsFor(groupId) {
-  return FIELDS[groupId] || FIELDS.default;
+  if (FIELDS[groupId]) return FIELDS[groupId];
+  return groupId === 'inbox' ? FIELDS.default : CUSTOM_GROUP_FIELDS;
 }
 
 // ============================================================
@@ -151,7 +160,7 @@ async function shrinkPhoto(file, maxSide = 1000) {
 function itemRow(item, meta = '', options = {}) {
   let picture = '';
   if (options.photo) picture = `<img class="thumb" src="${photoUrl(options.photo)}" alt="">`;
-  else if (options.emoji) picture = `<span class="emoji">${options.emoji}</span>`;
+  else if (options.emoji) picture = `<span class="emoji">${escapeHtml(options.emoji)}</span>`;
 
   const filter = options.filter !== undefined
     ? `data-filter-values="${escapeHtml(options.filter)}"` : '';
@@ -248,19 +257,33 @@ function recipesList(items) {
   }));
 }
 
+// לא ממוין, and your own groups: first line of the text, photo, tag filters
 function plainList(items) {
-  return listCard(items.map(item =>
-    itemRow(item, escapeHtml((item.text || '').split('\n')[0]))));
+  const allTags = [...new Set(items.flatMap(item => parseTags(item.tags)))];
+  const chips = allTags.length
+    ? filterChips(Object.fromEntries([['', TEXT.all], ...allTags.map(tag => [tag, tag])]), '')
+    : '';
+
+  return chips + listCard(items.map(item =>
+    itemRow(item, escapeHtml((item.text || '').split('\n')[0]), {
+      photo: item.photo,
+      filter: parseTags(item.tags).join('|'),
+    })));
 }
 
 async function groupScreen(group) {
   const items = await getItemsInGroup(group.id);
-  const newButton = `<a class="new-button" href="#/new/${group.id}">＋ ${TEXT.newItem}</a>`;
-  if (!items.length) return newButton + emptyCard(group.emoji, TEXT.emptyGroup);
+
+  let buttons = `<a class="new-button" href="#/new/${group.id}">＋ ${TEXT.newItem}</a>`;
+  if (group.custom) {
+    buttons = `<div class="button-row">${buttons}
+      <a class="new-button" href="#/group-settings/${group.id}">${TEXT.editGroupButton}</a></div>`;
+  }
+  if (!items.length) return buttons + emptyCard(escapeHtml(group.emoji), TEXT.emptyGroup);
 
   const lists = { reminders: remindersList, songs: songsList, movies: moviesList, recipes: recipesList };
   const makeList = lists[group.id] || plainList;
-  return newButton + makeList(items);
+  return buttons + makeList(items);
 }
 
 // ============================================================
@@ -351,7 +374,7 @@ function editorHtml() {
   const { group, draft } = editor;
   const fields = fieldsFor(group).map(field => fieldHtml(field, draft[field.key])).join('');
   const groupOptions = GROUPS.map(g =>
-    `<option value="${g.id}" ${g.id === group ? 'selected' : ''}>${g.emoji} ${escapeHtml(g.name)}</option>`
+    `<option value="${g.id}" ${g.id === group ? 'selected' : ''}>${groupTitle(g)}</option>`
   ).join('');
 
   return `

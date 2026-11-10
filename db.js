@@ -113,6 +113,23 @@ async function countItemsPerGroup() {
   return counts;
 }
 
+// ---------- Your own groups ----------
+// Each one looks like: { id, name, emoji, shortcut, order }
+
+async function getCustomGroups() {
+  const groups = await runInStore('groups', 'readonly', store => store.getAll());
+  return groups.sort((a, b) => a.order - b.order);
+}
+
+// Add a new group or save changes to one (same id = replace)
+async function saveCustomGroup(group) {
+  await runInStore('groups', 'readwrite', store => store.put(group));
+}
+
+async function deleteCustomGroup(id) {
+  await runInStore('groups', 'readwrite', store => store.delete(id));
+}
+
 // ---------- Keep the data safe ----------
 
 // Ask the browser to never delete our data when the phone is

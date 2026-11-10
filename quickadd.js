@@ -217,6 +217,17 @@ function normalizeTime(typed) {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
+// "ס" → movies · "מתנות" → your "מתנות" group · anything else → null
+function groupForShortcut(word) {
+  if (QUICK_ADD_RULES.shortcuts[word]) return QUICK_ADD_RULES.shortcuts[word];
+  // GROUPS (from app.js) includes your own groups with their shortcuts
+  if (typeof GROUPS !== 'undefined') {
+    const group = GROUPS.find(g => (g.shortcut && g.shortcut === word) || g.name === word);
+    if (group) return group.id;
+  }
+  return null;
+}
+
 // ---------- Main function ----------
 
 // Remove a piece of text from the title and tidy the leftovers
@@ -234,12 +245,12 @@ function analyzeQuickAdd(text, chosenGroup = null, now = new Date()) {
   let title = lines[0].trim();
   const rest = lines.slice(1).join('\n').trim();  // more lines = lyrics / notes
 
-  // 1. Shortcut like "ס:" at the start
+  // 1. Shortcut like "ס:" at the start – or a group's full name, like "מתנות:"
   let shortcutGroup = null;
-  const shortcut = title.match(/^(\S+?)\s*:\s*/);
-  if (shortcut && QUICK_ADD_RULES.shortcuts[shortcut[1]]) {
-    shortcutGroup = QUICK_ADD_RULES.shortcuts[shortcut[1]];
-    title = title.slice(shortcut[0].length);
+  const shortcut = title.match(/^([^:\n]{1,30}?)\s*:\s*/);
+  if (shortcut) {
+    shortcutGroup = groupForShortcut(shortcut[1].trim());
+    if (shortcutGroup) title = title.slice(shortcut[0].length);
   }
 
   // 2 + 3. Guess from dates and words

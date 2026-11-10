@@ -24,10 +24,32 @@ const TEXT = {
   addShortcuts: 'קיצורים:<br>ת: תזכורת · ש: שיר<br>ס: סרט · מ: מתכון',
   send: 'שליחה',
   undo: 'ביטול',
-  savedIn: group => `נשמר ב־${group.emoji} ${group.name}`,
+  savedIn: group => `נשמר ב־${groupTitle(group)}`,
   today: 'היום',
   tomorrow: 'מחר',
   everyYear: 'כל שנה',
+
+  // Your own groups
+  newGroup: 'קבוצה חדשה',
+  editGroup: 'עריכת קבוצה',
+  editGroupButton: '✏️ עריכת הקבוצה',
+  groupName: 'שם',
+  groupNameHint: 'למשל: מתנות, ספרים, רעיונות',
+  groupEmoji: 'אימוג׳י',
+  groupShortcut: 'קיצור להוספה מהירה (לא חובה)',
+  groupShortcutHint: 'למשל: ר  ←  ואז כותבים "ר: ..."',
+  groupOrder: 'מיקום ברשימה',
+  moveEarlier: '→ הזזה קדימה',
+  moveLater: 'הזזה אחורה ←',
+  createGroup: 'יצירת הקבוצה',
+  saveGroup: 'שמירה',
+  deleteGroup: 'מחיקת הקבוצה',
+  groupNameNeeded: 'צריך לתת לקבוצה שם',
+  groupNameTaken: 'כבר יש קבוצה בשם הזה',
+  shortcutTaken: 'הקיצור הזה כבר בשימוש',
+  confirmDeleteGroup: (name, count) => count === 0
+    ? `למחוק את הקבוצה "${name}"?`
+    : `למחוק את הקבוצה "${name}"? ${count === 1 ? 'הפריט שבה יעבור' : `${count} הפריטים שבה יעברו`} ל"לא ממוין".`,
 
   // Calendar
   weekdaysShort: ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'],
@@ -65,16 +87,22 @@ const TEXT = {
 
 // ============================================================
 // GROUPS
-// The built-in sections. Later, groups you create yourself
-// will be added to this same list.
+// The built-in sections. Groups you create yourself are added
+// after them when the app starts (see loadGroups in groups.js).
 // ============================================================
-const GROUPS = [
+const BUILT_IN_GROUPS = [
   { id: 'reminders', name: 'תזכורות', emoji: '🎂' },
   { id: 'songs',     name: 'שירים',   emoji: '🎵' },
   { id: 'movies',    name: 'סרטים',   emoji: '🎬' },
   { id: 'recipes',   name: 'מתכונים', emoji: '🍲' },
   { id: 'inbox',     name: 'לא ממוין', emoji: '📥' },
 ];
+let GROUPS = [...BUILT_IN_GROUPS];
+
+// "🎁 מתנות" – safe to put inside HTML (your group names could contain anything)
+function groupTitle(group) {
+  return `${escapeHtml(group.emoji)} ${escapeHtml(group.name)}`;
+}
 
 // Find a group by its id. Unknown ids fall back to לא ממוין,
 // so an item never gets lost.
@@ -121,7 +149,7 @@ function formatDate(isoDate) {
 // Small label like "🎂 תזכורות · מחר · כל שנה"
 function groupLabel(groupId, fields) {
   const group = findGroup(groupId);
-  let label = `${group.emoji} ${group.name}`;
+  let label = groupTitle(group);
   if (fields.date) label += ` · ${formatDate(fields.date)}`;
   if (fields.time) label += ` · ${fields.time}`;
   if (fields.repeatYearly) label += ` · ${TEXT.everyYear}`;
@@ -180,7 +208,7 @@ function searchScreen() {
 // bubbles, and you type at the bottom.
 async function addScreen() {
   const groupButtons = GROUPS.map(group =>
-    `<button type="button" class="chip" data-group="${group.id}">${group.emoji} ${group.name}</button>`
+    `<button type="button" class="chip" data-group="${group.id}">${groupTitle(group)}</button>`
   ).join('');
 
   return `
@@ -235,7 +263,7 @@ function setupAddScreen() {
       return;
     }
     const { group, fields } = analyzeQuickAdd(textBox.value, chosenGroup);
-    guessChip.textContent = groupLabel(group, fields) + ' ▾';
+    guessChip.innerHTML = groupLabel(group, fields) + ' ▾';
     guessChip.hidden = false;
   }
 
@@ -301,13 +329,20 @@ async function groupsScreen() {
   // Build one tile per group, then join them into one piece of HTML
   const tiles = GROUPS.map(group => `
     <a class="group-tile" href="#/group/${group.id}">
-      <span class="emoji">${group.emoji}</span>
-      ${group.name}
+      <span class="emoji">${escapeHtml(group.emoji)}</span>
+      ${escapeHtml(group.name)}
       <span class="count">${TEXT.itemCount(counts[group.id] || 0)}</span>
     </a>
   `).join('');
 
-  return `<div class="groups-grid">${tiles}</div>`;
+  // The last tile creates a new group
+  const newTile = `
+    <a class="group-tile new-group-tile" href="#/group-settings/new">
+      <span class="emoji">＋</span>
+      ${TEXT.newGroup}
+    </a>`;
+
+  return `<div class="groups-grid">${tiles}${newTile}</div>`;
 }
 
 // Filter chips (like "🍿 לראות / ✔️ ראיתי") show only the
@@ -364,6 +399,15 @@ async function buildScreen(page, id, extra) {
     const group = findGroup(id);
     return { title: `${group.emoji} ${group.name}`, html: newItemScreen(id, extra),
              tab: 'groups', back: `#/group/${id}`, setup: setupItemScreen };
+  }
+  if (page === 'group-settings') {
+    // "#/group-settings/new" creates a group, "#/group-settings/g-12ab34cd" edits one
+    const html = groupSettingsScreen(id);
+    if (html) {
+      return { title: id === 'new' ? TEXT.newGroup : TEXT.editGroup, html,
+               tab: 'groups', back: id === 'new' ? '#/groups' : `#/group/${id}`,
+               setup: setupGroupSettings };
+    }
   }
   if (page === 'item') {
     const html = await itemScreen(id);
@@ -440,7 +484,9 @@ window.addEventListener('hashchange', () => {
   movedInsideApp = true;
   showScreen();
 });
-showScreen();
+
+// Load your own groups first, then draw the first screen
+loadGroups().then(showScreen);
 
 // Save unsaved typing if you switch apps or close this one
 document.addEventListener('visibilitychange', () => {

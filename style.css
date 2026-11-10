@@ -180,6 +180,71 @@ svg {
   border-radius: var(--radius);
 }
 
+/* Two buttons side by side ("＋ פריט חדש" · "✏️ עריכת הקבוצה") */
+.button-row { display: flex; gap: 8px; }
+.button-row .new-button { flex: 1; }
+
+/* ============================================================
+   YOUR OWN GROUPS
+   ============================================================ */
+
+/* The "＋ קבוצה חדשה" tile: dashed outline instead of a card */
+.new-group-tile {
+  color: var(--accent);
+  background: none;
+  border: 2px dashed var(--line);
+}
+
+.emoji-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.field .emoji-input {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  font-size: 32px;
+  text-align: center;
+}
+
+.emoji-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.emoji-choice {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  font-size: 22px;
+  background: var(--card);
+  border: none;
+  border-radius: 10px;
+}
+
+.field-hint {
+  min-height: 1em;
+  font-size: 14px;
+  color: #d93025;
+}
+
+.primary-button {
+  padding: 14px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--accent-text);
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+}
+
+.small-button:disabled { opacity: 0.4; }
+.editor .danger-button { align-self: center; }
+
 /* Filter chips above a list – scroll sideways if there are many */
 .filter-chips {
   display: flex;
