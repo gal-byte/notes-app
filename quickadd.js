@@ -137,6 +137,19 @@ function findDate(text, now) {
   return null;
 }
 
+// Find a time: "17:30" · "ב-17:30" · "בשעה 9" · "בשעה 9:15"
+// Returns { time: "09:15", matched } or null.
+function findTime(text) {
+  const m = text.match(new RegExp(`(^|\\s)(?:ב[-־]?|בשעה\\s+|שעה\\s+)?(\\d{1,2}):(\\d{2})${EDGE_AFTER}`))
+         || text.match(new RegExp(`(^|\\s)(?:בשעה|שעה)\\s+(\\d{1,2})()${EDGE_AFTER}`));
+  if (!m) return null;
+  const hours = Number(m[2]);
+  const minutes = Number(m[3] || 0);
+  if (hours > 23 || minutes > 59) return null;
+  const time = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  return { time, matched: m[0].slice(m[1].length) };
+}
+
 // ---------- Main function ----------
 
 // Remove a piece of text from the title and tidy the leftovers
@@ -174,17 +187,28 @@ function analyzeQuickAdd(text, chosenGroup = null, now = new Date()) {
     foundDate = null;
   }
 
-  const guessed = foundDate ? 'reminders' : (wordGroup || 'inbox');
+  // A time ("17:30") also means it's a reminder
+  const foundTime = findTime(title);
+  const guessed = (foundDate || foundTime) ? 'reminders' : (wordGroup || 'inbox');
 
   const group = chosenGroup || shortcutGroup || guessed;
   const fields = {};
 
   if (group === 'reminders') {
+    if (foundTime) {
+      fields.time = foundTime.time;
+      title = removeFromTitle(title, foundTime.matched);
+    }
     if (foundDate) {
       fields.date = toISODate(foundDate.date);
       title = removeFromTitle(title, foundDate.matched);
     } else {
-      fields.date = toISODate(startOfDay(now));  // no date typed → today
+      // No date typed → today. But if only a time was typed and
+      // it already passed today ("8:00" at noon), it means tomorrow.
+      const day = startOfDay(now);
+      const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      if (foundTime && foundTime.time <= nowTime) day.setDate(day.getDate() + 1);
+      fields.date = toISODate(day);
     }
     fields.repeatYearly = hasAnyWord(text, QUICK_ADD_RULES.yearlyWords);
     if (rest) fields.text = rest;

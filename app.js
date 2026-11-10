@@ -109,6 +109,7 @@ function groupLabel(groupId, fields) {
   const group = findGroup(groupId);
   let label = `${group.emoji} ${group.name}`;
   if (fields.date) label += ` · ${formatDate(fields.date)}`;
+  if (fields.time) label += ` · ${fields.time}`;
   if (fields.repeatYearly) label += ` · ${TEXT.everyYear}`;
   return label;
 }

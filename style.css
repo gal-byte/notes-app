@@ -218,6 +218,7 @@ svg {
 
 .field input[type="text"],
 .field input[type="date"],
+.field input[type="time"],
 .field textarea,
 .field select {
   width: 100%;
@@ -229,6 +230,10 @@ svg {
   border-radius: 12px;
   outline: none;
 }
+/* Date and time boxes: numbers read left-to-right, keep them on the right side */
+.field input[type="date"],
+.field input[type="time"] { text-align: right; }
+
 .field input:focus,
 .field textarea:focus,
 .field select:focus { border-color: var(--accent); }

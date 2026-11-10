@@ -11,11 +11,12 @@ const MOVIE_LISTS = { watchlist: '🍿 לראות', watched: '✔️ ראיתי'
 const TITLE_FIELD = { key: 'title', type: 'text', label: 'כותרת' };
 const NOTES_FIELD = { key: 'text', type: 'textarea', label: 'הערות' };
 
-// Field types: text · textarea · date · checkbox · choice · rating · photo
+// Field types: text · textarea · date · time · checkbox · choice · rating · photo
 const FIELDS = {
   reminders: [
     TITLE_FIELD,
     { key: 'date', type: 'date', label: 'תאריך' },
+    { key: 'time', type: 'time', label: 'שעה (לא חובה)' },
     { key: 'repeatYearly', type: 'checkbox', label: 'חוזר כל שנה (ימי הולדת, ימי נישואין)' },
     NOTES_FIELD,
   ],
@@ -85,12 +86,19 @@ function daysUntil(date) {
   return Math.round((date - todayStart()) / 86400000);
 }
 
-// "היום" · "מחר" · "בעוד 5 ימים · 15/11"
-function whenLabel(date) {
+// "היום · 17:30" · "מחר" · "בעוד 5 ימים · 15/11"
+function whenLabel(date, time) {
   const days = daysUntil(date);
-  if (days === 0) return TEXT.today;
-  if (days === 1) return TEXT.tomorrow;
-  return `${TEXT.inDays(days)} · ${date.getDate()}/${date.getMonth() + 1}`;
+  let label;
+  if (days === 0) label = TEXT.today;
+  else if (days === 1) label = TEXT.tomorrow;
+  else label = `${TEXT.inDays(days)} · ${date.getDate()}/${date.getMonth() + 1}`;
+  return time ? `${label} · ${time}` : label;
+}
+
+// Soonest first: by day, then by time (reminders without a time come first that day)
+function bySoonest(a, b) {
+  return (a.next - b.next) || (a.item.time || '').localeCompare(b.item.time || '');
 }
 
 // The next few reminders, soonest first (used by Home)
@@ -99,7 +107,7 @@ async function upcomingReminders(limit) {
   return (await getItemsInGroup('reminders'))
     .map(item => ({ item, next: nextOccurrence(item) }))
     .filter(r => r.next && r.next >= today)
-    .sort((a, b) => a.next - b.next)
+    .sort(bySoonest)
     .slice(0, limit);
 }
 
@@ -183,7 +191,7 @@ function parseTags(text) {
 
 function reminderRow({ item, next }, isPast) {
   let meta = '';
-  if (next) meta = isPast ? formatDate(item.date) : whenLabel(next);
+  if (next) meta = isPast ? formatDate(item.date) : whenLabel(next, item.time);
   if (item.repeatYearly) meta = `🔁 ${meta}`;
   return itemRow(item, meta, { dim: isPast });
 }
@@ -191,7 +199,7 @@ function reminderRow({ item, next }, isPast) {
 function remindersList(items) {
   const today = todayStart();
   const all = items.map(item => ({ item, next: nextOccurrence(item) }));
-  const upcoming = all.filter(r => r.next && r.next >= today).sort((a, b) => a.next - b.next);
+  const upcoming = all.filter(r => r.next && r.next >= today).sort(bySoonest);
   const past = all.filter(r => !r.next || r.next < today).sort((a, b) => (b.next || 0) - (a.next || 0));
 
   let html = '';
@@ -294,6 +302,10 @@ function fieldHtml(field, value) {
     case 'date':
       return `<label class="field">${label}
         <input type="date" ${key} value="${escapeHtml(value)}"></label>`;
+
+    case 'time':
+      return `<label class="field">${label}
+        <input type="time" ${key} value="${escapeHtml(value)}"></label>`;
 
     case 'checkbox':
       return `<label class="field check">
