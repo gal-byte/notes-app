@@ -32,8 +32,28 @@ const TEXT = {
   calendarComingSoon: 'כאן יופיע לוח השנה',
   emptyGroup: 'אין עדיין פריטים בקבוצה הזו',
 
-  // A function, because the word changes with the number
+  // Lists
+  newItem: 'פריט חדש',
+  untitled: 'ללא כותרת',
+  all: 'הכל',
+  upcomingTitle: 'בקרוב',
+  pastTitle: 'עבר',
+  recommendedBy: name => `המלצה של ${name}`,
+
+  // Item screen
+  saved: 'נשמר ✓',
+  typeTitleToSave: 'יישמר אחרי שתכתבו כותרת',
+  moveToGroup: 'קבוצה',
+  deleteItem: 'מחיקה',
+  confirmDelete: 'למחוק את הפריט? אי אפשר לבטל את זה.',
+  addPhoto: '📷 הוספת תמונה',
+  changePhoto: '📷 החלפת תמונה',
+  removePhoto: 'הסרה',
+  photoError: 'לא הצלחתי לפתוח את התמונה. אפשר לנסות תמונה אחרת.',
+
+  // Functions, because the words change with the number
   itemCount: n => n === 0 ? 'ריק' : n === 1 ? 'פריט אחד' : `${n} פריטים`,
+  inDays: n => `בעוד ${n} ימים`,
 };
 
 // ============================================================
@@ -49,37 +69,26 @@ const GROUPS = [
   { id: 'inbox',     name: 'לא ממוין', emoji: '📥' },
 ];
 
+// Find a group by its id. Unknown ids fall back to לא ממוין,
+// so an item never gets lost.
 function findGroup(id) {
-  return GROUPS.find(group => group.id === id);
+  return GROUPS.find(group => group.id === id) || GROUPS.find(group => group.id === 'inbox');
+}
+
+function groupExists(id) {
+  return GROUPS.some(group => group.id === id);
 }
 
 // ============================================================
 // HELPERS FOR SHOWING ITEMS
+// (the lists themselves are in sections.js)
 // ============================================================
 
 // Makes text safe to put inside HTML. Without this, typing
-// something like "<b>" in a note would break the page.
+// something like "<b>" or a quote mark in a note would break the page.
 function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text ?? '';
-  return div.innerHTML;
-}
-
-// One line in a list. dir="auto" lets English titles show
-// correctly inside the Hebrew layout.
-function itemRow(item, showGroupEmoji) {
-  const group = findGroup(item.group);
-  const emoji = showGroupEmoji ? `<span class="emoji">${group ? group.emoji : '📝'}</span>` : '';
-  return `
-    <div class="item-row">
-      ${emoji}
-      <span class="item-title" dir="auto">${escapeHtml(item.title)}</span>
-    </div>
-  `;
-}
-
-function itemList(items, showGroupEmoji) {
-  return `<div class="card list">${items.map(item => itemRow(item, showGroupEmoji)).join('')}</div>`;
+  const safe = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  return String(text ?? '').replace(/[&<>"']/g, char => safe[char]);
 }
 
 // "2026-03-12" → "היום" / "מחר" / "12/3" / "12/3/2027"
@@ -107,10 +116,10 @@ function groupLabel(groupId, fields) {
 // One chat bubble on the Add screen
 function bubble(item) {
   return `
-    <div class="bubble">
+    <a class="bubble" href="#/item/${item.id}">
       <div dir="auto">${escapeHtml(item.title)}</div>
       <div class="bubble-label">${groupLabel(item.group, item)}</div>
-    </div>
+    </a>
   `;
 }
 
@@ -125,14 +134,23 @@ function emptyCard(emoji, message) {
 // ============================================================
 
 async function homeScreen() {
+  const upcoming = await upcomingReminders(5);
   const recent = await getRecentItems(5);
+
+  const upcomingHtml = upcoming.length
+    ? listCard(upcoming.map(r => reminderRow(r, false)))
+    : emptyCard('🗓️', TEXT.noUpcoming);
+
+  const recentHtml = recent.length
+    ? listCard(recent.map(item => itemRow(item, '', { emoji: findGroup(item.group).emoji })))
+    : emptyCard('✨', TEXT.noRecent);
 
   return `
     <h2 class="section-title">${TEXT.upcoming}</h2>
-    ${emptyCard('🗓️', TEXT.noUpcoming)}
+    ${upcomingHtml}
 
     <h2 class="section-title">${TEXT.recent}</h2>
-    ${recent.length ? itemList(recent, true) : emptyCard('✨', TEXT.noRecent)}
+    ${recentHtml}
   `;
 }
 
@@ -289,9 +307,22 @@ async function groupsScreen() {
   return `<div class="groups-grid">${tiles}</div>`;
 }
 
-async function groupScreen(group) {
-  const items = await getItemsInGroup(group.id);
-  return items.length ? itemList(items, false) : emptyCard(group.emoji, TEXT.emptyGroup);
+// Filter chips (like "🍿 לראות / ✔️ ראיתי") show only the
+// matching rows. Works on any screen that has them.
+function setupFilters() {
+  const chips = document.querySelectorAll('[data-filter]');
+  if (!chips.length) return;
+
+  function apply(value) {
+    chips.forEach(chip => chip.classList.toggle('selected', chip.dataset.filter === value));
+    document.querySelectorAll('[data-filter-values]').forEach(row => {
+      row.hidden = value !== '' && !row.dataset.filterValues.split('|').includes(value);
+    });
+  }
+
+  chips.forEach(chip => chip.addEventListener('click', () => apply(chip.dataset.filter)));
+  const selected = document.querySelector('[data-filter].selected');
+  apply(selected ? selected.dataset.filter : '');
 }
 
 // ============================================================
@@ -301,6 +332,47 @@ async function groupScreen(group) {
 // This also makes the phone's back button work for free.
 // ============================================================
 
+// Decide which screen an address means. Returns:
+//   title – text in the top bar
+//   html  – the screen's content
+//   tab   – which bottom tab to highlight
+//   back  – where the back arrow goes (no back arrow if missing)
+//   setup – extra code to run after the screen is shown
+async function buildScreen(page, id) {
+  if (page === 'search') {
+    return { title: TEXT.search, html: searchScreen(), tab: 'search' };
+  }
+  if (page === 'add') {
+    return { title: TEXT.add, html: await addScreen(), tab: 'add', setup: setupAddScreen };
+  }
+  if (page === 'calendar') {
+    return { title: TEXT.calendar, html: calendarScreen(), tab: 'calendar' };
+  }
+  if (page === 'groups') {
+    return { title: TEXT.groups, html: await groupsScreen(), tab: 'groups' };
+  }
+  if (page === 'group' && groupExists(id)) {
+    const group = findGroup(id);
+    return { title: `${group.emoji} ${group.name}`, html: await groupScreen(group),
+             tab: 'groups', back: '#/groups' };
+  }
+  if (page === 'new' && groupExists(id)) {
+    const group = findGroup(id);
+    return { title: `${group.emoji} ${group.name}`, html: newItemScreen(id),
+             tab: 'groups', back: `#/group/${id}`, setup: setupItemScreen };
+  }
+  if (page === 'item') {
+    const html = await itemScreen(id);
+    if (html) {
+      const group = findGroup(editor.group);
+      return { title: `${group.emoji} ${group.name}`, html,
+               tab: 'groups', back: `#/group/${group.id}`, setup: setupItemScreen };
+    }
+  }
+  // Anything unknown (or no hash at all) → home
+  return { title: TEXT.appName, html: await homeScreen(), tab: 'home' };
+}
+
 // Counts screen changes. If you tap quickly, an older screen
 // that's still loading must not replace the newer one.
 let latestScreen = 0;
@@ -308,57 +380,41 @@ let latestScreen = 0;
 async function showScreen() {
   const thisScreen = ++latestScreen;
 
+  // Save any unsaved typing on the item screen we're leaving
+  if (flushEditor) {
+    const flush = flushEditor;
+    flushEditor = null;
+    await flush();
+  }
+
+  const oldPhotoUrls = takePhotoUrls();
+
   // "#/group/songs" → ["group", "songs"]
   const [page, id] = location.hash.replace('#/', '').split('/');
-
-  let title;
-  let html;
-  let tab = page;          // which bottom tab to highlight
-  let showBack = false;
-
-  if (page === 'search') {
-    title = TEXT.search;
-    html = searchScreen();
-  } else if (page === 'add') {
-    title = TEXT.add;
-    html = await addScreen();
-  } else if (page === 'calendar') {
-    title = TEXT.calendar;
-    html = calendarScreen();
-  } else if (page === 'groups') {
-    title = TEXT.groups;
-    html = await groupsScreen();
-  } else if (page === 'group' && findGroup(id)) {
-    const group = findGroup(id);
-    title = `${group.emoji} ${group.name}`;
-    html = await groupScreen(group);
-    tab = 'groups';
-    showBack = true;
-  } else {
-    // Anything unknown (or no hash at all) → home
-    title = TEXT.appName;
-    html = await homeScreen();
-    tab = 'home';
-  }
+  const screen = await buildScreen(page, id);
 
   if (thisScreen !== latestScreen) return;  // a newer screen took over
 
-  document.getElementById('screen-title').textContent = title;
-  document.getElementById('screen').innerHTML = html;
-  document.body.dataset.page = tab;  // lets style.css style each screen
+  document.getElementById('screen-title').textContent = screen.title;
+  document.getElementById('screen').innerHTML = screen.html;
+  document.body.dataset.page = screen.tab;  // lets style.css style each screen
   document.body.classList.remove('typing');
-  document.getElementById('back-button').hidden = !showBack;
-  document.title = title === TEXT.appName ? title : `${title} · ${TEXT.appName}`;
+  document.title = screen.title === TEXT.appName ? screen.title : `${screen.title} · ${TEXT.appName}`;
+
+  const backButton = document.getElementById('back-button');
+  backButton.hidden = !screen.back;
+  if (screen.back) backButton.href = screen.back;
 
   // Highlight the current tab
   document.querySelectorAll('.tabbar a').forEach(link => {
-    link.classList.toggle('active', link.dataset.tab === tab);
+    link.classList.toggle('active', link.dataset.tab === screen.tab);
   });
 
   window.scrollTo(0, 0);
+  oldPhotoUrls.forEach(url => URL.revokeObjectURL(url));  // free photos of the old screen
 
-  // Screens with buttons and typing need extra setup
-  if (tab === 'add') setupAddScreen();
+  setupFilters();
+  if (screen.setup) screen.setup();
 }
 
 // Fill in the tab bar labels from TEXT
@@ -366,9 +422,27 @@ document.querySelectorAll('[data-text]').forEach(element => {
   element.textContent = TEXT[element.dataset.text];
 });
 
+// The back arrow: go back like the phone's back button, but if
+// the app was opened straight on this screen, go to the arrow's address.
+let movedInsideApp = false;
+document.getElementById('back-button').addEventListener('click', event => {
+  if (movedInsideApp) {
+    event.preventDefault();
+    history.back();
+  }
+});
+
 // Draw the right screen now, and every time the address changes
-window.addEventListener('hashchange', showScreen);
+window.addEventListener('hashchange', () => {
+  movedInsideApp = true;
+  showScreen();
+});
 showScreen();
+
+// Save unsaved typing if you switch apps or close this one
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && flushEditor) flushEditor();
+});
 
 // Ask the phone to keep our data safe (see db.js)
 askForPersistentStorage();

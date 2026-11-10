@@ -202,6 +202,8 @@ function analyzeQuickAdd(text, chosenGroup = null, now = new Date()) {
       }
     }
     if (rest) fields.text = rest;
+  } else if (group === 'recipes') {
+    if (rest) fields.ingredients = rest;  // lines after the name = ingredients
   } else {
     if (rest) fields.text = rest;
   }

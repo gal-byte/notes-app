@@ -139,12 +139,185 @@ svg {
 }
 .item-row:last-child { border-bottom: none; }
 .item-row .emoji { font-size: 20px; }
+.item-row.dim { opacity: 0.55; }  /* reminders that already passed */
 
-.item-title {
+.item-main {
   flex: 1;
+  min-width: 0;  /* lets long titles shrink and end with "…" */
+  display: flex;
+  flex-direction: column;
+}
+
+.item-title,
+.item-meta {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;  /* long titles end with "…" */
+}
+
+.item-meta {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* Small recipe photo in the list */
+.thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+/* "＋ פריט חדש" at the top of each group */
+.new-button {
+  display: block;
+  margin-bottom: 12px;
+  padding: 12px;
+  text-align: center;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--card);
+  border-radius: var(--radius);
+}
+
+/* Filter chips above a list – scroll sideways if there are many */
+.filter-chips {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.filter-chips .chip { margin-bottom: 0; white-space: nowrap; }
+.chip.selected {
+  color: var(--accent-text);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ============================================================
+   ITEM SCREEN (the edit form)
+   ============================================================ */
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.field input[type="text"],
+.field input[type="date"],
+.field textarea,
+.field select {
+  width: 100%;
+  padding: 12px 14px;
+  font: inherit;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  outline: none;
+}
+.field input:focus,
+.field textarea:focus,
+.field select:focus { border-color: var(--accent); }
+
+.field textarea {
+  resize: none;
+  overflow: hidden;   /* it grows instead of scrolling */
+  line-height: 1.6;
+}
+
+.field input[type="text"][data-key="title"] { font-size: 20px; font-weight: 600; }
+
+/* Checkbox on one line with its text */
+.field.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+.field.check input { width: 22px; height: 22px; accent-color: var(--accent); }
+
+/* Buttons side by side, the chosen one is filled */
+.segmented {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--card);
+  border-radius: 12px;
+}
+.segmented button {
+  flex: 1;
+  padding: 8px;
+  color: var(--text);
+  background: none;
+  border: none;
+  border-radius: 9px;
+}
+.segmented button.selected {
+  color: var(--accent-text);
+  background: var(--accent);
+}
+
+/* Rating stars */
+.stars { display: flex; gap: 4px; }
+.stars button {
+  padding: 0 2px;
+  font-size: 32px;
+  line-height: 1;
+  color: var(--line);
+  background: none;
+  border: none;
+}
+.stars button.on { color: #f5b301; }
+
+/* Recipe photo */
+.photo-preview {
+  width: 100%;
+  max-height: 320px;
+  object-fit: cover;
+  border-radius: var(--radius);
+}
+.photo-buttons { display: flex; gap: 8px; }
+
+.small-button {
+  padding: 8px 14px;
+  font-size: 15px;
+  color: var(--accent);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.editor-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.save-status {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.danger-button {
+  padding: 8px 16px;
+  color: #d93025;
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: 10px;
 }
 
 /* Search box */
