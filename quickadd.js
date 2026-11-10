@@ -129,12 +129,12 @@ function findDate(text, now) {
   //   "שישי הזה" / "שבת הזאת"   → this week's (today counts)
   //   "שישי הבא" / "שבת הבאה"   → next week's (a week after this week's)
   //   "ביום שישי" / "בשישי"     → the coming one (next week's if it's today)
-  // ("בשני" / "בראשון" alone are left out: they also mean "in two" / "at first")
+  // ("בראשון" alone is left out: it also means "at first")
   const days = WEEKDAY_NAMES.join('|');
   m = text.match(new RegExp(
     `(^|\\s)(?:ב?(?:יום\\s+)?(${days}|שבת)\\s+(הזה|הזאת|הזו|הבא|הבאה)` +  // שישי הבא · יום שבת הזה
     `|ב?יום\\s+(${days}|שבת)` +                                         // ביום שישי
-    `|ב(שלישי|רביעי|חמישי|שישי|שבת))${EDGE_AFTER}`                     // בשישי · בשבת
+    `|ב(שני|שלישי|רביעי|חמישי|שישי|שבת))${EDGE_AFTER}`                 // בשני · בשישי · בשבת
   ));
   if (m) {
     const name = m[2] || m[4] || m[5];
@@ -152,11 +152,18 @@ function findDate(text, now) {
     return { date, matched: m[0].slice(m[1].length) };
   }
 
-  // שבוע הבא · בשבוע הבא → a week from today
-  m = text.match(new RegExp(`(^|\\s)(?:ב)?שבוע\\s+הבא${EDGE_AFTER}`));
+  // A number of days or weeks from today:
+  //   בעוד יום · בעוד יומיים · בעוד 3 ימים · בעוד שבוע · בעוד שבועיים · בעוד 3 שבועות · בשבוע הבא
+  m = text.match(new RegExp(
+    `(^|\\s)(?:בעוד\\s+(?:(יום|יומיים|שבוע|שבועיים)|(\\d{1,3})\\s+(ימים|שבועות))|(?:ב)?שבוע\\s+הבא)${EDGE_AFTER}`
+  ));
   if (m) {
+    const words = { 'יום': 1, 'יומיים': 2, 'שבוע': 7, 'שבועיים': 14 };
+    let ahead = 7;  // "בשבוע הבא"
+    if (m[2]) ahead = words[m[2]];
+    if (m[3]) ahead = Number(m[3]) * (m[4] === 'שבועות' ? 7 : 1);
     const date = new Date(today);
-    date.setDate(date.getDate() + 7);
+    date.setDate(date.getDate() + ahead);
     return { date, matched: m[0].slice(m[1].length) };
   }
 
@@ -193,6 +200,21 @@ function findTime(text) {
   if (hours > 23 || minutes > 59) return null;
   const time = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   return { time, matched: m[0].slice(m[1].length), unsure };
+}
+
+// For the time box on the edit screen: turn what you typed into "HH:MM".
+//   "1020" → "10:20" · "930" → "09:30" · "17:30" / "17.30" → "17:30"
+//   "9" / "בשעה 9" → "09:00" · anything else → null
+function normalizeTime(typed) {
+  const text = typed.trim().replace(/^(?:בשעה|שעה|ב[-־]?)\s*/, '');
+  const m = text.match(/^(\d{1,2})[:.](\d{2})$/)   // 17:30 · 17.30
+         || text.match(/^(\d{1,2})(\d{2})$/)       // 1730 · 930
+         || text.match(/^(\d{1,2})()$/);           // 9
+  if (!m) return null;
+  const hours = Number(m[1]);
+  const minutes = Number(m[2] || 0);
+  if (hours > 23 || minutes > 59) return null;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
 // ---------- Main function ----------

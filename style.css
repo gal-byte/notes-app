@@ -232,7 +232,10 @@ svg {
 }
 /* Date and time boxes: numbers read left-to-right, keep them on the right side */
 .field input[type="date"],
-.field input[type="time"] { text-align: right; }
+.field input[data-time] { text-align: right; }
+
+/* A time that can't be understood gets a red border */
+.field input.invalid { border-color: #d93025; }
 
 .field input:focus,
 .field textarea:focus,

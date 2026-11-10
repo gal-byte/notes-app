@@ -48,6 +48,7 @@ const TEXT = {
 
   // Item screen
   saved: 'נשמר ✓',
+  timeHint: 'למשל 1020 או 17:30',
   typeTitleToSave: 'יישמר אחרי שתכתבו כותרת',
   moveToGroup: 'קבוצה',
   deleteItem: 'מחיקה',

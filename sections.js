@@ -305,9 +305,12 @@ function fieldHtml(field, value) {
       return `<label class="field">${label}
         <input type="date" ${key} value="${escapeHtml(value)}"></label>`;
 
+    // A normal text box (not a clock), so you can type "1020" like in quick-add.
+    // inputmode="decimal" shows a number keyboard that also has a dot.
     case 'time':
       return `<label class="field">${label}
-        <input type="time" ${key} value="${escapeHtml(value)}"></label>`;
+        <input type="text" ${key} data-time inputmode="decimal" dir="ltr"
+               value="${escapeHtml(value)}" placeholder="${TEXT.timeHint}"></label>`;
 
     case 'checkbox':
       return `<label class="field check">
@@ -413,6 +416,18 @@ function setupItemScreen() {
     const element = event.target;
     const key = element.dataset.key;
     if (!key) return;
+
+    // Time box: only save once it makes sense ("1020" → "10:20")
+    if ('time' in element.dataset) {
+      const time = normalizeTime(element.value);
+      const empty = !element.value.trim();
+      element.classList.toggle('invalid', !empty && !time);
+      if (!empty && !time) return;  // still typing, or a mistake
+      editor.draft[key] = empty ? '' : time;
+      saveSoon();
+      return;
+    }
+
     editor.draft[key] = element.type === 'checkbox' ? element.checked : element.value;
     if (element.tagName === 'TEXTAREA') autoGrow(element);
     saveSoon();
@@ -454,6 +469,14 @@ function setupItemScreen() {
       flushEditor = null;
       location.replace(`#/group/${editor.group}`);
     }
+  });
+
+  // When you leave the time box, show the tidy version ("1020" → "10:20")
+  form.addEventListener('focusout', event => {
+    const element = event.target;
+    if (!('time' in (element.dataset || {}))) return;
+    const time = normalizeTime(element.value);
+    if (time) element.value = time;
   });
 
   // Choosing a photo
