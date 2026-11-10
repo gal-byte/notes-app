@@ -33,7 +33,9 @@ async function calendarScreen() {
     calendarMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     calendarSelected = toISODate(today);
   }
-  return `<div id="calendar">${await calendarHtml()}</div>`;
+  // The month (redrawn when you move around), then the
+  // "add all to Google Calendar" button below it
+  return `<div id="calendar">${await calendarHtml()}</div>${await addAllToCalendarHtml()}`;
 }
 
 async function calendarHtml() {
@@ -111,6 +113,7 @@ function selectedDayHtml(reminders) {
 
 function setupCalendar() {
   const box = document.getElementById('calendar');
+  setupAddAllToCalendar();
 
   async function redraw() {
     box.innerHTML = await calendarHtml();

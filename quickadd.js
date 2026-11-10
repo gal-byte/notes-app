@@ -302,22 +302,44 @@ function analyzeQuickAdd(text, chosenGroup = null, now = new Date()) {
     if (rest) fields.text = rest;
   } else if (group === 'songs') {
     fields.status = 'idea';
+    const statusOf = word => QUICK_ADD_RULES.songStatus[word.replace(/^[בה](?=טיוט)/, '')];
     const words = Object.keys(QUICK_ADD_RULES.songStatus).join('|');
-    const atStart = title.match(new RegExp(`^(${words})\\s*[-–:,]?\\s+(\\S)`));
-    const atEnd = title.match(new RegExp(`\\s+[-–:,]?\\s*(${words})$`));
-    if (atEnd) {
-      // "הים הכחול - טיוטה"
-      fields.status = QUICK_ADD_RULES.songStatus[atEnd[1]];
+    // "בטיוטה" / "הטיוטה" count too
+    const word = `((?:[בה](?=טיוט))?(?:${words}))`;
+    const atStart = title.match(new RegExp(`^\\(?${word}\\)?\\s*[-–:,.]?\\s*(\\S)`));
+    const atEnd = title.match(new RegExp(`[\\s(]+[-–:,]?\\s*\\(?${word}\\)?[.!]*$`));
+    const alone = title.match(new RegExp(`^${word}[.!]*$`));
+    let lyrics = rest;
+    if (alone) {
+      // Just "טיוטה" – keep it as the title, but use the status
+      fields.status = statusOf(alone[1]);
+    } else if (atEnd) {
+      // "הים הכחול - טיוטה", "הים הכחול (טיוטה)"
+      fields.status = statusOf(atEnd[1]);
       title = removeFromTitle(title, atEnd[0]);
     } else if (atStart) {
-      fields.status = QUICK_ADD_RULES.songStatus[atStart[1]];
+      fields.status = statusOf(atStart[1]);
       // "רעיון לשיר על הים" reads as a sentence, so keep it whole.
       // Otherwise remove the word: "טיוטה: הים הכחול" → "הים הכחול"
-      if (!(atStart[1] === 'רעיון' && atStart[2] === 'ל')) {
+      if (atStart[2] !== 'ל') {
         title = title.slice(atStart[0].length - 1);
       }
+    } else {
+      // A line of its own with only "טיוטה": "הים\nטיוטה"
+      // (not "גמור" – that could be a line of the song)
+      const lines = rest.split('\n');
+      const index = lines.findIndex(line => /^\s*\(?[בה]?טיוט[הא]\)?[.!]*\s*$/.test(line));
+      if (index !== -1) {
+        fields.status = 'draft';
+        lines.splice(index, 1);
+        lyrics = lines.join('\n').trim();
+      } else {
+        // "טיוטה" anywhere in the first line (an unusual word, so it's safe)
+        const middle = title.match(new RegExp(`(?:^|\\s)((?:[בה])?(?:טיוטה|טיוטא))(?=\\s|$)`));
+        if (middle) fields.status = 'draft';
+      }
     }
-    if (rest) fields.lyrics = rest;
+    if (lyrics) fields.lyrics = lyrics;
   } else if (group === 'movies') {
     fields.list = 'watchlist';
     for (const pattern of QUICK_ADD_RULES.recommendedBy) {

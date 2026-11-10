@@ -540,8 +540,7 @@ async function buildScreen(page, id, extra) {
   if (page === 'group' && groupExists(id)) {
     const group = findGroup(id);
     return { title: `${group.emoji} ${group.name}`, html: await groupScreen(group),
-             tab: 'groups', back: '#/groups',
-             setup: group.id === 'reminders' ? setupRemindersScreen : null };
+             tab: 'groups', back: '#/groups' };
   }
   if (page === 'new' && groupExists(id)) {
     // "#/new/reminders/2026-11-20" → a new reminder already set to that day

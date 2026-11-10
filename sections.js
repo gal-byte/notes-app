@@ -212,15 +212,6 @@ function remindersList(items) {
   const past = all.filter(r => !r.next || r.next < today).sort((a, b) => (b.next || 0) - (a.next || 0));
 
   let html = '';
-  // Upcoming reminders that aren't in Google Calendar yet get one button for all
-  const missing = notInCalendar(items).length;
-  if (missing) {
-    html += `
-      <div class="calendar-box">
-        <button type="button" class="small-button wide" data-calendar-all>${TEXT.calendarAddAll(missing)}</button>
-        <p class="backup-status" id="calendar-all-status"></p>
-      </div>`;
-  }
   if (upcoming.length) {
     html += `<h2 class="section-title">${TEXT.upcomingTitle}</h2>`;
     html += listCard(upcoming.map(r => reminderRow(r, false)));
@@ -242,8 +233,18 @@ function notInCalendar(items) {
   });
 }
 
-// The "add all to calendar" button on the reminders screen
-function setupRemindersScreen() {
+// The "add all to Google Calendar" button (shown on the calendar screen)
+async function addAllToCalendarHtml() {
+  const missing = notInCalendar(await getItemsInGroup('reminders')).length;
+  if (!missing) return '';
+  return `
+    <div class="calendar-box">
+      <button type="button" class="small-button wide" data-calendar-all>${TEXT.calendarAddAll(missing)}</button>
+      <p class="backup-status" id="calendar-all-status"></p>
+    </div>`;
+}
+
+function setupAddAllToCalendar() {
   const button = document.querySelector('[data-calendar-all]');
   if (!button) return;
   const status = document.getElementById('calendar-all-status');
