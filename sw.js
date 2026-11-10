@@ -28,6 +28,7 @@ const APP_FILES = [
   'calendar.js',
   'groups.js',
   'search.js',
+  'drive.js',
   'backup.js',
   'app.js',
   'manifest.json',

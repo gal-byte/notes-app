@@ -216,8 +216,10 @@ async function backupScreen() {
   const persisted = navigator.storage && navigator.storage.persisted ? await navigator.storage.persisted() : false;
 
   return `
+    ${driveCard()}
+
     <div class="card backup-card">
-      <h2 class="card-title">💾 ${TEXT.backupTitle}</h2>
+      <h2 class="card-title">📤 ${TEXT.backupTitle}</h2>
       <p class="muted">${TEXT.backupExplain}</p>
       <p class="backup-facts">${TEXT.backupCounts(items.length, photos)} · ${lastText}</p>
       <button type="button" class="primary-button" data-backup="full">${TEXT.backupFull}</button>
@@ -262,27 +264,36 @@ function setupBackupScreen() {
   document.getElementById('restore-file').addEventListener('change', async event => {
     const file = event.target.files[0];
     event.target.value = '';  // allow picking the same file again later
-    if (!file) return;
-    try {
-      const backup = await readBackupFile(file);
-      const local = {
-        items: await getAllItems(),
-        groups: (await getCustomGroups()).map(withoutFlag),
-        deleted: await getDeletedRecords(),
-      };
-      const plan = planMerge(local, backup);
-      if (plan.changes === 0) {
-        restoreStatus.textContent = TEXT.restoreNothing;
-        return;
-      }
-      if (!confirm(TEXT.restoreConfirm(plan.counts))) return;
-      restoreStatus.textContent = TEXT.restoreWorking;
-      await applyMerge(plan);
-      restoreStatus.textContent = TEXT.restoreDone(plan.counts);
-    } catch (error) {
-      restoreStatus.textContent = error.message || TEXT.notABackup;
-    }
+    if (file) await restoreBackupFile(file, restoreStatus);
   });
+
+  setupDriveCard();
+}
+
+// Used by both "pick a file" and "restore from Drive"
+async function restoreBackupFile(file, status) {
+  try {
+    const backup = await readBackupFile(file);
+    const local = {
+      items: await getAllItems(),
+      groups: (await getCustomGroups()).map(withoutFlag),
+      deleted: await getDeletedRecords(),
+    };
+    const plan = planMerge(local, backup);
+    if (plan.changes === 0) {
+      status.textContent = TEXT.restoreNothing;
+      return;
+    }
+    if (!confirm(TEXT.restoreConfirm(plan.counts))) {
+      status.textContent = '';
+      return;
+    }
+    status.textContent = TEXT.restoreWorking;
+    await applyMerge(plan);
+    status.textContent = TEXT.restoreDone(plan.counts);
+  } catch (error) {
+    status.textContent = error.message || TEXT.notABackup;
+  }
 }
 
 // ---------- Reminder on Home ----------
