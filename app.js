@@ -19,7 +19,16 @@ const TEXT = {
   searchPlaceholder: 'חיפוש בכל הפתקים…',
   searchHint: 'אפשר להקליד כדי לחפש בכל הקבוצות',
 
-  addComingSoon: 'כאן תופיע תיבת ההוספה המהירה',
+  addPlaceholder: 'מה לשמור?',
+  addHint: 'כותבים כל דבר, והאפליקציה מנחשת לאיזו קבוצה הוא שייך. אפשר ללחוץ על התווית כדי לשנות.',
+  addShortcuts: 'קיצורים: ת: תזכורת · ש: שיר · ס: סרט · מ: מתכון',
+  send: 'שליחה',
+  undo: 'ביטול',
+  savedIn: group => `נשמר ב־${group.emoji} ${group.name}`,
+  today: 'היום',
+  tomorrow: 'מחר',
+  everyYear: 'כל שנה',
+
   calendarComingSoon: 'כאן יופיע לוח השנה',
   emptyGroup: 'אין עדיין פריטים בקבוצה הזו',
 
@@ -73,6 +82,38 @@ function itemList(items, showGroupEmoji) {
   return `<div class="card list">${items.map(item => itemRow(item, showGroupEmoji)).join('')}</div>`;
 }
 
+// "2026-03-12" → "היום" / "מחר" / "12/3" / "12/3/2027"
+function formatDate(isoDate) {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const daysAway = Math.round((date - today) / 86400000);
+
+  if (daysAway === 0) return TEXT.today;
+  if (daysAway === 1) return TEXT.tomorrow;
+  return year === today.getFullYear() ? `${day}/${month}` : `${day}/${month}/${year}`;
+}
+
+// Small label like "🎂 תזכורות · מחר · כל שנה"
+function groupLabel(groupId, fields) {
+  const group = findGroup(groupId);
+  let label = `${group.emoji} ${group.name}`;
+  if (fields.date) label += ` · ${formatDate(fields.date)}`;
+  if (fields.repeatYearly) label += ` · ${TEXT.everyYear}`;
+  return label;
+}
+
+// One chat bubble on the Add screen
+function bubble(item) {
+  return `
+    <div class="bubble">
+      <div dir="auto">${escapeHtml(item.title)}</div>
+      <div class="bubble-label">${groupLabel(item.group, item)}</div>
+    </div>
+  `;
+}
+
 function emptyCard(emoji, message) {
   return `<div class="card empty"><span class="emoji">${emoji}</span>${message}</div>`;
 }
@@ -102,12 +143,124 @@ function searchScreen() {
   `;
 }
 
-function addScreen() {
+// The Add screen looks like a chat: what you saved appears as
+// bubbles, and you type at the bottom.
+async function addScreen() {
+  const groupButtons = GROUPS.map(group =>
+    `<button type="button" class="chip" data-group="${group.id}">${group.emoji} ${group.name}</button>`
+  ).join('');
+
   return `
-    <div class="card empty">
-      <span class="emoji">✏️</span>${TEXT.addComingSoon}
-    </div>
+    <div class="chat" id="chat">${await chatBubbles()}</div>
+
+    <form class="composer" id="composer">
+      <div class="composer-inner">
+        <div class="toast" id="toast" hidden></div>
+        <button type="button" class="chip guess-chip" id="guess-chip" hidden></button>
+        <div class="group-picker" id="group-picker" hidden>${groupButtons}</div>
+        <div class="composer-row">
+          <textarea id="quick-text" rows="1" dir="auto" placeholder="${TEXT.addPlaceholder}"></textarea>
+          <button class="send-button" aria-label="${TEXT.send}">
+            <svg viewBox="0 0 24 24"><path d="M19 12H5m6-6-6 6 6 6"/></svg>
+          </button>
+        </div>
+      </div>
+    </form>
   `;
+}
+
+async function chatBubbles() {
+  const items = (await getRecentItems(30)).reverse();  // oldest at top, newest at bottom
+  if (!items.length) {
+    return `<p class="empty">${TEXT.addHint}<br><br>${TEXT.addShortcuts}</p>`;
+  }
+  return items.map(bubble).join('');
+}
+
+// Makes the Add screen work: live guessing, picking a group, sending, undo
+function setupAddScreen() {
+  const form = document.getElementById('composer');
+  const textBox = document.getElementById('quick-text');
+  const guessChip = document.getElementById('guess-chip');
+  const picker = document.getElementById('group-picker');
+  const toast = document.getElementById('toast');
+  const chat = document.getElementById('chat');
+
+  let chosenGroup = null;  // set when you tap a group yourself
+  let toastTimer = null;
+
+  // Update the guess label while typing
+  function updateGuess() {
+    // Grow the box with the text (up to a limit set in style.css)
+    textBox.style.height = 'auto';
+    textBox.style.height = textBox.scrollHeight + 'px';
+
+    if (!textBox.value.trim()) {
+      guessChip.hidden = true;
+      picker.hidden = true;
+      chosenGroup = null;
+      return;
+    }
+    const { group, fields } = analyzeQuickAdd(textBox.value, chosenGroup);
+    guessChip.textContent = groupLabel(group, fields) + ' ▾';
+    guessChip.hidden = false;
+  }
+
+  function scrollToBottom() {
+    window.scrollTo(0, document.body.scrollHeight);
+  }
+
+  function showToast(html) {
+    toast.innerHTML = html;
+    toast.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toast.hidden = true; }, 5000);
+  }
+
+  textBox.addEventListener('input', updateGuess);
+
+  // Tap the label → show all groups; tap a group → use it
+  guessChip.addEventListener('click', () => { picker.hidden = !picker.hidden; });
+  picker.addEventListener('click', event => {
+    const button = event.target.closest('[data-group]');
+    if (!button) return;
+    chosenGroup = button.dataset.group;
+    picker.hidden = true;
+    updateGuess();
+  });
+
+  // Send
+  form.addEventListener('submit', async event => {
+    event.preventDefault();  // stop the browser from reloading the page
+    if (!textBox.value.trim()) return;
+
+    const { group, fields } = analyzeQuickAdd(textBox.value, chosenGroup);
+    const item = await addItem(group, fields);
+
+    textBox.value = '';
+    updateGuess();
+    chat.innerHTML = await chatBubbles();
+    scrollToBottom();
+
+    showToast(`<span>${TEXT.savedIn(findGroup(group))}</span>
+               <button type="button" id="undo-button">${TEXT.undo}</button>`);
+    document.getElementById('undo-button').addEventListener('click', async () => {
+      await deleteItem(item.id);
+      toast.hidden = true;
+      chat.innerHTML = await chatBubbles();
+    });
+  });
+
+  // Keep the keyboard open when tapping buttons in the box
+  form.addEventListener('mousedown', event => {
+    if (event.target.closest('button')) event.preventDefault();
+  });
+
+  // While typing, hide the bottom tabs to leave more room
+  textBox.addEventListener('focus', () => document.body.classList.add('typing'));
+  textBox.addEventListener('blur', () => document.body.classList.remove('typing'));
+
+  scrollToBottom();
 }
 
 function calendarScreen() {
@@ -165,7 +318,7 @@ async function showScreen() {
     html = searchScreen();
   } else if (page === 'add') {
     title = TEXT.add;
-    html = addScreen();
+    html = await addScreen();
   } else if (page === 'calendar') {
     title = TEXT.calendar;
     html = calendarScreen();
@@ -189,6 +342,8 @@ async function showScreen() {
 
   document.getElementById('screen-title').textContent = title;
   document.getElementById('screen').innerHTML = html;
+  document.body.dataset.page = tab;  // lets style.css style each screen
+  document.body.classList.remove('typing');
   document.getElementById('back-button').hidden = !showBack;
   document.title = title === TEXT.appName ? title : `${title} · ${TEXT.appName}`;
 
@@ -198,6 +353,9 @@ async function showScreen() {
   });
 
   window.scrollTo(0, 0);
+
+  // Screens with buttons and typing need extra setup
+  if (tab === 'add') setupAddScreen();
 }
 
 // Fill in the tab bar labels from TEXT
