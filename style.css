@@ -201,7 +201,9 @@ svg {
   gap: 10px;
 }
 
-.field .emoji-input {
+/* "input.emoji-input" (not just ".emoji-input") so it beats the general
+   text-box rule that makes every box full width */
+.field input.emoji-input {
   flex-shrink: 0;
   width: 64px;
   height: 64px;
@@ -211,6 +213,8 @@ svg {
 }
 
 .emoji-choices {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
