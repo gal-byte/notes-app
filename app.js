@@ -21,7 +21,7 @@ const TEXT = {
 
   addPlaceholder: 'מה לשמור?',
   addHint: 'כותבים כל דבר, והאפליקציה מנחשת לאיזו קבוצה הוא שייך. אפשר ללחוץ על התווית כדי לשנות.',
-  addShortcuts: 'קיצורים: ת: תזכורת · ש: שיר · ס: סרט · מ: מתכון',
+  addShortcuts: 'קיצורים:<br>ת: תזכורת · ש: שיר<br>ס: סרט · מ: מתכון',
   send: 'שליחה',
   undo: 'ביטול',
   savedIn: group => `נשמר ב־${group.emoji} ${group.name}`,
@@ -235,10 +235,13 @@ function setupAddScreen() {
     if (!textBox.value.trim()) return;
 
     const { group, fields } = analyzeQuickAdd(textBox.value, chosenGroup);
-    const item = await addItem(group, fields);
 
+    // Clear the box right away, so you can start typing the next one
+    // while this one is still being saved
     textBox.value = '';
     updateGuess();
+
+    const item = await addItem(group, fields);
     chat.innerHTML = await chatBubbles();
     scrollToBottom();
 
