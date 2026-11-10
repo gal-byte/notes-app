@@ -28,6 +28,7 @@ const APP_FILES = [
   'calendar.js',
   'groups.js',
   'search.js',
+  'backup.js',
   'app.js',
   'manifest.json',
   'icons/icon-192.png',

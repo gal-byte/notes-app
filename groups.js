@@ -122,8 +122,9 @@ function setupGroupSettings() {
       if (to < 0 || to >= list.length) return;
       const a = list[from];
       const b = list[to];
-      await saveCustomGroup({ ...withoutFlag(a), order: b.order });
-      await saveCustomGroup({ ...withoutFlag(b), order: a.order });
+      const now = Date.now();
+      await saveCustomGroup({ ...withoutFlag(a), order: b.order, updatedAt: now });
+      await saveCustomGroup({ ...withoutFlag(b), order: a.order, updatedAt: now });
       await loadGroups();
       showScreen();  // redraw this screen with the new order
       return;
@@ -159,13 +160,13 @@ function setupGroupSettings() {
 
     if (id) {
       const old = customGroups().find(g => g.id === id);
-      await saveCustomGroup({ ...withoutFlag(old), name, emoji, shortcut });
+      await saveCustomGroup({ ...withoutFlag(old), name, emoji, shortcut, updatedAt: Date.now() });
       await loadGroups();
       leave(id);
     } else {
       const highest = Math.max(0, ...customGroups().map(g => g.order));
       const newId = 'g-' + crypto.randomUUID().slice(0, 8);
-      await saveCustomGroup({ id: newId, name, emoji, shortcut, order: highest + 1 });
+      await saveCustomGroup({ id: newId, name, emoji, shortcut, order: highest + 1, updatedAt: Date.now() });
       await loadGroups();
       location.replace(`#/group/${newId}`);
     }

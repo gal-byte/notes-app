@@ -68,6 +68,33 @@ const TEXT = {
     ? `למחוק את הקבוצה "${name}"?`
     : `למחוק את הקבוצה "${name}"? ${count === 1 ? 'הפריט שבה יעבור' : `${count} הפריטים שבה יעברו`} ל"לא ממוין".`,
 
+  // Backup
+  backupScreenTitle: 'גיבוי ושחזור',
+  backupLink: '💾 גיבוי ושחזור',
+  backupTitle: 'גיבוי',
+  backupExplain: 'שומר את כל הפתקים בקובץ אחד. בתפריט השיתוף בוחרים Drive (או כל מקום אחר).',
+  backupCounts: (items, photos) => `${items} פריטים${photos ? `, ${photos} תמונות` : ''}`,
+  neverBackedUp: 'עוד לא גיבית',
+  backedUpToday: 'גובה היום',
+  lastBackupDaysAgo: n => n === 1 ? 'הגיבוי האחרון: אתמול' : `הגיבוי האחרון: לפני ${n} ימים`,
+  backupFull: 'גיבוי מלא (עם תמונות)',
+  backupTextOnly: 'גיבוי טקסט בלבד (קטן ומהיר)',
+  backupPreparing: 'מכין את הקובץ…',
+  backupShared: 'הגיבוי נשלח ✓',
+  backupDownloaded: 'הגיבוי ירד לתיקיית ההורדות ✓',
+  backupCancelled: 'הגיבוי בוטל',
+  backupNow: 'לגבות עכשיו',
+  restoreTitle: 'שחזור ומיזוג',
+  restoreExplain: 'בוחרים קובץ גיבוי. מה שחסר יתווסף, מה שהשתנה יתעדכן לגרסה החדשה יותר, ומה שנמחק במכשיר השני יימחק גם כאן. שום דבר אחר לא נמחק.',
+  restoreButton: '📂 בחירת קובץ גיבוי',
+  restoreWorking: 'משחזר…',
+  restoreNothing: 'הכל כבר מעודכן, אין מה לשנות ✓',
+  restoreConfirm: c => `בשחזור הזה:\nיתווספו: ${c.added}\nיתעדכנו: ${c.updated}\nיימחקו: ${c.removed}\n\nלהמשיך?`,
+  restoreDone: c => `השחזור הושלם ✓ נוספו ${c.added}, עודכנו ${c.updated}, נמחקו ${c.removed}`,
+  notABackup: 'הקובץ הזה לא נראה כמו גיבוי של האפליקציה',
+  storageProtected: '🔒 הטלפון שומר על הנתונים ולא ימחק אותם כשנגמר המקום',
+  storageNotProtected: 'כדאי להתקין את האפליקציה, כדי שהטלפון ישמור על הנתונים',
+
   // Calendar
   weekdaysShort: ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'],
   prevMonth: 'החודש הקודם',
@@ -221,6 +248,7 @@ function sectionHead(title, link) {
 async function homeScreen() {
   const upcoming = await upcomingReminders(5);
   const recent = await getRecentItems(6);
+  const itemCount = (await getAllItems()).length;
 
   // Today's date, like "יום שלישי, 10 בנובמבר"
   const today = new Date().toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -261,6 +289,7 @@ async function homeScreen() {
     <p class="home-date">${today}</p>
     ${searchLink}
     ${installCard()}
+    ${backupReminder(itemCount)}
 
     ${sectionHead(TEXT.upcoming, '#/group/reminders')}
     ${upcomingHtml}
@@ -408,7 +437,9 @@ async function groupsScreen() {
       ${TEXT.newGroup}
     </a>`;
 
-  return `<div class="groups-grid">${tiles}${newTile}</div>`;
+  return `
+    <div class="groups-grid">${tiles}${newTile}</div>
+    <a class="new-button settings-link" href="#/settings">${TEXT.backupLink}</a>`;
 }
 
 // Filter chips (like "🍿 לראות / ✔️ ראיתי") show only the
@@ -465,6 +496,10 @@ async function buildScreen(page, id, extra) {
     const group = findGroup(id);
     return { title: `${group.emoji} ${group.name}`, html: newItemScreen(id, extra),
              tab: 'groups', back: `#/group/${id}`, setup: setupItemScreen };
+  }
+  if (page === 'settings') {
+    return { title: TEXT.backupScreenTitle, html: await backupScreen(),
+             tab: 'groups', back: '#/groups', setup: setupBackupScreen };
   }
   if (page === 'group-settings') {
     // "#/group-settings/new" creates a group, "#/group-settings/g-12ab34cd" edits one

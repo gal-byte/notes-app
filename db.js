@@ -3,9 +3,12 @@
 // Saves everything on the phone using IndexedDB — a database
 // built into every browser. No server, no internet needed.
 //
-// It has two "stores" (think: two tables):
-//   items  → every reminder, song, movie, recipe, note
-//   groups → groups you create yourself (used in Step 6)
+// It has three "stores" (think: three tables):
+//   items   → every reminder, song, movie, recipe, note
+//   groups  → groups you create yourself
+//   deleted → a note of what you deleted and when, so that a
+//             backup restored on another device (tablet) deletes
+//             it there too, instead of bringing it back
 //
 // Every item looks like this:
 //   { id, group, title, createdAt, updatedAt, ...other fields }
@@ -13,7 +16,7 @@
 // ============================================================
 
 const DB_NAME = 'notes-app';
-const DB_VERSION = 1;  // raise this when the structure changes
+const DB_VERSION = 2;  // raise this when the structure changes
 
 let databasePromise = null;
 
@@ -24,16 +27,27 @@ function openDatabase() {
   databasePromise = new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    // Runs only the first time (or when DB_VERSION goes up):
-    // this is where the stores are created
-    request.onupgradeneeded = () => {
+    // Runs only the first time, or when DB_VERSION goes up.
+    // oldVersion says what this phone already has, so we only add
+    // what's missing (and never touch the data already there).
+    request.onupgradeneeded = event => {
       const db = request.result;
-      const items = db.createObjectStore('items', { keyPath: 'id' });
-      items.createIndex('group', 'group');  // lets us quickly find "all songs"
-      db.createObjectStore('groups', { keyPath: 'id' });
+      if (event.oldVersion < 1) {
+        const items = db.createObjectStore('items', { keyPath: 'id' });
+        items.createIndex('group', 'group');  // lets us quickly find "all songs"
+        db.createObjectStore('groups', { keyPath: 'id' });
+      }
+      if (event.oldVersion < 2) {
+        db.createObjectStore('deleted', { keyPath: 'id' });
+      }
     };
 
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      const db = request.result;
+      // If a newer version of the app opens in another tab, step aside
+      db.onversionchange = () => db.close();
+      resolve(db);
+    };
     request.onerror = () => reject(request.error);
   });
 
@@ -79,7 +93,20 @@ async function updateItem(id, changes) {
   return updated;
 }
 
+// Delete an item, and write down that it was deleted (see "deleted" above)
 async function deleteItem(id) {
+  await runInStore('items', 'readwrite', store => store.delete(id));
+  await rememberDeleted(id);
+}
+
+// Save an item exactly as given (used when restoring a backup)
+async function putItem(item) {
+  await runInStore('items', 'readwrite', store => store.put(item));
+}
+
+// Delete without writing it down (used when restoring a backup,
+// which brings its own list of deletions)
+async function removeItemRecord(id) {
   await runInStore('items', 'readwrite', store => store.delete(id));
 }
 
@@ -114,7 +141,7 @@ async function countItemsPerGroup() {
 }
 
 // ---------- Your own groups ----------
-// Each one looks like: { id, name, emoji, shortcut, order }
+// Each one looks like: { id, name, emoji, shortcut, order, updatedAt }
 
 async function getCustomGroups() {
   const groups = await runInStore('groups', 'readonly', store => store.getAll());
@@ -128,6 +155,22 @@ async function saveCustomGroup(group) {
 
 async function deleteCustomGroup(id) {
   await runInStore('groups', 'readwrite', store => store.delete(id));
+  await rememberDeleted(id);
+}
+
+async function removeGroupRecord(id) {
+  await runInStore('groups', 'readwrite', store => store.delete(id));
+}
+
+// ---------- What was deleted ----------
+// Each one looks like: { id, deletedAt }
+
+async function rememberDeleted(id, deletedAt = Date.now()) {
+  await runInStore('deleted', 'readwrite', store => store.put({ id, deletedAt }));
+}
+
+async function getDeletedRecords() {
+  return runInStore('deleted', 'readonly', store => store.getAll());
 }
 
 // ---------- Keep the data safe ----------
