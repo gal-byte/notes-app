@@ -187,9 +187,10 @@ async function backupScreen() {
   const persisted = navigator.storage && navigator.storage.persisted ? await navigator.storage.persisted() : false;
 
   return `
+    ${syncCard()}
+    ${pushCard()}
     ${driveCard()}
     ${await notificationsCard()}
-    ${serverPushCard()}
     <p class="backup-facts center">${TEXT.backupCounts(items.length, photos)} · ${lastText}</p>
     <p class="muted center">${persisted ? TEXT.storageProtected : TEXT.storageNotProtected}</p>
   `;
@@ -198,7 +199,8 @@ async function backupScreen() {
 function setupBackupScreen() {
   setupDriveCard();
   setupNotificationsCard();
-  setupServerPushCard();
+  setupSyncCard();
+  setupPushCard();
 }
 
 // ---------- Daily summary switch (see daily.js) ----------
@@ -228,7 +230,7 @@ async function turnOnBackgroundCheck() {
 
 async function notificationsCard() {
   if (!notificationsSupported()) {
-    return `<div class="card backup-card"><h2 class="card-title">🔔 ${TEXT.notifyTitle}</h2>
+    return `<div class="card backup-card"><h2 class="card-title">${icon('bell')} ${TEXT.notifyTitle}</h2>
             <p class="muted">${TEXT.notifyUnsupported}</p></div>`;
   }
   const on = dailySummaryOn() && Notification.permission === 'granted';
@@ -241,7 +243,7 @@ async function notificationsCard() {
 
   return `
     <div class="card backup-card">
-      <h2 class="card-title">🔔 ${TEXT.notifyTitle}</h2>
+      <h2 class="card-title">${icon('bell')} ${TEXT.notifyTitle}</h2>
       <p class="muted">${TEXT.notifyExplain}</p>
       ${on ? `<p class="backup-facts">${background ? TEXT.notifyOn : TEXT.notifyOnOpenOnly}</p>` : ''}
       ${buttons}
@@ -306,6 +308,8 @@ async function restoreBackupFile(file, status) {
     }
     status.textContent = TEXT.restoreWorking;
     await applyMerge(plan);
+    resendEverything();  // the restored notes go to the server too (sync.js)
+    syncNow();
     status.textContent = TEXT.restoreDone(plan.counts);
   } catch (error) {
     status.textContent = error.message || TEXT.notABackup;
@@ -321,7 +325,7 @@ function backupReminder(itemCount) {
   const text = days === null ? TEXT.neverBackedUp : TEXT.lastBackupDaysAgo(days);
   return `
     <a class="card backup-reminder" href="#/settings">
-      <span class="emoji">💾</span>
+      <span class="empty-icon accent">${icon('cloud')}</span>
       <span>${text}<br><strong>${TEXT.backupNow}</strong></span>
     </a>`;
 }

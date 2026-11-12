@@ -17,19 +17,19 @@ const TEXT = {
   noRecent: 'עוד לא הוספת כלום',
 
   searchPlaceholder: 'חיפוש בכל הפתקים…',
-  searchHint: 'מחפשים בכל הקבוצות: כותרות, מילים של שירים, מצרכים, הערות ותגיות',
+  searchHint: 'כותרות, מילים, מצרכים, הערות ותגיות',
   searchNoResults: query => `לא נמצא כלום עבור "${query}"`,
   searchCount: n => n === 1 ? 'תוצאה אחת' : `${n} תוצאות`,
 
   // Home
   seeAll: 'הכל ‹',
   installTitle: 'להתקין כאפליקציה?',
-  installText: 'אייקון במסך הבית, מסך מלא, ועובד גם בלי אינטרנט.',
+  installText: 'מסך מלא, ועובד גם בלי אינטרנט.',
   installButton: 'התקנה',
   installLater: 'לא עכשיו',
   welcomeTitle: 'ברוכים הבאים!',
-  welcomeText: 'כל מה שתשמרו יופיע כאן: תזכורות קרובות ומה שנוסף לאחרונה.',
-  welcomeButton: 'להוסיף משהו ראשון',
+  welcomeText: 'תזכורות קרובות ומה שנוסף לאחרונה יופיעו כאן.',
+  welcomeButton: 'להוסיף משהו',
   justNow: 'עכשיו',
   minutesAgo: n => n === 1 ? 'לפני דקה' : `לפני ${n} דקות`,
   hoursAgo: n => n === 1 ? 'לפני שעה' : n === 2 ? 'לפני שעתיים' : `לפני ${n} שעות`,
@@ -37,10 +37,12 @@ const TEXT = {
   daysAgo: n => n === 2 ? 'לפני יומיים' : `לפני ${n} ימים`,
 
   addPlaceholder: 'מה לשמור?',
-  addHint: 'כותבים כל דבר, והאפליקציה מנחשת לאיזו קבוצה הוא שייך. אפשר ללחוץ על התווית כדי לשנות.',
-  addShortcuts: 'קיצורים:<br>ת: תזכורת · ש: שיר · מ: מתכון<br>ס: סרט · סד: סדרה<br>"ראיתי" / "סיימתי" / "4 כוכבים" → כבר נצפה',
+  addHint: 'כותבים, והאפליקציה מסדרת לבד.',
+  addExamples: ['מחר ב-10 רופא שיניים', 'ש: שיר חדש', 'סרט: דיון', 'מתכון שקשוקה'],
   send: 'שליחה',
   undo: 'ביטול',
+  deletedOne: 'נמחק',
+  nothingHere: 'אין כאן כלום כרגע',
   savedIn: group => `נשמר ב־${groupTitle(group)}`,
   today: 'היום',
   tomorrow: 'מחר',
@@ -49,10 +51,10 @@ const TEXT = {
   // Your own groups
   newGroup: 'קבוצה חדשה',
   editGroup: 'עריכת קבוצה',
-  editGroupButton: '✏️ עריכת הקבוצה',
+  editGroupButton: 'עריכת הקבוצה',
   groupName: 'שם',
   groupNameHint: 'למשל: מתנות, ספרים, רעיונות',
-  groupEmoji: 'אימוג׳י',
+  groupIcon: 'סמל וצבע',
   groupShortcut: 'קיצור להוספה מהירה (לא חובה)',
   groupShortcutHint: 'למשל: ר (ואז כותבים ר: ופריט)',
   groupOrder: 'מיקום ברשימה',
@@ -70,46 +72,54 @@ const TEXT = {
 
   // Backup
   backupScreenTitle: 'הגדרות וגיבוי',
-  backupLink: '⚙️ הגדרות וגיבוי',
+  backupLink: 'הגדרות וגיבוי',
 
   // Calendar button + daily summary
-  addToCalendar: '📅 הוספה ל-Google Calendar',
-  calendarUpdate: '📅 עדכון ביומן',
-  calendarAlready: 'כבר ביומן ✓ אחרי שינוי, "עדכון ביומן" מחליף את האירוע.',
+  addToCalendar: 'הוספה ל-Google Calendar',
+  calendarUpdate: 'עדכון ביומן',
+  calendarAlready: 'כבר ביומן. אחרי שינוי, "עדכון ביומן" מחליף את האירוע.',
   calendarAdding: 'מוסיף ליומן…',
-  calendarAdded: 'נוסף ל-Google Calendar ✓',
-  calendarAddAll: n => n === 1 ? '📅 הוספת תזכורת אחת שעוד לא ביומן' : `📅 הוספת ${n} תזכורות שעוד לא ביומן`,
+  calendarAdded: 'נוסף ליומן',
+  calendarAddAll: n => n === 1 ? 'הוספת תזכורת אחת שעוד לא ביומן' : `הוספת ${n} תזכורות שעוד לא ביומן`,
   calendarAddingCount: (i, n) => `מוסיף ליומן… ${i} מתוך ${n}`,
-  calendarAddedAll: n => n === 1 ? 'תזכורת אחת נוספה ל-Google Calendar ✓' : `${n} תזכורות נוספו ל-Google Calendar ✓`,
+  calendarAddedAll: n => n === 1 ? 'תזכורת אחת נוספה ליומן' : `${n} תזכורות נוספו ליומן`,
   openInCalendar: 'פתיחה ביומן ‹',
   calendarNeedsTitle: 'צריך כותרת ותאריך לפני הוספה ליומן',
   calendarNoPermission: 'לא התקבלה הרשאה ליומן',
   calendarError: 'משהו השתבש מול היומן. אפשר לנסות שוב',
-  toCalendarShort: '📅 ליומן',
-  notifyTitle: 'סיכום יומי',
-  notifyExplain: 'פעם ביום, בבוקר: הודעה אחת עם התזכורות של היום. ביום בלי תזכורות לא תגיע הודעה. להתראה בשעה מדויקת, לחצו "הוספה ל-Google Calendar" בתזכורת.',
-  notifyTurnOn: '🔔 הפעלת הסיכום היומי',
+  toCalendarShort: 'ליומן',
+  notifyTitle: 'סיכום בוקר',
+  notifyExplain: 'כל בוקר, הודעה אחת עם התזכורות של היום.',
+  notifyTurnOn: 'הפעלת הסיכום היומי',
   notifyTurnOff: 'כיבוי',
   notifyTest: 'שליחת הודעת ניסיון',
-  notifyTestSent: 'נשלחה ✓',
-  notifyOn: 'פועל ✓ הסיכום יגיע פעם ביום',
-  notifyOnOpenOnly: 'פועל ✓ הטלפון לא מאפשר עדיין בדיקה ברקע, אז הסיכום יופיע כשפותחים את האפליקציה. (באפליקציה מותקנת זה בדרך כלל מסתדר אחרי כמה ימי שימוש.)',
+  notifyTestSent: 'נשלחה',
+  notifyOn: 'פועל',
+  notifyOnOpenOnly: 'פועל · יופיע כשפותחים את האפליקציה',
   notifyBlocked: 'ההתראות חסומות. אפשר לאשר אותן בהגדרות של Chrome ← הגדרות אתר ← התראות.',
   notifyUnsupported: 'הדפדפן הזה לא תומך בהתראות.',
 
-  // Reminders from the home server (serverpush.js)
-  pushTitle: 'התראות מהשרת בבית',
-  pushExplain: 'השרת בבית שולח התראה דרך אפליקציית ntfy: ימי הולדת יום לפני ב-10:00, תזכורת עם שעה שעתיים לפני, ותזכורת בלי שעה ערב לפני ב-20:00. לתזכורת עם שעה ומקום מגיעה גם התראה מתי לצאת (לפי האוטובוסים ולפי איפה שאתה). עובד רק כש-Tailscale פועל.',
-  pushTurnOn: '⏰ הפעלת התראות מהשרת',
-  pushSyncNow: 'שליחה לשרת עכשיו',
-  pushLastSync: when => `פועל ✓ התזכורות נשלחו לשרת לאחרונה: ${when}`,
-  pushNeverSynced: 'פועל ✓ עוד לא נשלח לשרת',
-  pushNoServer: 'אין חיבור לשרת. צריך ש-Tailscale יהיה פועל בטלפון.',
+  // Reminders as notifications (push.js)
+  pushTitle: 'התראות',
+  pushExplain: 'גם כשהאפליקציה סגורה: יום הולדת יום לפני, תזכורת עם שעה שעתיים לפני, ועם מקום גם מתי לצאת.',
+  pushTurnOn: 'הפעלת התראות',
+  pushIsOn: 'פועל במכשיר הזה',
+
+  // Sync between devices (sync.js)
+  syncTitle: 'סנכרון',
+  syncExplain: 'הפתקים נשמרים גם בשרת בבית, וכל המכשירים רואים אותם.',
+  syncLast: when => `מסונכרן · ${when}`,
+  syncNever: 'עוד לא סונכרן',
+  syncIsOff: 'כבוי במכשיר הזה',
+  syncNow: 'סנכרון עכשיו',
+  syncTurnOn: 'הפעלת סנכרון',
+  syncTurnOff: 'כיבוי',
+  syncNoServer: 'אין חיבור לשרת. צריך ש-Tailscale יהיה פועל.',
 
   // Where a reminder happens (places.js)
   placePlaceholder: 'למשל: אצל אמא, דיזנגוף סנטר, ויצמן 12 כפר סבא',
-  placeHint: 'עם מקום ושעה, השרת ישלח התראה מתי לצאת (באוטובוס, מאיפה שאתה).',
-  placeOn: '🚌 תגיע התראה כ-10 דקות לפני שצריך לצאת. צריך שהתראות מהשרת יהיו פועלות.',
+  placeHint: 'עם מקום ושעה, תגיע התראה מתי לצאת.',
+  placeOn: 'תגיע התראה כ-10 דקות לפני שצריך לצאת.',
   placeNeedsTime: 'הוסף שעה כדי לקבל התראה מתי לצאת.',
   placeDirections: 'איך מגיעים',
   about: 'בערך',
@@ -119,14 +129,14 @@ const TEXT = {
   placeNoServer: 'אין חיבור לשרת. צריך ש-Tailscale יהיה פועל.',
 
   // Google Drive
-  driveExplain: 'שומר את הגיבוי בקובץ אחד בדרייב שלך ומחליף אותו בכל גיבוי. האפליקציה רואה רק את הקובץ שהיא עצמה יצרה.',
-  driveConnectedText: 'מחובר ✓ כל גיבוי מחליף את הקובץ notes-app-backup.json בדרייב. שחזור מוסיף מה שחסר, מעדכן לגרסה החדשה יותר, ומוחק מה שנמחק במכשיר השני.',
+  driveExplain: 'גיבוי לקובץ אחד בדרייב שלך.',
+  driveConnectedText: 'מחובר · כל גיבוי מחליף את הקובץ הקודם.',
   driveConnect: 'חיבור ל-Google Drive',
-  driveBackup: '☁️ גיבוי ל-Drive',
-  driveRestore: '☁️ שחזור מ-Drive',
+  driveBackup: 'גיבוי עכשיו',
+  driveRestore: 'שחזור מהגיבוי',
   driveDisconnect: 'ניתוק',
   driveWorking: 'רגע…',
-  driveSaved: 'נשמר בדרייב ✓',
+  driveSaved: 'נשמר בדרייב',
   driveNoBackup: 'עוד אין גיבוי בדרייב. אפשר ללחוץ "גיבוי ל-Drive" קודם.',
   driveNeedsInternet: 'צריך חיבור לאינטרנט כדי להשתמש בדרייב',
   driveNotReady: 'עוד רגע... אפשר ללחוץ שוב',
@@ -141,11 +151,11 @@ const TEXT = {
   lastBackupDaysAgo: n => n === 1 ? 'הגיבוי האחרון: אתמול' : `הגיבוי האחרון: לפני ${n} ימים`,
   backupNow: 'לגבות עכשיו',
   restoreWorking: 'משחזר…',
-  restoreNothing: 'הכל כבר מעודכן, אין מה לשנות ✓',
+  restoreNothing: 'הכל כבר מעודכן',
   restoreConfirm: c => `בשחזור הזה:\nיתווספו: ${c.added}\nיתעדכנו: ${c.updated}\nיימחקו: ${c.removed}\n\nלהמשיך?`,
-  restoreDone: c => `השחזור הושלם ✓ נוספו ${c.added}, עודכנו ${c.updated}, נמחקו ${c.removed}`,
+  restoreDone: c => `השחזור הושלם: נוספו ${c.added}, עודכנו ${c.updated}, נמחקו ${c.removed}`,
   notABackup: 'הקובץ הזה לא נראה כמו גיבוי של האפליקציה',
-  storageProtected: '🔒 הטלפון שומר על הנתונים ולא ימחק אותם כשנגמר המקום',
+  storageProtected: 'הנתונים מוגנים במכשיר',
   storageNotProtected: 'כדאי להתקין את האפליקציה, כדי שהטלפון ישמור על הנתונים',
 
   // Calendar
@@ -166,14 +176,14 @@ const TEXT = {
   recommendedBy: name => `המלצה של ${name}`,
 
   // Item screen
-  saved: 'נשמר ✓',
+  saved: 'נשמר',
   timeHint: 'למשל 1020 או 17:30',
   typeTitleToSave: 'יישמר אחרי שתכתבו כותרת',
   moveToGroup: 'קבוצה',
   deleteItem: 'מחיקה',
   confirmDelete: 'למחוק את הפריט? אי אפשר לבטל את זה.',
-  addPhoto: '📷 הוספת תמונה',
-  changePhoto: '📷 החלפת תמונה',
+  addPhoto: 'הוספת תמונה',
+  changePhoto: 'החלפת תמונה',
   removePhoto: 'הסרה',
   photoError: 'לא הצלחתי לפתוח את התמונה. אפשר לנסות תמונה אחרת.',
 
@@ -188,18 +198,18 @@ const TEXT = {
 // after them when the app starts (see loadGroups in groups.js).
 // ============================================================
 const BUILT_IN_GROUPS = [
-  { id: 'reminders', name: 'תזכורות', emoji: '🎂' },
-  { id: 'songs',     name: 'שירים',   emoji: '🎵' },
-  { id: 'movies',    name: 'סרטים',   emoji: '🎬' },
-  { id: 'shows',     name: 'סדרות',   emoji: '📺' },
-  { id: 'recipes',   name: 'מתכונים', emoji: '🍲' },
-  { id: 'inbox',     name: 'לא ממוין', emoji: '📥' },
+  { id: 'reminders', name: 'תזכורות',  icon: 'bell',     tint: 'amber' },
+  { id: 'songs',     name: 'שירים',    icon: 'music',    tint: 'violet' },
+  { id: 'movies',    name: 'סרטים',    icon: 'film',     tint: 'rose' },
+  { id: 'shows',     name: 'סדרות',    icon: 'tv',       tint: 'sky' },
+  { id: 'recipes',   name: 'מתכונים',  icon: 'utensils', tint: 'green' },
+  { id: 'inbox',     name: 'לא ממוין', icon: 'inbox',    tint: 'slate' },
 ];
 let GROUPS = [...BUILT_IN_GROUPS];
 
-// "🎁 מתנות" – safe to put inside HTML (your group names could contain anything)
+// A group's name, safe to put inside HTML (your group names could contain anything)
 function groupTitle(group) {
-  return `${escapeHtml(group.emoji)} ${escapeHtml(group.name)}`;
+  return escapeHtml(group.name);
 }
 
 // Find a group by its id. Unknown ids fall back to לא ממוין,
@@ -269,8 +279,9 @@ function bubble(item) {
   `;
 }
 
-function emptyCard(emoji, message) {
-  return `<div class="card empty"><span class="emoji">${emoji}</span>${message}</div>`;
+// A quiet card for an empty list: an icon in a soft circle and one line
+function emptyCard(iconName, message) {
+  return `<div class="card empty"><span class="empty-icon">${icon(iconName)}</span>${message}</div>`;
 }
 
 // ============================================================
@@ -314,7 +325,7 @@ async function homeScreen() {
   // Looks like a search box; tapping it opens the Search tab
   const searchLink = `
     <a class="search-input search-link" href="#/search">
-      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      ${icon('search')}
       ${TEXT.searchPlaceholder}
     </a>`;
 
@@ -325,23 +336,23 @@ async function homeScreen() {
       ${searchLink}
       ${installCard()}
       <div class="card empty welcome">
-        <span class="emoji">👋</span>
-        <strong>${TEXT.welcomeTitle}</strong><br>${TEXT.welcomeText}
-        <a class="primary-button welcome-button" href="#/add">＋ ${TEXT.welcomeButton}</a>
+        <span class="empty-icon accent">${icon('sparkle')}</span>
+        <strong>${TEXT.welcomeTitle}</strong>${TEXT.welcomeText}
+        <a class="primary-button welcome-button" href="#/add">${icon('plus')} ${TEXT.welcomeButton}</a>
       </div>`;
   }
 
   const upcomingHtml = upcoming.length
     ? listCard(upcoming.map(r => reminderRow(r, false)))
-    : emptyCard('🗓️', TEXT.noUpcoming);
+    : emptyCard('calendar', TEXT.noUpcoming);
 
   const recentHtml = recent.length
     ? listCard(recent.map(item => {
         const group = findGroup(item.group);
         const meta = `${escapeHtml(group.name)} · ${timeAgo(item.createdAt)}`;
-        return itemRow(item, meta, { emoji: group.emoji });
+        return itemRow(item, meta, { badge: group });
       }))
-    : emptyCard('✨', TEXT.noRecent);
+    : emptyCard('sparkle', TEXT.noRecent);
 
   return `
     <p class="home-date">${today}</p>
@@ -386,7 +397,14 @@ async function addScreen() {
 async function chatBubbles() {
   const items = (await getRecentItems(30)).reverse();  // oldest at top, newest at bottom
   if (!items.length) {
-    return `<p class="empty">${TEXT.addHint}<br><br>${TEXT.addShortcuts}</p>`;
+    // Nothing yet: a short line and a few examples you can tap to try
+    const examples = TEXT.addExamples.map(text =>
+      `<button type="button" class="chip example-chip" data-example="${escapeHtml(text)}">${escapeHtml(text)}</button>`).join('');
+    return `<div class="add-empty">
+      <span class="empty-icon accent">${icon('sparkle')}</span>
+      <p>${TEXT.addHint}</p>
+      <div class="example-chips">${examples}</div>
+    </div>`;
   }
   return items.map(bubble).join('');
 }
@@ -433,6 +451,15 @@ function setupAddScreen() {
 
   textBox.addEventListener('input', updateGuess);
 
+  // Tapping an example puts it in the box (you still press send)
+  chat.addEventListener('click', event => {
+    const example = event.target.closest('[data-example]');
+    if (!example) return;
+    textBox.value = example.dataset.example;
+    updateGuess();
+    textBox.focus();
+  });
+
   // Tap the label → show all groups; tap a group → use it
   guessChip.addEventListener('click', () => { picker.hidden = !picker.hidden; });
   picker.addEventListener('click', event => {
@@ -456,7 +483,9 @@ function setupAddScreen() {
     updateGuess();
 
     const item = await addItem(group, fields);
+    haptic();
     chat.innerHTML = await chatBubbles();
+    chat.lastElementChild?.classList.add('just-added');
     scrollToBottom();
 
     // Reminders also get "📅 ליומן" (add straight to Google Calendar)
@@ -500,9 +529,9 @@ async function groupsScreen() {
 
   // Build one tile per group, then join them into one piece of HTML
   const tiles = GROUPS.map(group => `
-    <a class="group-tile" href="#/group/${group.id}">
-      <span class="emoji">${escapeHtml(group.emoji)}</span>
-      ${escapeHtml(group.name)}
+    <a class="group-tile t-${group.tint || 'slate'}" href="#/group/${group.id}">
+      ${groupBadge(group)}
+      <span class="tile-name">${escapeHtml(group.name)}</span>
       <span class="count">${TEXT.itemCount(counts[group.id] || 0)}</span>
     </a>
   `).join('');
@@ -510,13 +539,13 @@ async function groupsScreen() {
   // The last tile creates a new group
   const newTile = `
     <a class="group-tile new-group-tile" href="#/group-settings/new">
-      <span class="emoji">＋</span>
-      ${TEXT.newGroup}
+      <span class="badge">${icon('plus')}</span>
+      <span class="tile-name">${TEXT.newGroup}</span>
     </a>`;
 
   return `
     <div class="groups-grid">${tiles}${newTile}</div>
-    <a class="new-button settings-link" href="#/settings">${TEXT.backupLink}</a>`;
+    <a class="settings-link" href="#/settings">${icon('sliders')}<span>${TEXT.backupLink}</span>${icon('chevron', 'chev')}</a>`;
 }
 
 // Filter chips (like "🍿 לראות / ✔️ ראיתי") show only the
@@ -529,6 +558,14 @@ function setupFilters() {
     chips.forEach(chip => chip.classList.toggle('selected', chip.dataset.filter === value));
     document.querySelectorAll('[data-filter-values]').forEach(row => {
       row.hidden = value !== '' && !row.dataset.filterValues.split('|').includes(value);
+    });
+    // Nothing left to show: hide the empty card, say so instead
+    document.querySelectorAll('.card.list').forEach(card => {
+      const empty = !card.querySelector('.item-row:not([hidden])');
+      card.hidden = empty;
+      let note = card.nextElementSibling?.classList.contains('filter-empty') ? card.nextElementSibling : null;
+      if (empty && !note) card.insertAdjacentHTML('afterend', `<p class="filter-empty">${TEXT.nothingHere}</p>`);
+      if (!empty && note) note.remove();
     });
   }
 
@@ -565,13 +602,13 @@ async function buildScreen(page, id, extra) {
   }
   if (page === 'group' && groupExists(id)) {
     const group = findGroup(id);
-    return { title: `${group.emoji} ${group.name}`, html: await groupScreen(group),
+    return { title: group.name, html: await groupScreen(group),
              tab: 'groups', back: '#/groups' };
   }
   if (page === 'new' && groupExists(id)) {
     // "#/new/reminders/2026-11-20" → a new reminder already set to that day
     const group = findGroup(id);
-    return { title: `${group.emoji} ${group.name}`, html: newItemScreen(id, extra),
+    return { title: group.name, html: newItemScreen(id, extra),
              tab: 'groups', back: `#/group/${id}`, setup: setupItemScreen };
   }
   if (page === 'settings') {
@@ -591,7 +628,7 @@ async function buildScreen(page, id, extra) {
     const html = await itemScreen(id);
     if (html) {
       const group = findGroup(editor.group);
-      return { title: `${group.emoji} ${group.name}`, html,
+      return { title: group.name, html,
                tab: 'groups', back: `#/group/${group.id}`, setup: setupItemScreen };
     }
   }
@@ -603,7 +640,9 @@ async function buildScreen(page, id, extra) {
 // that's still loading must not replace the newer one.
 let latestScreen = 0;
 
-async function showScreen() {
+// quiet = redraw the same screen in place (after a sync from another
+// device): no animation and no jump to the top.
+async function showScreen(quiet = false) {
   const thisScreen = ++latestScreen;
 
   // Save any unsaved typing on the item screen we're leaving
@@ -622,7 +661,13 @@ async function showScreen() {
   if (thisScreen !== latestScreen) return;  // a newer screen took over
 
   document.getElementById('screen-title').textContent = screen.title;
-  document.getElementById('screen').innerHTML = screen.html;
+  const screenBox = document.getElementById('screen');
+  const scrollY = window.scrollY;
+  screenBox.innerHTML = screen.html;
+  // Restart the "slide in" animation on a new screen only
+  screenBox.style.animation = 'none';
+  if (!quiet) { void screenBox.offsetWidth; screenBox.style.animation = ''; }
+  screenBox.classList.toggle('quiet', quiet);
   document.body.dataset.page = screen.tab;  // lets style.css style each screen
   document.title = screen.title === TEXT.appName ? screen.title : `${screen.title} · ${TEXT.appName}`;
 
@@ -635,7 +680,7 @@ async function showScreen() {
     link.classList.toggle('active', link.dataset.tab === screen.tab);
   });
 
-  window.scrollTo(0, 0);
+  window.scrollTo(0, quiet ? scrollY : 0);
   oldPhotoUrls.forEach(url => URL.revokeObjectURL(url));  // free photos of the old screen
 
   setupFilters();
@@ -694,7 +739,7 @@ function installCard() {
   if (!installPrompt || isInstalled() || installDismissed()) return '';
   return `
     <div class="card install-card">
-      <span class="emoji">📲</span>
+      <span class="empty-icon accent">${icon('download')}</span>
       <div class="install-text"><strong>${TEXT.installTitle}</strong><br>${TEXT.installText}</div>
       <div class="install-buttons">
         <button type="button" class="primary-button" data-install>${TEXT.installButton}</button>
@@ -734,3 +779,97 @@ document.addEventListener('visibilitychange', () => {
 
 // Ask the phone to keep our data safe (see db.js)
 askForPersistentStorage();
+
+// ============================================================
+// MESSAGES
+// showToast('נמחק', { action: 'ביטול', onAction }) shows a short
+// message above the tab bar for a few seconds.
+// ============================================================
+let appToastTimer = null;
+
+function showToast(text, options = {}) {
+  const toast = document.getElementById('app-toast');
+  toast.innerHTML = `<span>${escapeHtml(text)}</span>` +
+    (options.action ? `<span class="toast-actions"><button type="button">${escapeHtml(options.action)}</button></span>` : '');
+  toast.hidden = false;
+  toast.style.animation = 'none'; void toast.offsetWidth; toast.style.animation = '';
+  const button = toast.querySelector('button');
+  if (button) button.addEventListener('click', () => { toast.hidden = true; options.onAction(); }, { once: true });
+  clearTimeout(appToastTimer);
+  appToastTimer = setTimeout(() => { toast.hidden = true; }, options.ms || 5000);
+}
+
+// ============================================================
+// SWIPE A ROW TO DELETE IT
+// Drag a row in a list sideways. Past a third of the width it is
+// deleted, with "ביטול" to bring it back.
+// ============================================================
+(function setupSwipeToDelete() {
+  let drag = null;  // { row, wrap, startX, startY, dx, decided }
+
+  document.addEventListener('pointerdown', event => {
+    const row = event.target.closest('.card.list .item-row[data-id]');
+    if (!row || event.button !== 0) return;
+    drag = { row, startX: event.clientX, startY: event.clientY, dx: 0, decided: false, swiping: false };
+  });
+
+  document.addEventListener('pointermove', event => {
+    if (!drag) return;
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    if (!drag.decided) {
+      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+      drag.decided = true;
+      drag.swiping = Math.abs(dx) > Math.abs(dy) * 1.5;  // mostly sideways = swipe, else it's a scroll
+      if (!drag.swiping) { drag = null; return; }
+      // Put the row in a wrapper with the red "delete" layer under it
+      const wrap = document.createElement('div');
+      wrap.className = 'swipe-wrap dragging';
+      wrap.innerHTML = `<div class="swipe-under">${icon('trash')}</div>`;
+      drag.row.before(wrap);
+      wrap.append(drag.row);
+      drag.wrap = wrap;
+    }
+    drag.dx = dx;
+    drag.wrap.classList.toggle('from-left', dx > 0);
+    drag.row.style.transform = `translateX(${dx}px)`;
+  });
+
+  async function finish() {
+    if (!drag) return;
+    const { row, wrap, dx, swiping } = drag;
+    drag = null;
+    if (!swiping || !wrap) return;
+    wrap.classList.remove('dragging');
+    const width = row.offsetWidth;
+
+    if (Math.abs(dx) < width / 3) {   // not far enough: slide back
+      row.style.transform = '';
+      row.addEventListener('transitionend', () => { if (wrap.isConnected) { wrap.before(row); wrap.remove(); } }, { once: true });
+      return;
+    }
+
+    row.style.transform = `translateX(${dx > 0 ? width : -width}px)`;
+    haptic(12);
+    const id = row.dataset.id;
+    const item = await getItem(id);
+    setTimeout(() => wrap.classList.add('gone'), 150);
+    await deleteItem(id);
+    showToast(TEXT.deletedOne, {
+      action: TEXT.undo,
+      onAction: async () => {
+        await putItem({ ...item, updatedAt: Date.now() });
+        showScreen(true);
+      },
+    });
+  }
+
+  document.addEventListener('pointerup', finish);
+  document.addEventListener('pointercancel', finish);
+
+  // A swipe must not also open the item
+  document.addEventListener('click', event => {
+    const wrap = event.target.closest('.swipe-wrap');
+    if (wrap) event.preventDefault();
+  }, true);
+})();

@@ -7,13 +7,14 @@
   <!-- interactive-widget: when the keyboard opens, shrink the page so the typing box stays visible -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <!-- Color of the phone's top bar (light / dark) -->
-  <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f4f2ee" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#141412" media="(prefers-color-scheme: dark)">
   <title>הפתקים שלי</title>
   <!-- Makes it installable: name, icon, full screen (see manifest.json) -->
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="preload" href="fonts/rubik-hebrew.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -29,6 +30,9 @@
 
   <!-- Each screen is drawn into here by app.js -->
   <main id="screen"></main>
+
+  <!-- Short messages like "Deleted · Undo" (see showToast in app.js) -->
+  <div class="toast" id="app-toast" hidden></div>
 
   <!-- Bottom navigation. In right-to-left, the first link appears on the right -->
   <nav class="tabbar">
@@ -59,6 +63,7 @@
   <!-- db.js must load first, app.js last: it uses all the others.
        (Updates reach the phone through sw.js, which always asks for
        the newest files first.) -->
+  <script src="icons.js"></script>
   <script src="db.js"></script>
   <script src="quickadd.js"></script>
   <script src="places.js"></script>
@@ -69,7 +74,8 @@
   <script src="daily.js"></script>
   <script src="drive.js"></script>
   <script src="backup.js"></script>
-  <script src="serverpush.js"></script>
+  <script src="sync.js"></script>
+  <script src="push.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -5,9 +5,9 @@
 //   3. Item screen – view and edit one item (saves by itself)
 // ============================================================
 
-const SONG_STATUS = { idea: '💡 רעיון', draft: '✏️ טיוטה', done: '✅ גמור' };
-const MOVIE_LISTS = { watchlist: '🍿 לראות', watched: '✔️ ראיתי' };
-const SHOW_LISTS = { watchlist: '🍿 לראות', watching: '▶️ בצפייה', watched: '✔️ סיימתי' };
+const SONG_STATUS = { idea: 'רעיון', draft: 'טיוטה', done: 'גמור' };
+const MOVIE_LISTS = { watchlist: 'לראות', watched: 'ראיתי' };
+const SHOW_LISTS = { watchlist: 'לראות', watching: 'בצפייה', watched: 'סיימתי' };
 
 const TITLE_FIELD = { key: 'title', type: 'text', label: 'כותרת' };
 const NOTES_FIELD = { key: 'text', type: 'textarea', label: 'הערות' };
@@ -181,13 +181,14 @@ async function shrinkPhoto(file, maxSide = 1000) {
 function itemRow(item, meta = '', options = {}) {
   let picture = '';
   if (options.photo) picture = `<img class="thumb" src="${photoUrl(options.photo)}" alt="">`;
-  else if (options.emoji) picture = `<span class="emoji">${escapeHtml(options.emoji)}</span>`;
+  else if (options.badge) picture = groupBadge(options.badge, 'small');
+  else if (options.dateBox) picture = options.dateBox;
 
   const filter = options.filter !== undefined
     ? `data-filter-values="${escapeHtml(options.filter)}"` : '';
 
   return `
-    <a class="item-row${options.dim ? ' dim' : ''}" href="#/item/${item.id}" ${filter}>
+    <a class="item-row${options.dim ? ' dim' : ''}" href="#/item/${item.id}" data-id="${item.id}" ${filter}>
       ${picture}
       <span class="item-main">
         <span class="item-title" dir="auto">${options.titleHtml || escapeHtml(item.title) || TEXT.untitled}</span>
@@ -219,13 +220,20 @@ function parseTags(text) {
   return (text || '').split(',').map(tag => tag.trim()).filter(Boolean);
 }
 
+// A small calendar page with the day and month, at the start of a reminder row
+function dateBox(date) {
+  if (!date) return '';
+  const month = date.toLocaleDateString('he-IL', { month: 'short' });
+  return `<span class="date-box"><b>${date.getDate()}</b><small>${month}</small></span>`;
+}
+
 function reminderRow({ item, next }, isPast) {
   let meta = '';
   const time = item.time && item.timeFlex === 'about' ? `${TEXT.about} ${item.time}` : item.time;
   if (next) meta = isPast ? formatDate(item.date) : whenLabel(next, time);
-  if (item.repeatYearly) meta = `🔁 ${meta}`;
-  if (item.place) meta += ` · 📍 ${escapeHtml(placeShortName(item.place))}`;
-  return itemRow(item, meta, { dim: isPast });
+  if (item.repeatYearly) meta = `${icon('repeat', 'inline')} ${meta}`;
+  if (item.place) meta += ` · ${icon('pin', 'inline')} ${escapeHtml(placeShortName(item.place))}`;
+  return itemRow(item, meta, { dim: isPast, dateBox: dateBox(next) });
 }
 
 function remindersList(items) {
@@ -330,7 +338,7 @@ function recipesList(items) {
     const tags = parseTags(item.tags);
     return itemRow(item, escapeHtml(tags.join(', ')), {
       photo: item.photo,
-      emoji: item.photo ? null : '🍲',
+      badge: item.photo ? null : findGroup('recipes'),
       filter: tags.join('|'),
     });
   }));
@@ -353,12 +361,14 @@ function plainList(items) {
 async function groupScreen(group) {
   const items = await getItemsInGroup(group.id);
 
-  let buttons = `<a class="new-button" href="#/new/${group.id}">＋ ${TEXT.newItem}</a>`;
+  let buttons = `<a class="new-button" href="#/new/${group.id}">${icon('plus')} ${TEXT.newItem}</a>`;
   if (group.custom) {
     buttons = `<div class="button-row">${buttons}
-      <a class="new-button" href="#/group-settings/${group.id}">${TEXT.editGroupButton}</a></div>`;
+      <a class="new-button secondary" href="#/group-settings/${group.id}">${icon('pencil')} ${TEXT.editGroupButton}</a></div>`;
   }
-  if (!items.length) return buttons + emptyCard(escapeHtml(group.emoji), TEXT.emptyGroup);
+  if (!items.length) {
+    return buttons + `<div class="card empty">${groupBadge(group, 'large')}${TEXT.emptyGroup}</div>`;
+  }
 
   const lists = {
     reminders: remindersList, songs: songsList, recipes: recipesList,
@@ -450,7 +460,7 @@ function photoFieldInner(blob) {
   return `
     ${blob ? `<img class="photo-preview" src="${photoUrl(blob)}" alt="">` : ''}
     <div class="photo-buttons">
-      <label class="small-button">${blob ? TEXT.changePhoto : TEXT.addPhoto}
+      <label class="small-button">${icon('camera')} ${blob ? TEXT.changePhoto : TEXT.addPhoto}
         <input type="file" accept="image/*" hidden></label>
       ${blob ? `<button type="button" class="small-button" data-remove-photo>${TEXT.removePhoto}</button>` : ''}
     </div>
@@ -468,7 +478,7 @@ function editorHtml() {
   const calendarButton = group === 'reminders' ? `
     <div class="calendar-box">
       <button type="button" class="small-button wide" data-calendar>
-        ${draft.calendarEventId ? TEXT.calendarUpdate : TEXT.addToCalendar}
+        ${icon('calendar')} <span>${draft.calendarEventId ? TEXT.calendarUpdate : TEXT.addToCalendar}</span>
       </button>
       <p class="backup-status" id="calendar-status">${draft.calendarEventId ? TEXT.calendarAlready : ''}</p>
     </div>` : '';
@@ -483,7 +493,7 @@ function editorHtml() {
       </label>
       <div class="editor-footer">
         <span class="save-status" id="save-status">${editor.id ? '' : TEXT.typeTitleToSave}</span>
-        <button type="button" class="danger-button" id="delete-button">${TEXT.deleteItem}</button>
+        <button type="button" class="danger-button" id="delete-button">${icon('trash')} ${TEXT.deleteItem}</button>
       </div>
     </form>
   `;
@@ -511,7 +521,7 @@ function setupItemScreen() {
     } else {
       await updateItem(editor.id, { ...draft, group: editor.group });
     }
-    status.textContent = TEXT.saved;
+    status.innerHTML = `${icon('check', 'inline')} ${TEXT.saved}`;
   }
 
   function saveNow() {
@@ -568,7 +578,7 @@ function setupItemScreen() {
           text => { calendarStatus.textContent = text; });
         editor.draft.calendarEventId = added.id;
         editor.draft.inCalendar = true;
-        calendarButton.textContent = TEXT.calendarUpdate;
+        calendarButton.querySelector('span').textContent = TEXT.calendarUpdate;
         calendarStatus.innerHTML = `${TEXT.calendarAdded} <a href="${escapeHtml(added.htmlLink)}" target="_blank" rel="noopener">${TEXT.openInCalendar}</a>`;
       } catch (error) {
         calendarStatus.textContent = error.message || TEXT.calendarError;
@@ -642,7 +652,7 @@ function setupItemScreen() {
     if (editor.id) await saveNow();
     else history.replaceState(null, '', `#/new/${editor.group}`);
     const group = findGroup(editor.group);
-    document.getElementById('screen-title').textContent = `${group.emoji} ${group.name}`;
+    document.getElementById('screen-title').textContent = group.name;
     document.getElementById('back-button').href = `#/group/${group.id}`;
     document.getElementById('screen').innerHTML = editorHtml();
     setupItemScreen();

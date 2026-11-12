@@ -25,6 +25,7 @@ const APP_FILES = [
   './',
   'index.html',
   'style.css',
+  'icons.js',
   'db.js',
   'quickadd.js',
   'places.js',
@@ -35,13 +36,17 @@ const APP_FILES = [
   'drive.js',
   'daily.js',
   'backup.js',
-  'serverpush.js',
+  'sync.js',
+  'push.js',
   'app.js',
   'manifest.json',
+  'fonts/rubik-hebrew.woff2',
+  'fonts/rubik-latin.woff2',
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/icon-maskable-512.png',
   'icons/apple-touch-icon.png',
+  'icons/badge-96.png',
 ];
 
 // First run: save all the app files
@@ -62,13 +67,54 @@ self.addEventListener('periodicsync', event => {
   if (event.tag === 'daily-summary') event.waitUntil(showDailySummary(self.registration));
 });
 
-// Tapping the notification opens the app (or brings it to the front)
+// A reminder from the home server (see push.js and ~/notify on the server)
+const SERVER = 'https://home-server.tail7870b4.ts.net:8443';
+
+self.addEventListener('push', event => {
+  let message = {};
+  try { message = event.data.json(); } catch { message = { title: 'הפתקים שלי', body: event.data?.text() || '' }; }
+  const actions = message.actions === false ? [] : [
+    { action: 'open', title: 'פתיחה' },
+    { action: 'snooze', title: 'תזכיר בעוד שעה' },
+  ];
+  event.waitUntil(self.registration.showNotification(message.title || 'הפתקים שלי', {
+    body: message.body || '',
+    icon: 'icons/icon-192.png',
+    badge: 'icons/badge-96.png',
+    tag: message.tag || undefined,       // a newer one about the same reminder replaces the older
+    renotify: !!message.tag,
+    lang: 'he',
+    dir: 'rtl',
+    actions,
+    data: { url: message.url || './', title: message.title, body: message.body, tag: message.tag },
+  }));
+});
+
+// Tapping the notification opens the app (or the bus app), or snoozes it
 self.addEventListener('notificationclick', event => {
   event.notification.close();
+  const data = event.notification.data || {};
+
+  if (event.action === 'snooze') {
+    event.waitUntil(fetch(`${SERVER}/push/snooze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: data.title, body: data.body, url: data.url, tag: data.tag, minutes: 60 }),
+    }).catch(() => {}));
+    return;
+  }
+
   event.waitUntil((async () => {
+    const url = new URL(data.url || './', self.registration.scope);
+    const ours = url.href.startsWith(self.registration.scope);
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    if (windows.length) return windows[0].focus();
-    return self.clients.openWindow(event.notification.data?.url || './');
+    if (ours && windows.length) {
+      const window = windows[0];
+      await window.focus();
+      if (url.hash) window.navigate(url.href).catch(() => {});
+      return;
+    }
+    return self.clients.openWindow(url.href);
   })());
 });
 

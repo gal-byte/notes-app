@@ -13,8 +13,8 @@
 // ============================================================
 
 const SUMMARY_WORDS = {
-  title: count => count > 1 ? `📅 היום · ${count} תזכורות` : '📅 היום',
-  nothingToday: 'אין תזכורות היום 🎉',
+  title: count => count > 1 ? `היום · ${count} תזכורות` : 'היום',
+  nothingToday: 'אין תזכורות היום',
 };
 
 // Only between these hours (Android may wake us in the middle of the night)
@@ -92,6 +92,7 @@ async function showDailySummary(registration, options = {}) {
   await registration.showNotification(SUMMARY_WORDS.title(today.length), {
     body,
     icon: 'icons/icon-192.png',
+    badge: 'icons/badge-96.png',
     tag: 'daily-summary',   // a newer summary replaces an older one
     lang: 'he',
     dir: 'rtl',

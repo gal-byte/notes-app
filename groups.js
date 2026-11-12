@@ -1,12 +1,9 @@
 // ============================================================
 // YOUR OWN GROUPS
-// Create a group with a name, an emoji and an optional quick-add
+// Create a group with a name, an icon, a color and an optional quick-add
 // shortcut. Rename it, move it, or delete it (its items then
 // move to "לא ממוין", so nothing is lost).
 // ============================================================
-
-const EMOJI_SUGGESTIONS = ['🎁', '📚', '💡', '🛒', '✈️', '💼', '🏋️', '🎮',
-                           '🌱', '🐶', '💊', '🏠', '🎨', '📝', '⭐', '❤️'];
 
 // Load your groups from the database and put them after the built-in ones
 async function loadGroups() {
@@ -16,14 +13,6 @@ async function loadGroups() {
 
 function customGroups() {
   return GROUPS.filter(group => group.custom);
-}
-
-// Keep only the first emoji you typed ("🎁🎁" → "🎁")
-function firstEmoji(text) {
-  const trimmed = text.trim();
-  if (!trimmed) return '';
-  if (Intl.Segmenter) return [...new Intl.Segmenter().segment(trimmed)][0].segment;
-  return Array.from(trimmed)[0];
 }
 
 // Is this shortcut already used by another group?
@@ -43,12 +32,19 @@ function groupSettingsScreen(id) {
   const existing = id === 'new' ? null : customGroups().find(group => group.id === id);
   if (id !== 'new' && !existing) return null;
 
-  const group = existing || { name: '', emoji: '📁', shortcut: '' };
+  // A new group gets the next color that isn't used yet
+  const usedTints = customGroups().map(g => g.tint);
+  const freeTint = TINTS.find(t => !usedTints.includes(t)) || 'teal';
+  const group = existing || { name: '', icon: 'folder', tint: freeTint, shortcut: '' };
   const others = customGroups();
   const position = existing ? others.findIndex(g => g.id === id) : -1;
 
-  const suggestions = EMOJI_SUGGESTIONS.map(emoji =>
-    `<button type="button" class="emoji-choice" data-emoji="${emoji}">${emoji}</button>`
+  // An older group made with an emoji: no icon is selected until you pick one
+  const iconChoices = GROUP_ICON_CHOICES.map(name =>
+    `<button type="button" class="icon-choice${name === group.icon ? ' selected' : ''}" data-icon="${name}" aria-label="${name}">${icon(name)}</button>`
+  ).join('');
+  const tintChoices = TINTS.map(tint =>
+    `<button type="button" class="tint-choice t-${tint}${tint === (group.tint || 'slate') ? ' selected' : ''}" data-tint="${tint}" aria-label="${tint}"></button>`
   ).join('');
 
   const moveButtons = existing && others.length > 1 ? `
@@ -69,10 +65,10 @@ function groupSettingsScreen(id) {
       </label>
 
       <div class="field">
-        <span class="field-label">${TEXT.groupEmoji}</span>
-        <div class="emoji-row">
-          <input type="text" id="group-emoji" class="emoji-input" value="${escapeHtml(group.emoji)}" aria-label="${TEXT.groupEmoji}">
-          <div class="emoji-choices">${suggestions}</div>
+        <span class="field-label">${TEXT.groupIcon}</span>
+        <div class="icon-picker" id="icon-picker" data-icon="${escapeHtml(group.icon || '')}" data-tint="${escapeHtml(group.tint || 'slate')}">
+          <div class="tint-choices">${tintChoices}</div>
+          <div class="icon-choices t-${escapeHtml(group.tint || 'slate')}">${iconChoices}</div>
         </div>
       </div>
 
@@ -95,7 +91,7 @@ function setupGroupSettings() {
   const form = document.getElementById('group-form');
   const id = form.dataset.id || null;
   const nameBox = document.getElementById('group-name');
-  const emojiBox = document.getElementById('group-emoji');
+  const picker = document.getElementById('icon-picker');
   const shortcutBox = document.getElementById('group-shortcut');
   const message = document.getElementById('form-message');
 
@@ -105,11 +101,19 @@ function setupGroupSettings() {
     else location.replace(groupId ? `#/group/${groupId}` : '#/groups');
   }
 
-  // Tap a suggested emoji
+  // Pick an icon or a color
   form.addEventListener('click', async event => {
-    const choice = event.target.closest('[data-emoji]');
-    if (choice) {
-      emojiBox.value = choice.dataset.emoji;
+    const iconChoice = event.target.closest('.icon-choice');
+    if (iconChoice) {
+      picker.dataset.icon = iconChoice.dataset.icon;
+      picker.querySelectorAll('.icon-choice').forEach(b => b.classList.toggle('selected', b === iconChoice));
+      return;
+    }
+    const tintChoice = event.target.closest('.tint-choice');
+    if (tintChoice) {
+      picker.dataset.tint = tintChoice.dataset.tint;
+      picker.querySelectorAll('.tint-choice').forEach(b => b.classList.toggle('selected', b === tintChoice));
+      picker.querySelector('.icon-choices').className = `icon-choices t-${tintChoice.dataset.tint}`;
       return;
     }
 
@@ -151,7 +155,9 @@ function setupGroupSettings() {
   form.addEventListener('submit', async event => {
     event.preventDefault();
     const name = nameBox.value.trim();
-    const emoji = firstEmoji(emojiBox.value) || '📁';
+    const tint = picker.dataset.tint || 'slate';
+    // Keep an older group's emoji until an icon is picked
+    const looks = picker.dataset.icon ? { icon: picker.dataset.icon, tint } : { tint };
     const shortcut = shortcutBox.value.replace(/[:\s]/g, '');
 
     if (!name) { message.textContent = TEXT.groupNameNeeded; nameBox.focus(); return; }
@@ -160,13 +166,13 @@ function setupGroupSettings() {
 
     if (id) {
       const old = customGroups().find(g => g.id === id);
-      await saveCustomGroup({ ...withoutFlag(old), name, emoji, shortcut, updatedAt: Date.now() });
+      await saveCustomGroup({ ...withoutFlag(old), name, ...looks, shortcut, updatedAt: Date.now() });
       await loadGroups();
       leave(id);
     } else {
       const highest = Math.max(0, ...customGroups().map(g => g.order));
       const newId = 'g-' + crypto.randomUUID().slice(0, 8);
-      await saveCustomGroup({ id: newId, name, emoji, shortcut, order: highest + 1, updatedAt: Date.now() });
+      await saveCustomGroup({ id: newId, name, ...looks, shortcut, order: highest + 1, updatedAt: Date.now() });
       await loadGroups();
       location.replace(`#/group/${newId}`);
     }

@@ -1,6 +1,6 @@
 // ============================================================
 // MAKE ICONS
-// Draws the app icon (a white note card on blue) and saves it
+// Draws the app icon (a white note card on green-teal) and saves it
 // as PNG files in the icons/ folder. Uses only Node.js itself,
 // no extra packages.
 //
@@ -11,7 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 
-const BLUE = [47, 111, 222];    // same blue as the app (--accent)
+const BLUE = [15, 122, 99];     // the app's accent (--accent), kept the old name
 const WHITE = [255, 255, 255];
 
 // Is the point (x, y) inside a rectangle with rounded corners?
@@ -24,7 +24,17 @@ function inRoundedRect(x, y, left, top, right, bottom, radius) {
 }
 
 // The color at one point of the icon, or null for "see-through"
-function colorAt(x, y, fullBleed) {
+function colorAt(x, y, fullBleed, badge) {
+  // Notification badge: only the card, white on see-through, lines cut out
+  // (Android draws it as a single-color silhouette)
+  if (badge) {
+    if (!inRoundedRect(x, y, 0.22, 0.12, 0.78, 0.88, 0.08)) return null;
+    const lines = [[0.32, 0.68, 0.30], [0.32, 0.68, 0.45], [0.44, 0.68, 0.60]];
+    for (const [left, right, top] of lines) {
+      if (inRoundedRect(x, y, left, top, right, top + 0.06, 0.03)) return null;
+    }
+    return WHITE;
+  }
   // Background: rounded square, or the whole square for "maskable"
   // icons (Android cuts those into its own shape)
   const inBackground = fullBleed || inRoundedRect(x, y, 0, 0, 1, 1, 0.22);
@@ -44,7 +54,7 @@ function colorAt(x, y, fullBleed) {
 
 // Draw the icon pixel by pixel. Each pixel is sampled 4×4 times
 // and averaged, so the edges come out smooth.
-function drawIcon(size, fullBleed) {
+function drawIcon(size, fullBleed, badge = false) {
   const pixels = Buffer.alloc(size * size * 4);
   const samples = 4;
   for (let py = 0; py < size; py++) {
@@ -52,7 +62,7 @@ function drawIcon(size, fullBleed) {
       let r = 0, g = 0, b = 0, a = 0;
       for (let sy = 0; sy < samples; sy++) {
         for (let sx = 0; sx < samples; sx++) {
-          const color = colorAt((px + (sx + 0.5) / samples) / size, (py + (sy + 0.5) / samples) / size, fullBleed);
+          const color = colorAt((px + (sx + 0.5) / samples) / size, (py + (sy + 0.5) / samples) / size, fullBleed, badge);
           if (color) { r += color[0]; g += color[1]; b += color[2]; a += 1; }
         }
       }
@@ -113,9 +123,10 @@ const icons = [
   ['icon-512.png', 512, false],
   ['icon-maskable-512.png', 512, true],
   ['apple-touch-icon.png', 180, true],
+  ['badge-96.png', 96, false, true],   // small icon in the phone's status bar
 ];
-for (const [name, size, fullBleed] of icons) {
+for (const [name, size, fullBleed, badge] of icons) {
   const file = path.join(folder, name);
-  fs.writeFileSync(file, toPng(size, drawIcon(size, fullBleed)));
+  fs.writeFileSync(file, toPng(size, drawIcon(size, fullBleed, badge)));
   console.log(`${name}  ${size}×${size}  ${(fs.statSync(file).size / 1024).toFixed(1)} KB`);
 }

@@ -101,13 +101,13 @@ function selectedDayHtml(reminders) {
   const items = remindersOn(reminders, date);
 
   const list = items.length
-    ? listCard(items.map(item => itemRow(item, [item.time, item.repeatYearly ? '🔁' : ''].filter(Boolean).join(' · '))))
+    ? listCard(items.map(item => itemRow(item, [item.time, item.repeatYearly ? icon('repeat', 'inline') : ''].filter(Boolean).join(' · '))))
     : `<p class="cal-empty">${TEXT.noRemindersThisDay}</p>`;
 
   return `
     <h2 class="section-title">${title}</h2>
     ${list}
-    <a class="new-button cal-new" href="#/new/reminders/${calendarSelected}">＋ ${TEXT.newReminderThisDay}</a>
+    <a class="new-button cal-new" href="#/new/reminders/${calendarSelected}">${icon('plus')} ${TEXT.newReminderThisDay}</a>
   `;
 }
 

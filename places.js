@@ -61,11 +61,11 @@ function placeFieldHtml(field, place) {
       <div class="place-row">
         <input type="text" data-place dir="auto" autocomplete="off"
                value="${escapeHtml(place?.name || '')}" placeholder="${TEXT.placePlaceholder}">
-        ${place ? `<button type="button" class="place-clear" data-place-clear aria-label="${TEXT.placeClear}">✕</button>` : ''}
+        ${place ? `<button type="button" class="place-clear" data-place-clear aria-label="${TEXT.placeClear}">${icon('x')}</button>` : ''}
       </div>
       <div class="place-list" id="place-list" hidden></div>
       <p class="field-hint">${note}</p>
-      ${place ? `<a class="small-button wide place-go" href="${escapeHtml(directionsUrl(editor.draft))}" target="_blank" rel="noopener">🚌 ${TEXT.placeDirections}</a>` : ''}
+      ${place ? `<a class="small-button wide place-go" href="${escapeHtml(directionsUrl(editor.draft))}" target="_blank" rel="noopener">${icon('bus')} ${TEXT.placeDirections}</a>` : ''}
     </div>`;
 }
 

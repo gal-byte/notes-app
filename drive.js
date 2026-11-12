@@ -267,7 +267,7 @@ function driveCard() {
 
   return `
     <div class="card backup-card">
-      <h2 class="card-title">☁️ Google Drive</h2>
+      <h2 class="card-title">${icon('cloud')} Google Drive</h2>
       <p class="muted">${driveConnected() ? TEXT.driveConnectedText : TEXT.driveExplain}</p>
       ${buttons}
       <p class="backup-status" id="drive-status"></p>

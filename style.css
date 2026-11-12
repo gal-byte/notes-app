@@ -1,34 +1,82 @@
 /* ============================================================
+   FONT
+   Rubik (same as the bus app), saved with the app so it works
+   offline. One file for Hebrew letters, one for Latin.
+   ============================================================ */
+@font-face { font-family: Rubik; font-weight: 300 900; font-display: swap; src: url(fonts/rubik-hebrew.woff2) format("woff2");
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+@font-face { font-family: Rubik; font-weight: 300 900; font-display: swap; src: url(fonts/rubik-latin.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215; }
+
+/* ============================================================
    COLORS
-   All colors are defined once here as "variables".
-   Dark mode just swaps the values — the rest of the file
-   never mentions a specific color.
+   All colors are defined once here. Dark mode swaps the values.
+   Warm paper-like background, one green-teal accent.
    ============================================================ */
 :root {
-  --bg: #f5f5f7;          /* page background */
+  --bg: #f4f2ee;          /* page background */
   --card: #ffffff;        /* cards and bars */
-  --text: #1d1d1f;        /* main text */
-  --muted: #6e6e73;       /* secondary text */
-  --line: #e3e3e8;        /* thin borders */
-  --accent: #2f6fde;      /* buttons, active tab */
-  --accent-text: #ffffff; /* text on top of accent */
-  --bubble: #dbe8ff;      /* chat bubbles on the Add screen */
+  --card-2: #efece6;      /* boxes inside cards, segmented buttons */
+  --text: #1c1b19;
+  --muted: #77716a;
+  --faint: #a8a29a;
+  --line: #e7e2da;
+  --accent: #0f7a63;
+  --accent-soft: #dcefe8;
+  --accent-text: #ffffff;
+  --danger: #c4372d;
+  --bubble: #dcefe8;
+  --star: #e3a008;
+  --shadow: 0 1px 2px rgba(40, 32, 20, .05), 0 6px 20px rgba(40, 32, 20, .05);
 
-  --radius: 14px;
+  --radius: 18px;
   --tabbar-height: 64px;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #1c1c1e;
-    --card: #2c2c2e;
-    --text: #f5f5f7;
-    --muted: #a1a1a6;
-    --line: #3a3a3c;
-    --accent: #5b8ff9;
-    --accent-text: #ffffff;
-    --bubble: #26385a;
+    --bg: #141412;
+    --card: #1e1e1b;
+    --card-2: #2a2925;
+    --text: #f2efe9;
+    --muted: #a39e95;
+    --faint: #6f6a62;
+    --line: #2f2e2a;
+    --accent: #3cc4a0;
+    --accent-soft: #17352d;
+    --accent-text: #06231b;
+    --danger: #ff7b6e;
+    --bubble: #17352d;
+    --star: #f5c24c;
+    --shadow: none;
+    color-scheme: dark;
   }
+}
+
+/* Group colors: --g is the icon color, --gs its soft background */
+.t-amber  { --g: #b7791f; --gs: #fbefd9; }
+.t-violet { --g: #7c4dcc; --gs: #efe6fb; }
+.t-rose   { --g: #c43b5c; --gs: #fbe4ea; }
+.t-sky    { --g: #1f78b4; --gs: #e0eff9; }
+.t-green  { --g: #2f8a3e; --gs: #e2f3e4; }
+.t-slate  { --g: #5b6470; --gs: #eceef1; }
+.t-teal   { --g: #0f7a73; --gs: #dcf1ef; }
+.t-orange { --g: #c4561a; --gs: #fce8dc; }
+.t-pink   { --g: #b83f9a; --gs: #f9e3f3; }
+.t-indigo { --g: #4b55c4; --gs: #e5e7fa; }
+@media (prefers-color-scheme: dark) {
+  .t-amber  { --g: #f0b85a; --gs: #3a2c14; }
+  .t-violet { --g: #b89af0; --gs: #2d2340; }
+  .t-rose   { --g: #f08aa2; --gs: #3e1f27; }
+  .t-sky    { --g: #79b8e8; --gs: #1a2e3d; }
+  .t-green  { --g: #7fcf8b; --gs: #1b3220; }
+  .t-slate  { --g: #aab3bf; --gs: #2a2d31; }
+  .t-teal   { --g: #6fd3c9; --gs: #163331; }
+  .t-orange { --g: #f29a66; --gs: #3b2417; }
+  .t-pink   { --g: #ee93d4; --gs: #3a1f33; }
+  .t-indigo { --g: #9aa2f2; --gs: #23264a; }
 }
 
 /* ============================================================
@@ -38,20 +86,18 @@
 
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;  /* the phone's own font (has Hebrew built in) */
+  font-family: Rubik, system-ui, sans-serif;
   font-size: 17px;
   line-height: 1.5;
   background: var(--bg);
   color: var(--text);
   -webkit-tap-highlight-color: transparent;  /* no grey flash when tapping on Android */
+  -webkit-font-smoothing: antialiased;
 }
 
 a { color: inherit; text-decoration: none; }
-
-/* Anything marked "hidden" in the HTML is really hidden */
 [hidden] { display: none !important; }
-
-button { font: inherit; cursor: pointer; }
+button { font: inherit; cursor: pointer; color: inherit; }
 
 svg {
   width: 24px;
@@ -61,7 +107,18 @@ svg {
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+  flex-shrink: 0;
 }
+/* Small icon inside a line of text */
+svg.inline { width: 15px; height: 15px; vertical-align: -2px; stroke-width: 2.2; }
+
+/* Anything you can tap shrinks a little while pressed */
+.item-row, .group-tile, .new-button, .primary-button, .small-button, .chip,
+.settings-link, .cal-day, .tabbar a, .send-button, .icon-choice, .tint-choice {
+  transition: transform .15s var(--ease), background-color .2s, opacity .2s;
+}
+.group-tile:active, .new-button:active, .primary-button:active, .small-button:active,
+.chip:active, .settings-link:active, .send-button:active, .icon-choice:active { transform: scale(.96); }
 
 /* ============================================================
    TOP BAR
@@ -72,16 +129,21 @@ svg {
   z-index: 10;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+  gap: 6px;
+  max-width: 672px;
+  margin: 0 auto;
+  padding: calc(14px + env(safe-area-inset-top)) 16px 10px;
   background: var(--bg);
 }
 
 .topbar h1 {
   margin: 0;
-  font-size: 26px;
+  font-size: 30px;
   font-weight: 700;
+  letter-spacing: -.01em;
 }
+/* Inner screens: a smaller title next to the back arrow */
+.topbar:has(.back-button:not([hidden])) h1 { font-size: 22px; font-weight: 600; }
 
 .back-button {
   display: flex;
@@ -89,26 +151,28 @@ svg {
   justify-content: center;
   width: 40px;
   height: 40px;
-  margin-inline-start: -8px;  /* line the arrow up with the page edge */
+  margin-inline-start: -10px;
   border-radius: 50%;
   color: var(--accent);
 }
-.back-button[hidden] { display: none; }
+.back-button:active { background: var(--card-2); }
 
 /* ============================================================
    SCREEN AREA
-   Extra space at the bottom so the tab bar never covers content.
    ============================================================ */
 #screen {
-  padding: 4px 16px calc(var(--tabbar-height) + 24px + env(safe-area-inset-bottom));
-  max-width: 640px;
+  padding: 4px 16px calc(var(--tabbar-height) + 28px + env(safe-area-inset-bottom));
+  max-width: 672px;
   margin: 0 auto;
+  animation: screen-in .28s var(--ease);
 }
+@keyframes screen-in { from { opacity: 0; transform: translateY(6px); } }
 
 .section-title {
-  margin: 20px 0 8px;
-  font-size: 15px;
+  margin: 26px 4px 10px;
+  font-size: 13px;
   font-weight: 600;
+  letter-spacing: .02em;
   color: var(--muted);
 }
 
@@ -116,153 +180,239 @@ svg {
   background: var(--card);
   border-radius: var(--radius);
   padding: 16px;
+  box-shadow: var(--shadow);
 }
 
-/* Friendly message when a list is empty */
+/* Empty list: an icon in a soft circle and one quiet line */
 .empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   text-align: center;
   color: var(--muted);
-  padding: 32px 16px;
+  padding: 32px 20px;
 }
-.empty .emoji { font-size: 40px; display: block; margin-bottom: 8px; }
+.empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  color: var(--muted);
+  background: var(--card-2);
+  flex-shrink: 0;
+}
+.empty-icon.accent { color: var(--accent); background: var(--accent-soft); }
 
-/* A list of items inside a card, with thin lines between rows */
-.card.list { padding: 0 16px; }
+/* ---------- Lists ---------- */
+.card.list { padding: 4px 0; overflow: hidden; }
 
 .item-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 52px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--line);
+  min-height: 60px;
+  padding: 10px 16px;
+  background: var(--card);
+  animation: row-in .32s var(--ease) backwards;
 }
-.item-row:last-child { border-bottom: none; }
-.item-row .emoji { font-size: 20px; }
-.item-row.dim { opacity: 0.55; }  /* reminders that already passed */
+.item-row + .item-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  inset-inline: 16px;
+  border-top: 1px solid var(--line);
+}
+.item-row:active { background: var(--card-2); }
+.item-row.dim { opacity: .5; }
+/* Rows slide in one after another */
+.item-row:nth-child(2) { animation-delay: .03s; }
+.item-row:nth-child(3) { animation-delay: .06s; }
+.item-row:nth-child(4) { animation-delay: .09s; }
+.item-row:nth-child(5) { animation-delay: .12s; }
+.item-row:nth-child(n+6) { animation-delay: .15s; }
+@keyframes row-in { from { opacity: 0; transform: translateY(8px); } }
 
 .item-main {
   flex: 1;
-  min-width: 0;  /* lets long titles shrink and end with "…" */
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
-
-.item-title,
-.item-meta {
+.item-title, .item-meta {
   overflow: hidden;
   white-space: nowrap;
-  text-overflow: ellipsis;  /* long titles end with "…" */
+  text-overflow: ellipsis;
 }
+.item-title { font-weight: 500; }
+.item-meta { font-size: 14px; color: var(--muted); }
 
-.item-meta {
-  font-size: 14px;
-  color: var(--muted);
-}
-
-/* Small recipe photo in the list */
 .thumb {
   width: 44px;
   height: 44px;
-  border-radius: 10px;
+  border-radius: 12px;
   object-fit: cover;
 }
 
+/* Group icon in a colored rounded square */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  color: var(--g, var(--muted));
+  background: var(--gs, var(--card-2));
+  flex-shrink: 0;
+}
+.badge svg { width: 22px; height: 22px; }
+.badge.small { width: 38px; height: 38px; border-radius: 12px; }
+.badge.small svg { width: 19px; height: 19px; }
+.badge.large { width: 56px; height: 56px; border-radius: 18px; }
+.badge.large svg { width: 28px; height: 28px; }
+.badge-emoji { font-size: 22px; line-height: 1; }
+
+/* Reminder rows start with a small calendar page */
+.date-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 46px;
+  border-radius: 12px;
+  background: var(--gs);
+  color: var(--g);
+  line-height: 1.05;
+  flex-shrink: 0;
+}
+.item-row .date-box { --g: #b7791f; --gs: #fbefd9; }
+@media (prefers-color-scheme: dark) { .item-row .date-box { --g: #f0b85a; --gs: #3a2c14; } }
+.date-box b { font-size: 18px; font-weight: 700; }
+.date-box small { font-size: 11px; font-weight: 500; }
+
+/* ---------- Swipe a row to delete it (see app.js) ---------- */
+.swipe-wrap { position: relative; overflow: hidden; }
+.swipe-wrap .item-row { transition: transform .25s var(--ease); }
+.card.list .item-row { touch-action: pan-y; }
+.swipe-wrap.dragging .item-row { transition: none; }
+.swipe-under {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 22px;
+  color: #fff;
+  background: var(--danger);
+}
+.swipe-wrap.from-left .swipe-under { justify-content: flex-start; }
+.swipe-wrap.gone { animation: row-gone .25s var(--ease) forwards; }
+@keyframes row-gone { to { height: 0; opacity: 0; } }
+
 /* "＋ פריט חדש" at the top of each group */
 .new-button {
-  display: block;
-  margin-bottom: 12px;
-  padding: 12px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 13px;
   font-weight: 600;
   color: var(--accent);
-  background: var(--card);
-  border-radius: var(--radius);
+  background: var(--accent-soft);
+  border-radius: 14px;
 }
+.new-button svg { width: 20px; height: 20px; }
+.new-button.secondary { color: var(--text); background: var(--card); box-shadow: var(--shadow); }
 
-/* Two buttons side by side ("＋ פריט חדש" · "✏️ עריכת הקבוצה") */
 .button-row { display: flex; gap: 8px; }
 .button-row .new-button { flex: 1; }
 
 /* ============================================================
-   YOUR OWN GROUPS
+   BUTTONS AND CHIPS
    ============================================================ */
-
-/* The "＋ קבוצה חדשה" tile: dashed outline instead of a card */
-.new-group-tile {
-  color: var(--accent);
-  background: none;
-  border: 2px dashed var(--line);
-}
-
-.emoji-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
-
-/* Written extra-specific on purpose, so it beats the general
-   text-box rule further down that makes every box full width */
-.field .emoji-row input.emoji-input {
-  flex-shrink: 0;
-  width: 64px;
-  height: 64px;
-  padding: 0;
-  font-size: 32px;
-  text-align: center;
-}
-
-.emoji-choices {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.emoji-choice {
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  font-size: 22px;
-  background: var(--card);
-  border: none;
-  border-radius: 10px;
-}
-
-.field-hint {
-  min-height: 1em;
-  font-size: 14px;
-  color: #d93025;
-}
-
 .primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 14px;
   font-size: 17px;
   font-weight: 600;
   color: var(--accent-text);
   background: var(--accent);
   border: none;
-  border-radius: var(--radius);
+  border-radius: 14px;
 }
 
-.small-button:disabled { opacity: 0.4; }
-.editor .danger-button { align-self: center; }
-
-/* Filter chips above a list – scroll sideways if there are many */
-.filter-chips {
-  display: flex;
+.small-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   gap: 6px;
-  margin-bottom: 12px;
-  overflow-x: auto;
-  scrollbar-width: none;
+  padding: 9px 14px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--card-2);
+  border: none;
+  border-radius: 12px;
 }
-.filter-chips .chip { margin-bottom: 0; white-space: nowrap; }
+.small-button svg { width: 18px; height: 18px; }
+.small-button:disabled { opacity: .4; }
+.small-button.wide { width: 100%; padding: 12px; }
+
+.danger-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  color: var(--danger);
+  background: none;
+  border: none;
+  border-radius: 12px;
+}
+.danger-button svg { width: 18px; height: 18px; }
+.danger-button:active { background: var(--card-2); }
+
+.link-button {
+  align-self: center;
+  padding: 4px 8px;
+  font-size: 14px;
+  color: var(--muted);
+  background: none;
+  border: none;
+}
+
+.chip {
+  padding: 6px 14px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
 .chip.selected {
   color: var(--accent-text);
   background: var(--accent);
   border-color: var(--accent);
 }
+
+.filter-chips {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.filter-chips .chip { margin-bottom: 0; white-space: nowrap; }
 
 /* ============================================================
    ITEM SCREEN (the edit form)
@@ -270,7 +420,7 @@ svg {
 .editor {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
 .field {
@@ -280,7 +430,8 @@ svg {
 }
 
 .field-label {
-  font-size: 14px;
+  padding: 0 4px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--muted);
 }
@@ -291,21 +442,19 @@ svg {
 .field textarea,
 .field select {
   width: 100%;
-  padding: 12px 14px;
+  padding: 13px 15px;
   font: inherit;
   color: var(--text);
   background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 12px;
+  border: 1.5px solid transparent;
+  border-radius: 14px;
   outline: none;
+  box-shadow: var(--shadow);
+  transition: border-color .2s;
 }
-/* Date and time boxes: numbers read left-to-right, keep them on the right side */
 .field input[type="date"],
 .field input[data-time] { text-align: right; }
-
-/* A time that can't be understood gets a red border */
-.field input.invalid { border-color: #d93025; }
-
+.field input.invalid { border-color: var(--danger); }
 .field input:focus,
 .field textarea:focus,
 .field select:focus { border-color: var(--accent); }
@@ -313,238 +462,307 @@ svg {
 .field textarea {
   resize: none;
   overflow: hidden;   /* it grows instead of scrolling */
-  line-height: 1.6;
+  line-height: 1.65;
 }
-/* Song lyrics: a big page to write on, even when it's still empty */
 .field textarea.big {
   min-height: 60vh;
   font-size: 18px;
-  line-height: 1.8;
+  line-height: 1.85;
 }
 
-.field input[type="text"][data-key="title"] { font-size: 20px; font-weight: 600; }
+/* The title looks like a heading, not a form box */
+.field input[type="text"][data-key="title"] {
+  padding: 4px 4px 8px;
+  font-size: 26px;
+  font-weight: 700;
+  background: none;
+  box-shadow: none;
+  border: none;
+  border-bottom: 1.5px solid var(--line);
+  border-radius: 0;
+}
+.field input[type="text"][data-key="title"]:focus { border-bottom-color: var(--accent); }
+.field:has([data-key="title"]) .field-label { display: none; }
 
-/* Checkbox on one line with its text */
 .field.check {
   flex-direction: row;
   align-items: center;
   gap: 10px;
+  padding: 0 4px;
 }
 .field.check input { width: 22px; height: 22px; accent-color: var(--accent); }
 
-/* Buttons side by side, the chosen one is filled */
 .segmented {
   display: flex;
   gap: 4px;
   padding: 4px;
-  background: var(--card);
-  border-radius: 12px;
+  background: var(--card-2);
+  border-radius: 14px;
 }
 .segmented button {
   flex: 1;
-  padding: 8px;
-  color: var(--text);
+  padding: 9px 6px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--muted);
   background: none;
   border: none;
-  border-radius: 9px;
+  border-radius: 10px;
+  transition: background-color .2s, color .2s, box-shadow .2s;
 }
 .segmented button.selected {
-  color: var(--accent-text);
-  background: var(--accent);
+  color: var(--text);
+  background: var(--card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .12);
 }
 
-/* Rating stars */
-.stars { display: flex; gap: 4px; }
+.stars { display: flex; gap: 2px; }
 .stars button {
   padding: 0 2px;
-  font-size: 32px;
+  font-size: 34px;
   line-height: 1;
   color: var(--line);
   background: none;
   border: none;
+  transition: color .15s, transform .15s var(--ease);
 }
-.stars button.on { color: #f5b301; }
+.stars button.on { color: var(--star); }
+.stars button:active { transform: scale(1.25); }
 
-/* Recipe photo */
 .photo-preview {
   width: 100%;
   max-height: 320px;
   object-fit: cover;
   border-radius: var(--radius);
 }
-.photo-buttons { display: flex; gap: 8px; }
-
-.small-button {
-  padding: 8px 14px;
-  font-size: 15px;
-  color: var(--accent);
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-}
+.photo-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .editor-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .save-status {
   font-size: 14px;
   color: var(--muted);
+  animation: fade-in .3s;
 }
+@keyframes fade-in { from { opacity: 0; } }
 
-.danger-button {
-  padding: 8px 16px;
-  color: #d93025;
-  background: none;
-  border: 1px solid currentColor;
-  border-radius: 10px;
-}
-
-/* Search box */
-.search-input {
-  width: 100%;
-  padding: 12px 16px;
-  font: inherit;
-  color: var(--text);
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  outline: none;
-}
-.search-input:focus { border-color: var(--accent); }
-
-/* Search results */
-.search-form { margin-bottom: 4px; }
-.search-count {
-  margin: 12px 0 0;
+.field-hint {
+  min-height: 1em;
+  margin: 0;
+  padding: 0 4px;
   font-size: 14px;
   color: var(--muted);
 }
+#form-message { color: var(--danger); }
 
-/* The found words, highlighted */
+/* ---------- Icon and color for your own groups ---------- */
+.icon-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.tint-choices { display: flex; flex-wrap: wrap; gap: 10px; }
+.tint-choice {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--g);
+}
+.tint-choice.selected { box-shadow: 0 0 0 3px var(--card), 0 0 0 5px var(--g); }
+.icon-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 6px;
+}
+.icon-choice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  padding: 0;
+  color: var(--muted);
+  background: none;
+  border: none;
+  border-radius: 12px;
+}
+.icon-choice svg { width: 22px; height: 22px; }
+.icon-choice.selected { color: var(--g); background: var(--gs); }
+
+/* ============================================================
+   SEARCH
+   ============================================================ */
+.search-input {
+  width: 100%;
+  padding: 13px 16px;
+  font: inherit;
+  color: var(--text);
+  background: var(--card);
+  border: 1.5px solid transparent;
+  border-radius: 14px;
+  outline: none;
+  box-shadow: var(--shadow);
+}
+.search-input:focus { border-color: var(--accent); }
+.search-form { margin-bottom: 4px; }
+.search-count { margin: 12px 4px 0; font-size: 14px; color: var(--muted); }
+
 mark {
-  padding: 0 1px;
+  padding: 0 2px;
   color: inherit;
-  background: rgba(255, 196, 0, 0.45);
-  border-radius: 3px;
+  background: rgba(240, 184, 40, .35);
+  border-radius: 4px;
 }
 
 /* ============================================================
    HOME
    ============================================================ */
 .home-date {
-  margin: -4px 0 12px;
+  margin: -6px 4px 14px;
+  font-size: 15px;
   color: var(--muted);
 }
 
-/* Looks like a search box, but it's a link to the Search tab */
 .search-link {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: var(--muted);
+  gap: 10px;
+  color: var(--faint);
 }
 .search-link svg { width: 20px; height: 20px; }
 
-/* Section title with "הכל ‹" on the other side */
 .section-head {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
 }
-.see-all {
-  font-size: 14px;
-  color: var(--accent);
+.see-all { font-size: 14px; font-weight: 500; color: var(--accent); }
+
+.welcome {
+  margin-top: 16px;
+  padding: 36px 24px;
+  line-height: 1.6;
 }
+.welcome strong { color: var(--text); font-size: 20px; }
+.welcome-button { margin-top: 10px; width: 100%; }
+
+.install-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+}
+.install-text { flex: 1; min-width: 180px; color: var(--muted); font-size: 15px; }
+.install-text strong { color: var(--text); font-size: 17px; }
+.install-buttons { display: flex; gap: 8px; width: 100%; }
+.install-buttons .primary-button { flex: 1; padding: 11px; }
+
+.backup-reminder {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+  font-size: 15px;
+  color: var(--muted);
+}
+.backup-reminder .empty-icon { width: 44px; height: 44px; }
+.backup-reminder strong { color: var(--accent); }
 
 /* ============================================================
-   BACKUP
+   SETTINGS
    ============================================================ */
 .backup-card {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
-.card-title { margin: 0; font-size: 18px; }
-.muted { margin: 0; color: var(--muted); }
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.card-title svg { width: 22px; height: 22px; color: var(--accent); }
+.muted { margin: 0; color: var(--muted); font-size: 15px; }
 .center { text-align: center; }
-.backup-facts { margin: 0; font-size: 14px; font-weight: 600; }
-.small-button.wide { width: 100%; padding: 12px; }
-.backup-status { margin: 0; min-height: 1.5em; font-size: 14px; color: var(--accent); }
-.settings-link { margin-top: 16px; }
-
-/* A quiet text button ("ניתוק") */
-.link-button {
-  align-self: center;
-  padding: 4px 8px;
+.backup-facts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
   font-size: 14px;
-  color: var(--muted);
-  background: none;
-  border: none;
-  text-decoration: underline;
+  font-weight: 500;
+  color: var(--accent);
 }
+.backup-facts.center { justify-content: center; color: var(--muted); }
+.backup-status { margin: 0; font-size: 14px; color: var(--accent); }
+.backup-status:empty { display: none; }
+.filter-empty { margin: 4px; padding: 24px 0; text-align: center; color: var(--muted); }
 
-/* "Time to back up" card on Home */
-.backup-reminder {
+/* "הגדרות וגיבוי" row under the groups */
+.settings-link {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 16px;
-  color: var(--muted);
+  margin-top: 18px;
+  padding: 15px 16px;
+  font-weight: 500;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
-.backup-reminder .emoji { font-size: 28px; }
-.backup-reminder strong { color: var(--accent); }
-
-/* "Install as an app?" card */
-.install-card {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  margin-top: 16px;
-  border: 1px solid var(--accent);
-}
-.install-card .emoji { font-size: 32px; }
-.install-text { flex: 1; min-width: 180px; color: var(--muted); }
-.install-text strong { color: var(--text); }
-.install-buttons { display: flex; gap: 8px; width: 100%; }
-.install-buttons .primary-button { flex: 1; padding: 10px; }
-
-.welcome {
-  margin-top: 16px;
-  line-height: 1.7;
-}
-.welcome strong { color: var(--text); font-size: 18px; }
-.welcome-button {
-  display: block;
-  margin-top: 16px;
-}
+.settings-link span { flex: 1; }
+.settings-link svg { color: var(--muted); }
+.settings-link .chev { width: 18px; height: 18px; }
 
 /* ============================================================
    GROUPS GRID
    ============================================================ */
 .groups-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);  /* two tiles per row */
+  grid-template-columns: repeat(2, 1fr);
   gap: 12px;
 }
 
 .group-tile {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 18px 16px;
+  gap: 0;
+  padding: 14px 16px;
   background: var(--card);
   border-radius: var(--radius);
-  font-weight: 600;
+  box-shadow: var(--shadow);
+  animation: row-in .32s var(--ease) backwards;
 }
-.group-tile .emoji { font-size: 30px; }
-.group-tile .count { font-size: 13px; font-weight: 400; color: var(--muted); margin-top: -6px; }
-.group-tile:active { transform: scale(0.97); }
+.group-tile .badge { margin-bottom: 10px; }
+.tile-name { font-weight: 600; }
+.group-tile .count { font-size: 13px; color: var(--muted); }
+.group-tile:nth-child(2) { animation-delay: .03s; }
+.group-tile:nth-child(3) { animation-delay: .06s; }
+.group-tile:nth-child(4) { animation-delay: .09s; }
+.group-tile:nth-child(n+5) { animation-delay: .12s; }
+
+.new-group-tile {
+  color: var(--accent);
+  background: none;
+  box-shadow: none;
+  border: 1.5px dashed var(--line);
+}
+.new-group-tile .badge { color: var(--accent); background: var(--accent-soft); }
 
 /* ============================================================
    CALENDAR
@@ -553,47 +771,31 @@ mark {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
-
-.cal-title {
-  margin: 0;
-  font-size: 20px;
-}
-
+.cal-title { margin: 0; font-size: 20px; font-weight: 600; }
 .cal-arrow {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  color: var(--accent);
+  width: 42px;
+  height: 42px;
+  color: var(--text);
   background: var(--card);
   border: none;
   border-radius: 50%;
+  box-shadow: var(--shadow);
 }
+.cal-today-button { display: flex; margin: 0 auto 10px; }
+.cal-grid-card { padding: 12px 8px; }
 
-.cal-today-button {
-  display: block;
-  margin: 0 auto 8px;
-}
-
-.cal-grid-card { padding: 10px 8px; }
-
-/* 7 equal columns. Because the page is right-to-left,
-   the first column (Sunday) is on the right. */
 .cal-weekdays,
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   text-align: center;
 }
-
-.cal-weekdays {
-  margin-bottom: 4px;
-  font-size: 13px;
-  color: var(--muted);
-}
+.cal-weekdays { margin-bottom: 4px; font-size: 12px; font-weight: 500; color: var(--faint); }
 
 .cal-day {
   display: flex;
@@ -601,113 +803,86 @@ mark {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  aspect-ratio: 1;   /* square boxes */
+  aspect-ratio: 1;
   padding: 0;
   font-size: 16px;
   color: var(--text);
   background: none;
   border: none;
-  border-radius: 12px;
+  border-radius: 50%;
 }
-
-.cal-day.today span:first-child {
-  font-weight: 700;
-  color: var(--accent);
-}
-
-.cal-day.selected {
-  color: var(--accent-text);
-  background: var(--accent);
-}
+.cal-day.today span:first-child { font-weight: 700; color: var(--accent); }
+.cal-day.selected { color: var(--accent-text); background: var(--accent); }
 .cal-day.selected span:first-child { color: var(--accent-text); }
 
-/* Little dots under days that have reminders */
-.cal-dots {
-  display: flex;
-  gap: 3px;
-  height: 6px;
-}
-.cal-dots i {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-}
+.cal-dots { display: flex; gap: 3px; height: 5px; }
+.cal-dots i { width: 5px; height: 5px; border-radius: 50%; background: #e0a43a; }
 .cal-day.selected .cal-dots i { background: var(--accent-text); }
 
-.cal-empty {
-  margin: 0 0 12px;
-  color: var(--muted);
-}
-
+.cal-empty { margin: 0 4px 12px; color: var(--muted); }
 .cal-new { margin-top: 12px; }
+.calendar-box { display: flex; flex-direction: column; gap: 6px; }
+.calendar-box .backup-status a { color: inherit; font-weight: 600; }
 
 /* ============================================================
    ADD SCREEN (chat)
    ============================================================ */
-
-/* Leave room at the bottom for the typing box */
 body[data-page="add"] #screen {
   padding-bottom: calc(var(--tabbar-height) + 150px + env(safe-area-inset-bottom));
 }
 
-.chat {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+.chat { display: flex; flex-direction: column; gap: 8px; }
 
-/* Like your own messages in WhatsApp: on the left in Hebrew */
 .bubble {
   align-self: flex-end;
   max-width: 85%;
-  padding: 8px 12px;
+  padding: 9px 14px;
   background: var(--bubble);
-  border-radius: 16px;
-  border-end-end-radius: 4px;
+  border-radius: 20px;
+  border-end-end-radius: 6px;
   overflow-wrap: anywhere;
 }
+.bubble.just-added { animation: pop-in .35s var(--ease); }
+@keyframes pop-in { from { opacity: 0; transform: translateY(12px) scale(.96); } }
+.bubble-label { margin-top: 2px; font-size: 12px; color: var(--muted); }
 
-.bubble-label {
-  margin-top: 2px;
-  font-size: 12px;
+.add-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px 12px;
+  text-align: center;
   color: var(--muted);
 }
+.add-empty p { margin: 0 0 6px; }
+.example-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.example-chip { margin: 0; color: var(--muted); }
 
-/* The typing box, stuck above the tab bar */
 .composer {
   position: fixed;
   left: 0;
   right: 0;
   bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
   z-index: 9;
-  padding: 8px 12px;
+  padding: 8px 12px 10px;
   background: var(--bg);
-  border-top: 1px solid var(--line);
 }
-
-.composer-inner {
-  max-width: 640px;
-  margin: 0 auto;
-}
-
-.composer-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-}
+.composer-inner { max-width: 640px; margin: 0 auto; }
+.composer-row { display: flex; align-items: flex-end; gap: 8px; }
 
 .composer textarea {
   flex: 1;
-  max-height: 40vh;  /* long text scrolls inside the box */
-  padding: 10px 16px;
+  max-height: 40vh;
+  padding: 11px 18px;
   font: inherit;
   color: var(--text);
   background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 22px;
+  border: 1.5px solid transparent;
+  border-radius: 24px;
   outline: none;
   resize: none;
+  box-shadow: var(--shadow);
 }
 .composer textarea:focus { border-color: var(--accent); }
 
@@ -716,56 +891,54 @@ body[data-page="add"] #screen {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
   border: none;
   border-radius: 50%;
   background: var(--accent);
   color: var(--accent-text);
 }
 
-/* Small rounded labels ("chips") */
-.chip {
-  padding: 4px 12px;
-  margin-bottom: 8px;
-  font-size: 14px;
-  color: var(--text);
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-}
-.guess-chip { border-color: var(--accent); color: var(--accent); }
+.guess-chip { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.group-picker { display: flex; flex-wrap: wrap; gap: 6px; }
 
-.group-picker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-/* "Saved in… / Undo" message */
+/* ============================================================
+   MESSAGES ("Saved · Undo")
+   One in the add screen, one for the whole app (#app-toast).
+   ============================================================ */
 .toast {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   margin-bottom: 8px;
-  padding: 8px 14px;
-  font-size: 14px;
+  padding: 11px 16px;
+  font-size: 15px;
   color: var(--bg);
   background: var(--text);
-  border-radius: 12px;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+  animation: toast-in .3s var(--ease);
 }
-.toast-actions { display: flex; gap: 14px; align-items: center; }
-.calendar-box { display: flex; flex-direction: column; gap: 6px; }
-.calendar-box .backup-status a { color: inherit; font-weight: 600; }
-.toast a { font-weight: 700; color: inherit; text-decoration: underline; }
-.toast button {
+@keyframes toast-in { from { opacity: 0; transform: translateY(10px); } }
+#app-toast {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(var(--tabbar-height) + 12px + env(safe-area-inset-bottom));
+  z-index: 20;
+  max-width: 616px;
+  margin: 0 auto;
+}
+.toast-actions { display: flex; gap: 16px; align-items: center; }
+.toast a, .toast button {
   padding: 0;
-  font-weight: 700;
-  color: inherit;
+  font-weight: 600;
+  color: var(--accent-soft);
   background: none;
   border: none;
-  text-decoration: underline;
 }
+@media (prefers-color-scheme: dark) { .toast a, .toast button { color: var(--accent-text); } }
 
 /* ============================================================
    BOTTOM TAB BAR
@@ -779,36 +952,41 @@ body[data-page="add"] #screen {
   display: flex;
   height: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
-  background: var(--card);
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid var(--line);
 }
 
 .tabbar a {
-  flex: 1;  /* five equal-width buttons */
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  font-size: 12px;
-  color: var(--muted);
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--faint);
 }
-
+.tabbar a svg { width: 23px; height: 23px; transition: transform .2s var(--ease); }
 .tabbar a.active { color: var(--accent); }
+.tabbar a.active svg { transform: translateY(-1px); stroke-width: 2.3; }
 
-/* The middle "+" button is a raised circle */
 .add-circle {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  margin-top: -22px;  /* pokes up above the bar */
-  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  margin-top: -24px;
+  border-radius: 18px;
   background: var(--accent);
   color: var(--accent-text);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 40%, transparent);
+  transition: transform .15s var(--ease);
 }
+.add-tab:active .add-circle { transform: scale(.92); }
 .add-circle svg { width: 26px; height: 26px; stroke-width: 2.5; }
 
 /* ============================================================
@@ -816,11 +994,20 @@ body[data-page="add"] #screen {
    ============================================================ */
 .place-row { display: flex; gap: 6px; align-items: center; }
 .place-row input { flex: 1; min-width: 0; }
-.place-clear { border: 0; background: none; color: var(--muted); font-size: 18px; padding: 6px 10px; cursor: pointer; }
-.place-list { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); margin-top: 6px; overflow: hidden; }
+.place-clear { display: flex; padding: 8px; border: 0; background: none; color: var(--muted); }
+.place-clear svg { width: 20px; height: 20px; }
+.place-list { background: var(--card); border-radius: 14px; margin-top: 6px; overflow: hidden; box-shadow: var(--shadow); }
 .place-option { display: block; width: 100%; text-align: start; background: none; border: 0; color: var(--text);
-  padding: 10px 12px; font: inherit; cursor: pointer; }
+  padding: 11px 14px; font: inherit; }
 .place-option + .place-option { border-top: 1px solid var(--line); }
 .place-option small { display: block; color: var(--muted); font-size: 13px; }
-.place-list .field-hint { padding: 10px 12px; margin: 0; }
-.place-go { margin-top: 8px; text-align: center; text-decoration: none; display: block; }
+.place-list .field-hint { padding: 10px 14px; }
+.place-go { margin-top: 8px; }
+
+/* ============================================================
+   LESS MOTION
+   If the phone is set to reduce animations, keep things still.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
