@@ -325,6 +325,9 @@ function analyzeQuickAdd(text, chosenGroup = null, now = new Date()) {
       fields.date = toISODate(day);
     }
     fields.repeatYearly = hasAnyWord(text, QUICK_ADD_RULES.yearlyWords);
+    // "אצל אמא" → the place, so the server can say when to leave (places.js)
+    const place = typeof homePlaceIn === 'function' ? homePlaceIn(text) : null;
+    if (place) fields.place = place;
     if (rest) fields.text = rest;
   } else if (group === 'songs') {
     fields.status = 'idea';

@@ -27,6 +27,7 @@ const APP_FILES = [
   'style.css',
   'db.js',
   'quickadd.js',
+  'places.js',
   'sections.js',
   'calendar.js',
   'groups.js',

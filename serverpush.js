@@ -4,6 +4,8 @@
 //   • birthdays → the day before, at 10:00
 //   • reminders with a time → 2 hours before
 //   • reminders without a time → the evening before, at 20:00
+//   • reminders with a time and a place → also "when to leave",
+//     about 10 minutes before you need to leave (bus app on the server)
 //
 // The phone gets them through the ntfy app, so they arrive even
 // when this app is closed. This file only keeps the server's copy
@@ -35,6 +37,8 @@ async function sendRemindersToServer() {
     time: item.time || '',
     repeatYearly: !!item.repeatYearly,
     birthday: isBirthday(item),   // same rule as Google Calendar (drive.js)
+    // With a place, the bus app sends "when to leave" too (places.js)
+    place: item.place ? { name: item.place.name, lat: item.place.lat, lon: item.place.lon } : null,
   }));
   try {
     const response = await fetch(`${PUSH_SERVER}/reminders`, {

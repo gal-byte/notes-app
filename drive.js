@@ -164,6 +164,7 @@ function calendarEventFor(item) {
   }
 
   const event = { summary: item.title || '', description: item.text || '' };
+  if (item.place?.name) event.location = item.place.name;
   if (item.time) {
     // A one-hour event in your phone's time zone
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;

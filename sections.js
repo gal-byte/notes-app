@@ -12,12 +12,13 @@ const SHOW_LISTS = { watchlist: '🍿 לראות', watching: '▶️ בצפיי�
 const TITLE_FIELD = { key: 'title', type: 'text', label: 'כותרת' };
 const NOTES_FIELD = { key: 'text', type: 'textarea', label: 'הערות' };
 
-// Field types: text · textarea · date · time · checkbox · choice · rating · photo
+// Field types: text · textarea · date · time · place · checkbox · choice · rating · photo
 const FIELDS = {
   reminders: [
     TITLE_FIELD,
     { key: 'date', type: 'date', label: 'תאריך' },
     { key: 'time', type: 'time', label: 'שעה (לא חובה)' },
+    { key: 'place', type: 'place', label: 'מקום (לא חובה)' },
     { key: 'repeatYearly', type: 'checkbox', label: 'חוזר כל שנה (ימי הולדת, ימי נישואין)' },
     NOTES_FIELD,
   ],
@@ -221,6 +222,7 @@ function reminderRow({ item, next }, isPast) {
   let meta = '';
   if (next) meta = isPast ? formatDate(item.date) : whenLabel(next, item.time);
   if (item.repeatYearly) meta = `🔁 ${meta}`;
+  if (item.place) meta += ` · 📍 ${escapeHtml(placeShortName(item.place))}`;
   return itemRow(item, meta, { dim: isPast });
 }
 
@@ -413,6 +415,10 @@ function fieldHtml(field, value) {
       return `<label class="field">${label}
         <input type="text" ${key} data-time inputmode="decimal" dir="ltr"
                value="${escapeHtml(value)}" placeholder="${TEXT.timeHint}"></label>`;
+
+    // Where: chosen from the bus app's places (places.js)
+    case 'place':
+      return placeFieldHtml(field, value);
 
     case 'checkbox':
       return `<label class="field check">
@@ -641,6 +647,7 @@ function setupItemScreen() {
   });
 
   form.querySelectorAll('textarea').forEach(autoGrow);
+  setupPlaceField(form, saveSoon);
 
   // Reminders: load Google's sign-in now, so the calendar button can
   // open Google's window straight from the tap

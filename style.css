@@ -810,3 +810,17 @@ body[data-page="add"] #screen {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 .add-circle svg { width: 26px; height: 26px; stroke-width: 2.5; }
+
+/* ============================================================
+   PLACE OF A REMINDER (places.js)
+   ============================================================ */
+.place-row { display: flex; gap: 6px; align-items: center; }
+.place-row input { flex: 1; min-width: 0; }
+.place-clear { border: 0; background: none; color: var(--muted); font-size: 18px; padding: 6px 10px; cursor: pointer; }
+.place-list { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); margin-top: 6px; overflow: hidden; }
+.place-option { display: block; width: 100%; text-align: start; background: none; border: 0; color: var(--text);
+  padding: 10px 12px; font: inherit; cursor: pointer; }
+.place-option + .place-option { border-top: 1px solid var(--line); }
+.place-option small { display: block; color: var(--muted); font-size: 13px; }
+.place-list .field-hint { padding: 10px 12px; margin: 0; }
+.place-go { margin-top: 8px; text-align: center; text-decoration: none; display: block; }
