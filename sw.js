@@ -33,7 +33,6 @@ const APP_FILES = [
   'calendar.js',
   'groups.js',
   'search.js',
-  'drive.js',
   'daily.js',
   'backup.js',
   'sync.js',

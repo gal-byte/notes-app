@@ -1,7 +1,7 @@
 # notes-app
 
 A personal notes app (installable PWA) in Hebrew: reminders, songs, movies, recipes and custom groups.
-Plain HTML, CSS and JavaScript. Data is stored on the device; hosted free on GitHub Pages.
+Plain HTML, CSS and JavaScript. Notes are kept on each device and synced through the home server; hosted free on GitHub Pages.
 
 ## Sync and notifications (2026-11-13)
 - Notes are kept on each device **and** on the home server (`~/notify` on the server, `store.py`).

@@ -1,33 +1,12 @@
 // ============================================================
-// BACKUP & RESTORE
-//
-// Backup: puts everything into one file, which drive.js saves to
-// your Google Drive (always the same file, replaced each time).
-//
-// Restore = smart merge, so it works between phone and tablet:
-//   • items you don't have yet        → added
-//   • items changed on both devices   → the newer version wins
-//   • items deleted on the other one  → deleted here too
-//   • nothing else is touched
+// MERGING NOTES FROM ANOTHER DEVICE
+// sync.js uses these rules when notes come from the server:
+//   - items you don't have yet        -> added
+//   - items changed on both devices   -> the newer version wins
+//   - items deleted on the other one  -> deleted here too
+//   - nothing else is touched
+// Also here: photos <-> text (for sending), and the morning summary switch.
 // ============================================================
-
-const BACKUP_FORMAT = 1;
-
-// ---------- Remember when the last backup was ----------
-// (kept per device, only used for the "time to back up" reminder)
-
-function lastBackupTime() {
-  try { return Number(localStorage.getItem('lastBackup')) || 0; } catch { return 0; }
-}
-
-function rememberBackup() {
-  try { localStorage.setItem('lastBackup', String(Date.now())); } catch { /* not important */ }
-}
-
-function daysSinceBackup() {
-  const last = lastBackupTime();
-  return last ? Math.floor((Date.now() - last) / 86400000) : null;
-}
 
 // ---------- Photos ↔ text ----------
 // A backup file is text, so photos are turned into text ("data URL")
@@ -46,51 +25,7 @@ async function dataUrlToBlob(dataUrl) {
   return (await fetch(dataUrl)).blob();
 }
 
-function formatSize(bytes) {
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
-
-// ---------- Making a backup ----------
-
-async function createBackupFile(withPhotos) {
-  const items = [];
-  for (const item of await getAllItems()) {
-    const copy = { ...item };
-    if (item.photo instanceof Blob) {
-      if (withPhotos) copy.photo = await blobToDataUrl(item.photo);
-      else delete copy.photo;  // "no photo field" = keep the photo you have when restoring
-    }
-    items.push(copy);
-  }
-
-  const backup = {
-    app: 'notes-app',
-    format: BACKUP_FORMAT,
-    createdAt: Date.now(),
-    withPhotos,
-    groups: (await getCustomGroups()).map(withoutFlag),
-    deleted: await getDeletedRecords(),
-    items,
-  };
-
-  return new File([JSON.stringify(backup)], DRIVE_BACKUP_NAME, { type: 'application/json' });
-}
-
-// ---------- Restoring (smart merge) ----------
-
-async function readBackupFile(file) {
-  let backup;
-  try {
-    backup = JSON.parse(await file.text());
-  } catch {
-    throw new Error(TEXT.notABackup);
-  }
-  if (!backup || backup.app !== 'notes-app' || !Array.isArray(backup.items)) {
-    throw new Error(TEXT.notABackup);
-  }
-  return backup;
-}
+// ---------- The merge ----------
 
 // Compare what's here with what's in the backup and decide what to do.
 // This only makes a plan – nothing is saved yet.
@@ -203,32 +138,4 @@ async function turnOnBackgroundCheck() {
 async function checkDailySummaryOnOpen() {
   if (!notificationsSupported() || !dailySummaryOn()) return;
   showDailySummary(await navigator.serviceWorker.ready);
-}
-
-// Used by "restore from Drive": show what will change → confirm → merge
-async function restoreBackupFile(file, status) {
-  try {
-    const backup = await readBackupFile(file);
-    const local = {
-      items: await getAllItems(),
-      groups: (await getCustomGroups()).map(withoutFlag),
-      deleted: await getDeletedRecords(),
-    };
-    const plan = planMerge(local, backup);
-    if (plan.changes === 0) {
-      status.textContent = TEXT.restoreNothing;
-      return;
-    }
-    if (!confirm(TEXT.restoreConfirm(plan.counts))) {
-      status.textContent = '';
-      return;
-    }
-    status.textContent = TEXT.restoreWorking;
-    await applyMerge(plan);
-    resendEverything();  // the restored notes go to the server too (sync.js)
-    syncNow();
-    status.textContent = TEXT.restoreDone(plan.counts);
-  } catch (error) {
-    status.textContent = error.message || TEXT.notABackup;
-  }
 }

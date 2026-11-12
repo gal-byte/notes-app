@@ -58,21 +58,8 @@ const TEXT = {
 
   // Settings
   backupScreenTitle: 'הגדרות',
-  backup: 'גיבוי',
-
-  // Google Calendar
-  addToCalendar: 'הוספה',
-  calendarUpdate: 'עדכון',
-  calendarInIt: 'ביומן',
-  googleCalendar: 'Google Calendar',
-  calendarAdding: 'מוסיף…',
-  calendarAdded: 'נוסף ליומן',
-  calendarAddAll: n => n === 1 ? 'תזכורת אחת עוד לא ביומן · הוספה' : `${n} תזכורות עוד לא ביומן · הוספה`,
-  calendarAddingCount: (i, n) => `מוסיף… ${i}/${n}`,
-  calendarAddedAll: n => n === 1 ? 'נוספה ליומן' : `${n} נוספו ליומן`,
-  calendarNeedsTitle: 'צריך כותרת ותאריך',
-  calendarNoPermission: 'לא התקבלה הרשאה ליומן',
-  calendarError: 'משהו השתבש מול היומן',
+  working: 'רגע…',
+  itemCounts: (items, photos) => `${items} פריטים${photos ? ` · ${photos} תמונות` : ''}`,
 
   // Morning summary + notifications
   notifyTitle: 'סיכום בוקר',
@@ -99,31 +86,6 @@ const TEXT = {
   placeHomeOf: 'הבית של',
   placeNotFound: 'לא נמצא',
   placeNoServer: 'אין חיבור לשרת',
-
-  // Google Drive
-  driveConnect: 'חיבור ל-Google Drive',
-  driveBackup: 'גיבוי עכשיו',
-  driveRestore: 'שחזור מהגיבוי',
-  driveDisconnect: 'ניתוק מ-Drive',
-  driveWorking: 'רגע…',
-  driveSaved: 'נשמר בדרייב',
-  driveNoBackup: 'עוד אין גיבוי בדרייב',
-  driveNeedsInternet: 'צריך אינטרנט',
-  driveNotReady: 'עוד רגע, אפשר ללחוץ שוב',
-  driveCancelled: 'בוטל',
-  googleWindowBlocked: 'החלון של Google לא נפתח, אפשר ללחוץ שוב',
-  driveNoPermission: 'לא התקבלה הרשאה',
-  driveTryAgain: 'צריך לאשר שוב',
-  driveError: 'משהו השתבש מול הדרייב',
-  backupCounts: (items, photos) => `${items} פריטים${photos ? ` · ${photos} תמונות` : ''}`,
-  neverBackedUp: 'עוד לא גובה',
-  backedUpToday: 'גובה היום',
-  lastBackupDaysAgo: n => n === 1 ? 'גובה אתמול' : `גובה לפני ${n} ימים`,
-  restoreWorking: 'משחזר…',
-  restoreNothing: 'הכל כבר מעודכן',
-  restoreConfirm: c => `בשחזור הזה:\nיתווספו: ${c.added}\nיתעדכנו: ${c.updated}\nיימחקו: ${c.removed}\n\nלהמשיך?`,
-  restoreDone: c => `נוספו ${c.added}, עודכנו ${c.updated}, נמחקו ${c.removed}`,
-  notABackup: 'זה לא קובץ גיבוי של האפליקציה',
 
   // Calendar
   weekdaysShort: ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'],

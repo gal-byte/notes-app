@@ -247,52 +247,6 @@ function remindersList(items) {
   return html;
 }
 
-// Upcoming reminders (with a title and date) not yet sent to Google Calendar
-function notInCalendar(items) {
-  const today = todayStart();
-  return items.filter(item => {
-    if (item.inCalendar || !item.title || !item.date) return false;
-    const next = nextOccurrence(item);
-    return next && next >= today;
-  });
-}
-
-// "3 תזכורות עוד לא ביומן · הוספה" under the calendar
-async function addAllToCalendarHtml() {
-  const missing = notInCalendar(await getItemsInGroup('reminders')).length;
-  if (!missing) return '';
-  return `<button type="button" class="text-button quiet-line" data-calendar-all>${TEXT.calendarAddAll(missing)}</button>`;
-}
-
-function setupAddAllToCalendar() {
-  const button = document.querySelector('[data-calendar-all]');
-  if (!button) return;
-  prepareGoogle().catch(error => { button.textContent = error.message; });
-
-  button.addEventListener('click', async () => {
-    // Ask Google first, straight from the tap
-    const tokenReady = getGoogleToken(CALENDAR_SCOPE);
-    button.disabled = true;
-    button.textContent = TEXT.calendarAdding;
-    let added = 0;
-    try {
-      await tokenReady;
-      const items = notInCalendar(await getItemsInGroup('reminders'));
-      for (const item of items) {
-        button.textContent = TEXT.calendarAddingCount(added + 1, items.length);
-        const event = await addToGoogleCalendar(item);
-        await updateItem(item.id, { calendarEventId: event.id, inCalendar: true });
-        added++;
-      }
-      button.textContent = TEXT.calendarAddedAll(added);
-    } catch (error) {
-      button.disabled = false;
-      const left = notInCalendar(await getItemsInGroup('reminders')).length;
-      button.textContent = `${error.message || TEXT.calendarError}${left ? ` · ${TEXT.calendarAddAll(left)}` : ''}`;
-    }
-  });
-}
-
 function songsList(items) {
   return filterChips({ '': TEXT.all, ...SONG_STATUS }, '') +
     rowList(items.map(item =>
@@ -448,19 +402,12 @@ function editorHtml() {
     `<option value="${g.id}" ${g.id === group ? 'selected' : ''}>${groupTitle(g)}</option>`
   ).join('');
 
-  // Reminders: one row that adds them straight to Google Calendar
-  const calendarRow = group === 'reminders' ? `
-    <button type="button" class="prop prop-link" data-calendar>${icon('calendar')}
-      <span class="prop-name">${TEXT.googleCalendar}</span>
-      <span class="prop-hint" id="calendar-status">${draft.calendarEventId ? `${TEXT.calendarInIt} · ${TEXT.calendarUpdate}` : TEXT.addToCalendar}</span>
-    </button>` : '';
 
   return `
     <form class="editor" id="editor">
       ${title}
       <div class="props">
         ${props}
-        ${calendarRow}
         <label class="prop">${groupBadge(findGroup(group), 'tiny')}<span class="prop-name">${TEXT.moveToGroup}</span>
           <select class="prop-input" id="group-select">${groupOptions}</select></label>
       </div>
@@ -542,26 +489,6 @@ function setupItemScreen() {
 
   // Buttons inside the form
   form.addEventListener('click', async event => {
-    // "Add to Google Calendar": send what's on screen right now
-    const calendarButton = event.target.closest('[data-calendar]');
-    if (calendarButton) {
-      const calendarStatus = document.getElementById('calendar-status');
-      if (!editor.id || !editor.draft.date) {
-        calendarStatus.textContent = TEXT.calendarNeedsTitle;
-        return;
-      }
-      try {
-        const added = await sendReminderToCalendar({ ...editor.draft, id: editor.id },
-          text => { calendarStatus.textContent = text; });
-        editor.draft.calendarEventId = added.id;
-        editor.draft.inCalendar = true;
-        calendarStatus.textContent = TEXT.calendarInIt;
-      } catch (error) {
-        calendarStatus.textContent = error.message || TEXT.calendarError;
-      }
-      return;
-    }
-
     const option = event.target.closest('.segmented button');
     if (option) {
       const box = option.parentElement;
@@ -637,8 +564,4 @@ function setupItemScreen() {
 
   // A brand-new item: start typing the title right away
   if (!editor.id) form.querySelector('.title-input')?.focus();
-
-  // Reminders: load Google's sign-in now, so the calendar button can
-  // open Google's window straight from the tap
-  if (editor.group === 'reminders') prepareGoogle().catch(() => { /* offline: shown on tap */ });
 }
