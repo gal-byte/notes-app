@@ -34,6 +34,7 @@ const APP_FILES = [
   'drive.js',
   'daily.js',
   'backup.js',
+  'serverpush.js',
   'app.js',
   'manifest.json',
   'icons/icon-192.png',

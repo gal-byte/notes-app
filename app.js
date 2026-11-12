@@ -97,6 +97,15 @@ const TEXT = {
   notifyBlocked: 'ההתראות חסומות. אפשר לאשר אותן בהגדרות של Chrome ← הגדרות אתר ← התראות.',
   notifyUnsupported: 'הדפדפן הזה לא תומך בהתראות.',
 
+  // Reminders from the home server (serverpush.js)
+  pushTitle: 'התראות מהשרת בבית',
+  pushExplain: 'השרת בבית שולח התראה דרך אפליקציית ntfy: ימי הולדת יום לפני ב-10:00, תזכורת עם שעה שעתיים לפני, ותזכורת בלי שעה ערב לפני ב-20:00. עובד רק כש-Tailscale פועל.',
+  pushTurnOn: '⏰ הפעלת התראות מהשרת',
+  pushSyncNow: 'שליחה לשרת עכשיו',
+  pushLastSync: when => `פועל ✓ התזכורות נשלחו לשרת לאחרונה: ${when}`,
+  pushNeverSynced: 'פועל ✓ עוד לא נשלח לשרת',
+  pushNoServer: 'אין חיבור לשרת. צריך ש-Tailscale יהיה פועל בטלפון.',
+
   // Google Drive
   driveExplain: 'שומר את הגיבוי בקובץ אחד בדרייב שלך ומחליף אותו בכל גיבוי. האפליקציה רואה רק את הקובץ שהיא עצמה יצרה.',
   driveConnectedText: 'מחובר ✓ כל גיבוי מחליף את הקובץ notes-app-backup.json בדרייב. שחזור מוסיף מה שחסר, מעדכן לגרסה החדשה יותר, ומוחק מה שנמחק במכשיר השני.',

@@ -189,6 +189,7 @@ async function backupScreen() {
   return `
     ${driveCard()}
     ${await notificationsCard()}
+    ${serverPushCard()}
     <p class="backup-facts center">${TEXT.backupCounts(items.length, photos)} · ${lastText}</p>
     <p class="muted center">${persisted ? TEXT.storageProtected : TEXT.storageNotProtected}</p>
   `;
@@ -197,6 +198,7 @@ async function backupScreen() {
 function setupBackupScreen() {
   setupDriveCard();
   setupNotificationsCard();
+  setupServerPushCard();
 }
 
 // ---------- Daily summary switch (see daily.js) ----------

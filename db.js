@@ -61,7 +61,11 @@ async function runInStore(storeName, mode, action) {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(storeName, mode);
     const request = action(transaction.objectStore(storeName));
-    transaction.oncomplete = () => resolve(request.result);
+    transaction.oncomplete = () => {
+      // Something changed in your notes: let the home server know (see serverpush.js)
+      if (storeName === 'items' && mode === 'readwrite' && typeof notesChanged === 'function') notesChanged();
+      resolve(request.result);
+    };
     transaction.onerror = () => reject(transaction.error);
     transaction.onabort = () => reject(transaction.error);
   });
