@@ -18,6 +18,7 @@ const FIELDS = {
     TITLE_FIELD,
     { key: 'date', type: 'date', label: 'תאריך' },
     { key: 'time', type: 'time', label: 'שעה (לא חובה)' },
+    { key: 'timeFlex', type: 'choice', label: 'להגיע', options: { exact: 'בדיוק בזמן', about: 'בערך (±10 דק׳)' } },
     { key: 'place', type: 'place', label: 'מקום (לא חובה)' },
     { key: 'repeatYearly', type: 'checkbox', label: 'חוזר כל שנה (ימי הולדת, ימי נישואין)' },
     NOTES_FIELD,
@@ -220,7 +221,8 @@ function parseTags(text) {
 
 function reminderRow({ item, next }, isPast) {
   let meta = '';
-  if (next) meta = isPast ? formatDate(item.date) : whenLabel(next, item.time);
+  const time = item.time && item.timeFlex === 'about' ? `${TEXT.about} ${item.time}` : item.time;
+  if (next) meta = isPast ? formatDate(item.date) : whenLabel(next, time);
   if (item.repeatYearly) meta = `🔁 ${meta}`;
   if (item.place) meta += ` · 📍 ${escapeHtml(placeShortName(item.place))}`;
   return itemRow(item, meta, { dim: isPast });

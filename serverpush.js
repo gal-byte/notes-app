@@ -38,6 +38,7 @@ async function sendRemindersToServer() {
     repeatYearly: !!item.repeatYearly,
     birthday: isBirthday(item),   // same rule as Google Calendar (drive.js)
     // With a place, the bus app sends "when to leave" too (places.js)
+    timeFlex: item.timeFlex === 'about' ? 'about' : 'exact',
     place: item.place ? { name: item.place.name, lat: item.place.lat, lon: item.place.lon } : null,
   }));
   try {

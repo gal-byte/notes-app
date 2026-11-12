@@ -112,6 +112,7 @@ const TEXT = {
   placeOn: '🚌 תגיע התראה כ-10 דקות לפני שצריך לצאת. צריך שהתראות מהשרת יהיו פועלות.',
   placeNeedsTime: 'הוסף שעה כדי לקבל התראה מתי לצאת.',
   placeDirections: 'איך מגיעים',
+  about: 'בערך',
   placeClear: 'הסר מקום',
   placeHomeOf: 'הבית של',
   placeNotFound: 'לא נמצא. נסה שם אחר או הוסף עיר.',

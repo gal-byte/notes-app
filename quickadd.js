@@ -254,6 +254,21 @@ function groupForShortcut(word) {
   return null;
 }
 
+// "19:00 בערך" / "בערך ב-19:00" → about · "19:00 בדיוק" → exact.
+// For reminders with a place: "בערך" lets the bus app suggest a trip up to
+// 10 minutes before or after; "בדיוק" (also the default) never arrives late.
+const TIME_FLEX_WORDS = { 'בדיוק': 'exact', 'בערך': 'about', 'בסביבות': 'about' };
+function findTimeFlex(title, timeText) {
+  const at = title.indexOf(timeText);
+  if (at < 0) return null;
+  const words = Object.keys(TIME_FLEX_WORDS).join('|');
+  const after = title.slice(at + timeText.length).match(new RegExp(`^\\s*(${words})(?=$|[\\s,.!?])`));
+  if (after) return { flex: TIME_FLEX_WORDS[after[1]], piece: after[0].trim() };
+  const before = title.slice(0, at).match(new RegExp(`(?:^|\\s)(${words})\\s*$`));
+  if (before) return { flex: TIME_FLEX_WORDS[before[1]], piece: before[1] };
+  return null;
+}
+
 // ---------- Main function ----------
 
 // Remove a piece of text from the title and tidy the leftovers
@@ -311,6 +326,11 @@ function analyzeQuickAdd(text, chosenGroup = null, now = new Date()) {
   if (group === 'reminders') {
     if (foundTime) {
       fields.time = foundTime.time;
+      const flex = findTimeFlex(title, foundTime.matched);
+      if (flex) {
+        fields.timeFlex = flex.flex;
+        title = title.replace(new RegExp(`(^|\\s)${flex.piece}(?=$|[\\s,.!?])`), ' ');
+      }
       title = removeFromTitle(title, foundTime.matched);
     }
     if (foundDate) {

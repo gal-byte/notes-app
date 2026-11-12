@@ -42,6 +42,7 @@ function directionsUrl(item) {
   const params = new URLSearchParams({ to: `${place.lat},${place.lon}`, toname: place.name });
   const next = nextOccurrence(item);
   if (next && item.time) params.set('arrive', `${toISODate(next)}T${item.time}`);
+  if (item.timeFlex === 'about') params.set('flex', '1');
   return `${BUS_APP}?${params}`;
 }
 
