@@ -76,6 +76,16 @@
    BASICS
    ============================================================ */
 * { box-sizing: border-box; }
+
+/* Behave like an app, not a web page:
+   no text selection or "search this" pop-ups when you hold a finger
+   on something, no double-tap zoom, no pull-to-refresh or bounce.
+   Typing boxes still select text as usual. */
+html, body { overscroll-behavior: none; }
+* { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+input, textarea, select, [contenteditable] { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+img, svg, a { -webkit-user-drag: none; }
+
 body {
   margin: 0;
   font-family: Rubik, system-ui, sans-serif;
@@ -471,6 +481,31 @@ mark { padding: 0 1px; color: inherit; background: rgba(240, 184, 40, .35); bord
 .cal-dots { display: flex; gap: 3px; height: 4px; }
 .cal-dots i { width: 4px; height: 4px; border-radius: 50%; background: #d99a06; }
 .cal-day.selected .cal-dots i { background: var(--bg); }
+
+/* ---------- Week strip on Home ---------- */
+.week { padding: 4px 12px 0; }
+.week-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.week-day {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 0 7px; background: none; border: none; border-radius: 14px;
+  transition: background-color .15s, color .15s, transform .15s var(--ease);
+}
+.week-day small { font-size: 12px; color: var(--faint); }
+.week-day b { font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.week-day.today b { color: var(--accent); }
+.week-day.selected { background: var(--text); color: var(--bg); }
+.week-day.selected small, .week-day.selected b { color: var(--bg); }
+.week-day:active { transform: scale(.94); }
+.week-dot { width: 5px; height: 5px; border-radius: 50%; background: #d99a06; }
+.week-dot.none { visibility: hidden; }
+.week-day.selected .week-dot { background: var(--bg); }
+.week-open {
+  display: flex; justify-content: center; margin: 2px auto 0; width: 64px; height: 24px;
+  color: var(--faint); border-radius: 12px;
+}
+.week-open:active { background: var(--fill); }
+#week-list { animation: fade-up .2s var(--ease); }
+.day-empty { margin: 0; padding: 14px var(--side) 4px; color: var(--faint); font-size: 15px; }
 
 /* ============================================================
    SETTINGS

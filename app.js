@@ -11,6 +11,8 @@ const TEXT = {
   back: 'חזרה',
 
   upcoming: 'בקרוב',
+  wholeMonth: 'כל החודש',
+  nothingThatDay: 'אין כלום ביום הזה',
   groups: 'קבוצות',
 
   searchPlaceholder: 'חיפוש',
@@ -242,16 +244,56 @@ function sectionLabel(text) {
 
 // ============================================================
 // HOME
-// What's coming up, then your groups. Nothing else.
+// This week (tap a day to see it, or open the whole month),
+// then your groups. Nothing else.
 // ============================================================
 
-async function homeScreen() {
-  const upcoming = await upcomingReminders(6);
-  const counts = await countItemsPerGroup();
+let homeDay = null;  // the day picked in the week strip, like "2026-11-13"
 
-  const upcomingHtml = upcoming.length
-    ? sectionLabel(TEXT.upcoming) + rowList(upcoming.map(r => reminderRow(r, false)))
-    : '';
+// Seven days from today, each with a dot if something happens then
+function weekStripHtml(reminders) {
+  const today = todayStart();
+  if (!homeDay) homeDay = toISODate(today);
+  let days = '';
+  for (let n = 0; n < 7; n++) {
+    const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() + n);
+    const iso = toISODate(date);
+    const count = remindersOn(reminders, date).length;
+    days += `
+      <button type="button" class="week-day${n === 0 ? ' today' : ''}${iso === homeDay ? ' selected' : ''}" data-week-day="${iso}">
+        <small>${TEXT.weekdaysShort[date.getDay()]}</small>
+        <b>${date.getDate()}</b>
+        <i class="week-dot${count ? '' : ' none'}"></i>
+      </button>`;
+  }
+  return `
+    <div class="week">
+      <div class="week-days">${days}</div>
+      <a class="week-open" href="#/calendar" aria-label="${TEXT.wholeMonth}">${icon('chevron', 'down')}</a>
+    </div>`;
+}
+
+// What happens on the picked day
+function weekDayListHtml(reminders) {
+  const date = parseISODate(homeDay);
+  const items = remindersOn(reminders, date);
+  if (!items.length) return `<p class="day-empty">${TEXT.nothingThatDay}</p>`;
+  // The day is already picked above, so only the time is shown
+  return rowList(items.map(item => itemRow(item, '', {
+    end: item.time ? (item.timeFlex === 'about' ? `~${item.time}` : item.time) : '',
+    after: item.place ? ` ${icon('pin', 'inline faint')}` : '',
+  })));
+}
+
+async function homeScreen() {
+  const reminders = await getItemsInGroup('reminders');
+  const counts = await countItemsPerGroup();
+  // A new day since the app was left open: start from today again
+  if (homeDay && homeDay < toISODate(todayStart())) homeDay = null;
+
+  const upcomingHtml = `
+    ${weekStripHtml(reminders)}
+    <div id="week-list">${weekDayListHtml(reminders)}</div>`;
 
   const groupRows = GROUPS.map(group => `
     <a class="row" href="#/group/${group.id}">
@@ -266,6 +308,40 @@ async function homeScreen() {
     </a>`);
 
   return upcomingHtml + sectionLabel(TEXT.groups) + rowList(groupRows);
+}
+
+// Tap a day in the strip: show that day. Swipe down on the strip: the whole month.
+function setupHome() {
+  const week = document.querySelector('.week');
+  if (!week) return;
+  week.addEventListener('click', async event => {
+    const day = event.target.closest('[data-week-day]');
+    if (!day) return;
+    homeDay = day.dataset.weekDay;
+    week.querySelectorAll('.week-day').forEach(b => b.classList.toggle('selected', b === day));
+    const reminders = await getItemsInGroup('reminders');
+    const list = document.getElementById('week-list');
+    list.innerHTML = weekDayListHtml(reminders);
+    list.style.animation = 'none'; void list.offsetWidth; list.style.animation = '';
+    haptic(5);
+  });
+  let startY = null;
+  week.addEventListener('touchstart', event => { startY = event.touches[0].clientY; }, { passive: true });
+  week.addEventListener('touchend', event => {
+    if (startY !== null && event.changedTouches[0].clientY - startY > 40) {
+      // Open the month on the day picked here
+      calendarSelected = homeDay;
+      const picked = parseISODate(homeDay);
+      calendarMonth = new Date(picked.getFullYear(), picked.getMonth(), 1);
+      location.hash = '#/calendar';
+    }
+    startY = null;
+  });
+  week.querySelector('.week-open').addEventListener('click', () => {
+    calendarSelected = homeDay;
+    const picked = parseISODate(homeDay);
+    calendarMonth = new Date(picked.getFullYear(), picked.getMonth(), 1);
+  });
 }
 
 // ============================================================
@@ -421,9 +497,8 @@ async function buildScreen(page, id, extra) {
   // Anything unknown (or no hash at all) → home. "#/add" focuses the box.
   return {
     title: TEXT.appName, html: await homeScreen(), addTo: '', home: true,
-    actions: headerLink('#/search', 'search', TEXT.search) + headerLink('#/calendar', 'calendar', TEXT.calendar)
-           + headerLink('#/settings', 'sliders', TEXT.settings),
-    setup: page === 'add' ? () => document.getElementById('quick-text').focus() : null,
+    actions: headerLink('#/search', 'search', TEXT.search) + headerLink('#/settings', 'sliders', TEXT.settings),
+    setup: () => { setupHome(); if (page === 'add') document.getElementById('quick-text').focus(); },
   };
 }
 
@@ -536,3 +611,11 @@ document.addEventListener('visibilitychange', () => {
 
 // Ask the phone to keep our data safe (see db.js)
 askForPersistentStorage();
+
+// No browser menu ("open in new tab", "search", "copy") when you hold a
+// finger on a row or a button, and no dragging links around. Typing boxes
+// keep their usual menu (paste, select all).
+document.addEventListener('contextmenu', event => {
+  if (!event.target.closest('input, textarea, select')) event.preventDefault();
+});
+document.addEventListener('dragstart', event => event.preventDefault());
