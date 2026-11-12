@@ -63,6 +63,7 @@ function matchingLine(item, terms) {
 function searchScreen() {
   return `
     <form class="search-form" id="search-form">
+      ${icon('search')}
       <input class="search-input" id="search-input" type="search" dir="auto"
              placeholder="${TEXT.searchPlaceholder}" value="${escapeHtml(searchQuery)}">
     </form>
@@ -83,12 +84,12 @@ function setupSearch() {
     const oldPhotos = takePhotoUrls();
 
     if (!terms.length) {
-      results.innerHTML = `<p class="empty">${TEXT.searchHint}</p>`;
+      results.innerHTML = '';
     } else {
       const found = allItems.filter(item => itemMatches(item, terms));
       results.innerHTML = found.length
         ? resultsHtml(found, terms)
-        : `<p class="empty">${TEXT.searchNoResults(escapeHtml(searchQuery.trim()))}</p>`;
+        : `<p class="filter-empty">${TEXT.searchNoResults(escapeHtml(searchQuery.trim()))}</p>`;
     }
     oldPhotos.forEach(url => URL.revokeObjectURL(url));
   }
@@ -115,14 +116,14 @@ function resultsHtml(found, terms) {
   const titleMatch = item => terms.every(term => (item.title || '').toLowerCase().includes(term));
   found.sort((a, b) => (titleMatch(b) - titleMatch(a)) || (b.updatedAt - a.updatedAt));
 
-  let html = `<p class="search-count">${TEXT.searchCount(found.length)}</p>`;
+  let html = '';
 
   // One section per group, in the usual group order
   for (const group of GROUPS) {
     const inGroup = found.filter(item => findGroup(item.group).id === group.id);
     if (!inGroup.length) continue;
-    html += `<h2 class="section-title">${groupTitle(group)} · ${inGroup.length}</h2>`;
-    html += listCard(inGroup.map(item => itemRow(item, matchingLine(item, terms), {
+    html += sectionLabel(groupTitle(group));
+    html += rowList(inGroup.map(item => itemRow(item, matchingLine(item, terms), {
       titleHtml: highlight(item.title || TEXT.untitled, terms),
       photo: item.photo,
     })));

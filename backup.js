@@ -174,35 +174,6 @@ async function applyMerge(plan) {
   await loadGroups();
 }
 
-// ---------- The backup screen ----------
-
-async function backupScreen() {
-  const items = await getAllItems();
-  const photos = items.filter(item => item.photo instanceof Blob).length;
-  const days = daysSinceBackup();
-  const lastText = days === null ? TEXT.neverBackedUp
-                 : days === 0 ? TEXT.backedUpToday
-                 : TEXT.lastBackupDaysAgo(days);
-
-  const persisted = navigator.storage && navigator.storage.persisted ? await navigator.storage.persisted() : false;
-
-  return `
-    ${syncCard()}
-    ${pushCard()}
-    ${driveCard()}
-    ${await notificationsCard()}
-    <p class="backup-facts center">${TEXT.backupCounts(items.length, photos)} · ${lastText}</p>
-    <p class="muted center">${persisted ? TEXT.storageProtected : TEXT.storageNotProtected}</p>
-  `;
-}
-
-function setupBackupScreen() {
-  setupDriveCard();
-  setupNotificationsCard();
-  setupSyncCard();
-  setupPushCard();
-}
-
 // ---------- Daily summary switch (see daily.js) ----------
 
 function dailySummaryOn() {
@@ -226,60 +197,6 @@ async function turnOnBackgroundCheck() {
   } catch {
     return false;
   }
-}
-
-async function notificationsCard() {
-  if (!notificationsSupported()) {
-    return `<div class="card backup-card"><h2 class="card-title">${icon('bell')} ${TEXT.notifyTitle}</h2>
-            <p class="muted">${TEXT.notifyUnsupported}</p></div>`;
-  }
-  const on = dailySummaryOn() && Notification.permission === 'granted';
-  const background = on && await turnOnBackgroundCheck();
-
-  const buttons = on
-    ? `<button type="button" class="small-button wide" data-notify="test">${TEXT.notifyTest}</button>
-       <button type="button" class="link-button" data-notify="off">${TEXT.notifyTurnOff}</button>`
-    : `<button type="button" class="primary-button" data-notify="on">${TEXT.notifyTurnOn}</button>`;
-
-  return `
-    <div class="card backup-card">
-      <h2 class="card-title">${icon('bell')} ${TEXT.notifyTitle}</h2>
-      <p class="muted">${TEXT.notifyExplain}</p>
-      ${on ? `<p class="backup-facts">${background ? TEXT.notifyOn : TEXT.notifyOnOpenOnly}</p>` : ''}
-      ${buttons}
-      <p class="backup-status" id="notify-status"></p>
-    </div>`;
-}
-
-function setupNotificationsCard() {
-  const status = document.getElementById('notify-status');
-  document.querySelectorAll('[data-notify]').forEach(button => {
-    button.addEventListener('click', async () => {
-      const action = button.dataset.notify;
-
-      if (action === 'on') {
-        const permission = await Notification.requestPermission();  // Android's "Allow notifications?"
-        if (permission !== 'granted') {
-          status.textContent = TEXT.notifyBlocked;
-          return;
-        }
-        try { localStorage.setItem('dailySummary', 'on'); } catch { /* not important */ }
-        showScreen();
-      }
-
-      if (action === 'off') {
-        try { localStorage.removeItem('dailySummary'); } catch { /* not important */ }
-        const registration = await navigator.serviceWorker.ready;
-        if ('periodicSync' in registration) await registration.periodicSync.unregister('daily-summary');
-        showScreen();
-      }
-
-      if (action === 'test') {
-        const result = await showDailySummary(await navigator.serviceWorker.ready, { force: true });
-        status.textContent = result === 'shown' ? TEXT.notifyTestSent : TEXT.notifyBlocked;
-      }
-    });
-  });
 }
 
 // When the app opens: show today's summary if it wasn't shown yet
@@ -314,18 +231,4 @@ async function restoreBackupFile(file, status) {
   } catch (error) {
     status.textContent = error.message || TEXT.notABackup;
   }
-}
-
-// ---------- Reminder on Home ----------
-// Shows when you have a few items and haven't backed up for 14 days
-
-function backupReminder(itemCount) {
-  const days = daysSinceBackup();
-  if (itemCount < 5 || (days !== null && days < 14)) return '';
-  const text = days === null ? TEXT.neverBackedUp : TEXT.lastBackupDaysAgo(days);
-  return `
-    <a class="card backup-reminder" href="#/settings">
-      <span class="empty-icon accent">${icon('cloud')}</span>
-      <span>${text}<br><strong>${TEXT.backupNow}</strong></span>
-    </a>`;
 }

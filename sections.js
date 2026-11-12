@@ -9,45 +9,45 @@ const SONG_STATUS = { idea: 'רעיון', draft: 'טיוטה', done: 'גמור' 
 const MOVIE_LISTS = { watchlist: 'לראות', watched: 'ראיתי' };
 const SHOW_LISTS = { watchlist: 'לראות', watching: 'בצפייה', watched: 'סיימתי' };
 
-const TITLE_FIELD = { key: 'title', type: 'text', label: 'כותרת' };
+const TITLE_FIELD = { key: 'title', type: 'title' };
 const NOTES_FIELD = { key: 'text', type: 'textarea', label: 'הערות' };
 
-// Field types: text · textarea · date · time · place · checkbox · choice · rating · photo
+// Field types: title · text · textarea · date · time · place · checkbox · choice · rating · photo
+// Short fields show as small rows with an icon; long text (notes, lyrics) as open text below.
 const FIELDS = {
   reminders: [
     TITLE_FIELD,
-    { key: 'date', type: 'date', label: 'תאריך' },
-    { key: 'time', type: 'time', label: 'שעה (לא חובה)' },
-    { key: 'timeFlex', type: 'choice', label: 'להגיע', options: { exact: 'בדיוק בזמן', about: 'בערך (±10 דק׳)' } },
-    { key: 'place', type: 'place', label: 'מקום (לא חובה)' },
-    { key: 'repeatYearly', type: 'checkbox', label: 'חוזר כל שנה (ימי הולדת, ימי נישואין)' },
+    { key: 'date', type: 'date', label: 'תאריך', icon: 'calendar' },
+    { key: 'time', type: 'time', label: 'שעה', icon: 'clock', flex: { key: 'timeFlex', options: { exact: 'בדיוק', about: 'בערך' } } },
+    { key: 'place', type: 'place', label: 'מקום' },
+    { key: 'repeatYearly', type: 'checkbox', label: 'כל שנה', icon: 'repeat' },
     NOTES_FIELD,
   ],
   songs: [
     TITLE_FIELD,
-    { key: 'status', type: 'choice', label: 'סטטוס', options: SONG_STATUS },
+    { key: 'status', type: 'choice', label: 'מצב', icon: 'pencil', options: SONG_STATUS },
     { key: 'lyrics', type: 'textarea', label: 'מילים', big: true },
   ],
   movies: [
     TITLE_FIELD,
-    { key: 'list', type: 'choice', label: 'רשימה', options: MOVIE_LISTS },
-    { key: 'recommendedBy', type: 'text', label: 'מי המליץ' },
-    { key: 'rating', type: 'rating', label: 'הדירוג שלי' },
+    { key: 'list', type: 'choice', label: 'רשימה', icon: 'bookmark', options: MOVIE_LISTS },
+    { key: 'rating', type: 'rating', label: 'דירוג', icon: 'star' },
+    { key: 'recommendedBy', type: 'text', label: 'מי המליץ', icon: 'heart' },
     NOTES_FIELD,
   ],
   shows: [
     TITLE_FIELD,
-    { key: 'list', type: 'choice', label: 'רשימה', options: SHOW_LISTS },
-    { key: 'recommendedBy', type: 'text', label: 'מי המליץ' },
-    { key: 'rating', type: 'rating', label: 'הדירוג שלי' },
+    { key: 'list', type: 'choice', label: 'רשימה', icon: 'bookmark', options: SHOW_LISTS },
+    { key: 'rating', type: 'rating', label: 'דירוג', icon: 'star' },
+    { key: 'recommendedBy', type: 'text', label: 'מי המליץ', icon: 'heart' },
     NOTES_FIELD,
   ],
   recipes: [
     TITLE_FIELD,
     { key: 'photo', type: 'photo', label: 'תמונה' },
-    { key: 'tags', type: 'text', label: 'תגיות', hint: 'מופרדות בפסיק, למשל: עוגות, טבעוני' },
+    { key: 'tags', type: 'text', label: 'תגיות', icon: 'bookmark', hint: 'עוגות, טבעוני' },
     { key: 'ingredients', type: 'textarea', label: 'מצרכים', hint: 'מצרך בכל שורה' },
-    { key: 'steps', type: 'textarea', label: 'אופן ההכנה', hint: 'שלב בכל שורה' },
+    { key: 'steps', type: 'textarea', label: 'הכנה', hint: 'שלב בכל שורה' },
   ],
   // לא ממוין
   default: [TITLE_FIELD, NOTES_FIELD],
@@ -56,9 +56,9 @@ const FIELDS = {
 // Groups you create yourself: a title, text, tags and an optional photo
 const CUSTOM_GROUP_FIELDS = [
   TITLE_FIELD,
-  NOTES_FIELD,
-  { key: 'tags', type: 'text', label: 'תגיות', hint: 'מופרדות בפסיק' },
   { key: 'photo', type: 'photo', label: 'תמונה' },
+  { key: 'tags', type: 'text', label: 'תגיות', icon: 'bookmark', hint: '' },
+  NOTES_FIELD,
 ];
 
 // Starting values for a brand-new item (functions, so "today" is always fresh)
@@ -173,33 +173,36 @@ async function shrinkPhoto(file, maxSide = 1000) {
   return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
 }
 
+
 // ============================================================
 // LISTS
+// Plain rows on the page, thin lines between them. A row has a
+// title, sometimes a small second line, and something short on
+// the far side (when, a count, a rating).
 // ============================================================
 
-// One tappable row. "meta" is the small grey line (already safe HTML).
-function itemRow(item, meta = '', options = {}) {
-  let picture = '';
-  if (options.photo) picture = `<img class="thumb" src="${photoUrl(options.photo)}" alt="">`;
-  else if (options.badge) picture = groupBadge(options.badge, 'small');
-  else if (options.dateBox) picture = options.dateBox;
+// One tappable row. sub and end are already safe HTML.
+function itemRow(item, sub = '', options = {}) {
+  let lead = '';
+  if (options.photo) lead = `<img class="thumb" src="${photoUrl(options.photo)}" alt="">`;
 
   const filter = options.filter !== undefined
     ? `data-filter-values="${escapeHtml(options.filter)}"` : '';
 
   return `
-    <a class="item-row${options.dim ? ' dim' : ''}" href="#/item/${item.id}" data-id="${item.id}" ${filter}>
-      ${picture}
-      <span class="item-main">
-        <span class="item-title" dir="auto">${options.titleHtml || escapeHtml(item.title) || TEXT.untitled}</span>
-        ${meta ? `<span class="item-meta">${meta}</span>` : ''}
+    <a class="row${options.dim ? ' dim' : ''}" href="#/item/${item.id}" data-id="${item.id}" ${filter}>
+      ${lead}
+      <span class="row-main">
+        <span class="row-title" dir="auto">${options.titleHtml || escapeHtml(item.title) || TEXT.untitled}${options.after || ''}</span>
+        ${sub ? `<span class="row-sub">${sub}</span>` : ''}
       </span>
+      ${options.end ? `<span class="row-end">${options.end}</span>` : ''}
     </a>
   `;
 }
 
-function listCard(rows) {
-  return `<div class="card list">${rows.join('')}</div>`;
+function rowList(rows) {
+  return `<div class="rows">${rows.join('')}</div>`;
 }
 
 // A row of chips that filter the list below (see setupFilters in app.js)
@@ -212,7 +215,7 @@ function filterChips(options, selected) {
 }
 
 function stars(rating) {
-  return '★'.repeat(rating) + '☆'.repeat(5 - rating);
+  return '★'.repeat(rating);
 }
 
 // "עוגות, טבעוני" → ['עוגות', 'טבעוני']
@@ -220,20 +223,17 @@ function parseTags(text) {
   return (text || '').split(',').map(tag => tag.trim()).filter(Boolean);
 }
 
-// A small calendar page with the day and month, at the start of a reminder row
-function dateBox(date) {
-  if (!date) return '';
-  const month = date.toLocaleDateString('he-IL', { month: 'short' });
-  return `<span class="date-box"><b>${date.getDate()}</b><small>${month}</small></span>`;
+// The far side of a reminder row: "היום 17:30" · "מחר" · "שני" · "16.11"
+function whenShort(next, item) {
+  if (!next) return '';
+  const time = item.time ? (item.timeFlex === 'about' ? `~${item.time}` : item.time) : '';
+  return [shortDay(next), time].filter(Boolean).join(' ');
 }
 
 function reminderRow({ item, next }, isPast) {
-  let meta = '';
-  const time = item.time && item.timeFlex === 'about' ? `${TEXT.about} ${item.time}` : item.time;
-  if (next) meta = isPast ? formatDate(item.date) : whenLabel(next, time);
-  if (item.repeatYearly) meta = `${icon('repeat', 'inline')} ${meta}`;
-  if (item.place) meta += ` · ${icon('pin', 'inline')} ${escapeHtml(placeShortName(item.place))}`;
-  return itemRow(item, meta, { dim: isPast, dateBox: dateBox(next) });
+  const after = item.place ? ` ${icon('pin', 'inline faint')}` : '';
+  const end = isPast ? (item.date ? formatDate(item.date) : '') : whenShort(next, item);
+  return itemRow(item, '', { dim: isPast, end, after });
 }
 
 function remindersList(items) {
@@ -242,14 +242,8 @@ function remindersList(items) {
   const past = all.filter(r => !stillAhead(r)).sort((a, b) => (b.next || 0) - (a.next || 0));
 
   let html = '';
-  if (upcoming.length) {
-    html += `<h2 class="section-title">${TEXT.upcomingTitle}</h2>`;
-    html += listCard(upcoming.map(r => reminderRow(r, false)));
-  }
-  if (past.length) {
-    html += `<h2 class="section-title">${TEXT.pastTitle}</h2>`;
-    html += listCard(past.map(r => reminderRow(r, true)));
-  }
+  if (upcoming.length) html += rowList(upcoming.map(r => reminderRow(r, false)));
+  if (past.length) html += sectionLabel(TEXT.pastTitle) + rowList(past.map(r => reminderRow(r, true)));
   return html;
 }
 
@@ -263,126 +257,87 @@ function notInCalendar(items) {
   });
 }
 
-// The "add all to Google Calendar" button (shown on the calendar screen)
+// "3 תזכורות עוד לא ביומן · הוספה" under the calendar
 async function addAllToCalendarHtml() {
   const missing = notInCalendar(await getItemsInGroup('reminders')).length;
   if (!missing) return '';
-  return `
-    <div class="calendar-box">
-      <button type="button" class="small-button wide" data-calendar-all>${TEXT.calendarAddAll(missing)}</button>
-      <p class="backup-status" id="calendar-all-status"></p>
-    </div>`;
+  return `<button type="button" class="text-button quiet-line" data-calendar-all>${TEXT.calendarAddAll(missing)}</button>`;
 }
 
 function setupAddAllToCalendar() {
   const button = document.querySelector('[data-calendar-all]');
   if (!button) return;
-  const status = document.getElementById('calendar-all-status');
-  prepareGoogle().catch(error => { status.textContent = error.message; });
+  prepareGoogle().catch(error => { button.textContent = error.message; });
 
   button.addEventListener('click', async () => {
     // Ask Google first, straight from the tap
     const tokenReady = getGoogleToken(CALENDAR_SCOPE);
     button.disabled = true;
-    status.textContent = TEXT.calendarAdding;
+    button.textContent = TEXT.calendarAdding;
     let added = 0;
     try {
       await tokenReady;
       const items = notInCalendar(await getItemsInGroup('reminders'));
       for (const item of items) {
-        status.textContent = TEXT.calendarAddingCount(added + 1, items.length);
+        button.textContent = TEXT.calendarAddingCount(added + 1, items.length);
         const event = await addToGoogleCalendar(item);
         await updateItem(item.id, { calendarEventId: event.id, inCalendar: true });
         added++;
       }
-      status.textContent = TEXT.calendarAddedAll(added);
-      button.hidden = true;
+      button.textContent = TEXT.calendarAddedAll(added);
     } catch (error) {
-      status.textContent = added
-        ? `${TEXT.calendarAddedAll(added)}. ${error.message || TEXT.calendarError}`
-        : (error.message || TEXT.calendarError);
       button.disabled = false;
       const left = notInCalendar(await getItemsInGroup('reminders')).length;
-      if (left) button.textContent = TEXT.calendarAddAll(left);
-      else button.hidden = true;
+      button.textContent = `${error.message || TEXT.calendarError}${left ? ` · ${TEXT.calendarAddAll(left)}` : ''}`;
     }
   });
 }
 
 function songsList(items) {
   return filterChips({ '': TEXT.all, ...SONG_STATUS }, '') +
-    listCard(items.map(item =>
-      itemRow(item, SONG_STATUS[item.status] || '', { filter: item.status || '' })));
+    rowList(items.map(item =>
+      itemRow(item, '', { end: SONG_STATUS[item.status] || '', filter: item.status || '' })));
 }
 
 // Movies and shows look the same, only the lists differ
 function moviesList(items, lists = MOVIE_LISTS) {
   return filterChips(lists, 'watchlist') +
-    listCard(items.map(item => {
-      const meta = [
-        item.recommendedBy ? TEXT.recommendedBy(escapeHtml(item.recommendedBy)) : '',
-        item.rating ? stars(item.rating) : '',
-      ].filter(Boolean).join(' · ');
-      return itemRow(item, meta, { filter: item.list || 'watchlist' });
-    }));
+    rowList(items.map(item => itemRow(item,
+      item.recommendedBy ? TEXT.recommendedBy(escapeHtml(item.recommendedBy)) : '',
+      { end: item.rating ? `<span class="stars-small">${stars(item.rating)}</span>` : '', filter: item.list || 'watchlist' })));
 }
 
-function recipesList(items) {
-  // Every tag used in any recipe becomes a filter chip
-  const allTags = [...new Set(items.flatMap(item => parseTags(item.tags)))];
-  const chips = allTags.length
-    ? filterChips(Object.fromEntries([['', TEXT.all], ...allTags.map(tag => [tag, tag])]), '')
-    : '';
-
-  return chips + listCard(items.map(item => {
-    const tags = parseTags(item.tags);
-    return itemRow(item, escapeHtml(tags.join(', ')), {
-      photo: item.photo,
-      badge: item.photo ? null : findGroup('recipes'),
-      filter: tags.join('|'),
-    });
-  }));
-}
-
-// לא ממוין, and your own groups: first line of the text, photo, tag filters
+// Recipes and your own groups: photo, first line or tags, tag filters
 function plainList(items) {
   const allTags = [...new Set(items.flatMap(item => parseTags(item.tags)))];
-  const chips = allTags.length
+  const chips = allTags.length > 1
     ? filterChips(Object.fromEntries([['', TEXT.all], ...allTags.map(tag => [tag, tag])]), '')
     : '';
-
-  return chips + listCard(items.map(item =>
-    itemRow(item, escapeHtml((item.text || '').split('\n')[0]), {
-      photo: item.photo,
-      filter: parseTags(item.tags).join('|'),
-    })));
+  return chips + rowList(items.map(item => {
+    const tags = parseTags(item.tags);
+    const sub = escapeHtml((item.text || '').split('\n')[0] || tags.join(', '));
+    return itemRow(item, sub, { photo: item.photo, filter: tags.join('|') });
+  }));
 }
 
 async function groupScreen(group) {
   const items = await getItemsInGroup(group.id);
-
-  let buttons = `<a class="new-button" href="#/new/${group.id}">${icon('plus')} ${TEXT.newItem}</a>`;
-  if (group.custom) {
-    buttons = `<div class="button-row">${buttons}
-      <a class="new-button secondary" href="#/group-settings/${group.id}">${icon('pencil')} ${TEXT.editGroupButton}</a></div>`;
-  }
   if (!items.length) {
-    return buttons + `<div class="card empty">${groupBadge(group, 'large')}${TEXT.emptyGroup}</div>`;
+    return `<div class="empty">${groupBadge(group, 'large')}<span>${TEXT.nothingHere}</span></div>`;
   }
-
   const lists = {
-    reminders: remindersList, songs: songsList, recipes: recipesList,
+    reminders: remindersList, songs: songsList,
     movies: items => moviesList(items, MOVIE_LISTS),
     shows: items => moviesList(items, SHOW_LISTS),
   };
-  const makeList = lists[group.id] || plainList;
-  return buttons + makeList(items);
+  return (lists[group.id] || plainList)(items);
 }
 
 // ============================================================
 // ITEM SCREEN
-// One form for viewing and editing. Every change is saved
-// automatically a moment after you stop typing.
+// Looks like a page, not a form: the title in big letters, a few
+// small rows (date, time, place…) and open space for the text.
+// Every change is saved automatically a moment after you stop.
 // ============================================================
 
 let editor = null;        // { id, group, draft } for the item on screen
@@ -404,97 +359,114 @@ function newItemScreen(groupId, startDate) {
 }
 
 function fieldHtml(field, value) {
-  const label = `<span class="field-label">${field.label}</span>`;
   const key = `data-key="${field.key}"`;
-  const placeholder = field.hint ? `placeholder="${field.hint}"` : '';
+  const name = `<span class="prop-name">${field.label}</span>`;
 
   switch (field.type) {
+    case 'title':
+      return `<textarea class="title-input" ${key} dir="auto" rows="1" placeholder="${TEXT.titlePlaceholder}">${escapeHtml(value)}</textarea>`;
+
     case 'text':
-      return `<label class="field">${label}
-        <input type="text" ${key} dir="auto" value="${escapeHtml(value)}" ${placeholder}></label>`;
+      return `<label class="prop">${icon(field.icon)}${name}
+        <input type="text" class="prop-input" ${key} dir="auto" value="${escapeHtml(value)}" placeholder="${field.hint || ''}"></label>`;
 
     case 'textarea':
-      return `<label class="field">${label}
-        <textarea ${key} dir="auto" rows="${field.big ? 8 : 3}" ${field.big ? 'class="big"' : ''} ${placeholder}>${escapeHtml(value)}</textarea></label>`;
+      return `<label class="text-block">
+        <span class="label">${field.label}</span>
+        <textarea ${key} dir="auto" rows="${field.big ? 10 : 3}" class="${field.big ? 'big' : ''}" placeholder="${field.hint || ''}">${escapeHtml(value)}</textarea></label>`;
 
     case 'date':
-      return `<label class="field">${label}
-        <input type="date" ${key} value="${escapeHtml(value)}"></label>`;
+      return `<label class="prop">${icon(field.icon)}${name}
+        <input type="date" class="prop-input" ${key} value="${escapeHtml(value)}"></label>`;
 
     // A normal text box (not a clock), so you can type "1020" like in quick-add.
     // inputmode="decimal" shows a number keyboard that also has a dot.
-    case 'time':
-      return `<label class="field">${label}
-        <input type="text" ${key} data-time inputmode="decimal" dir="ltr"
-               value="${escapeHtml(value)}" placeholder="${TEXT.timeHint}"></label>`;
+    // With "בדיוק / בערך" at the end, shown once there is a time
+    case 'time': {
+      const flex = field.flex ? segmentedHtml(field.flex.key, field.flex.options, editor.draft[field.flex.key],
+        `data-only="time"${value ? '' : ' hidden'}`) : '';
+      return `<div class="prop">${icon(field.icon)}${name}
+        <input type="text" class="prop-input" ${key} data-time inputmode="decimal" dir="ltr"
+               value="${escapeHtml(value)}" placeholder="${TEXT.timeHint}">${flex}</div>`;
+    }
 
     // Where: chosen from the bus app's places (places.js)
     case 'place':
       return placeFieldHtml(field, value);
 
     case 'checkbox':
-      return `<label class="field check">
-        <input type="checkbox" ${key} ${value ? 'checked' : ''}> ${field.label}</label>`;
+      return `<label class="prop">${icon(field.icon)}${name}
+        <input type="checkbox" class="switch" role="switch" ${key} ${value ? 'checked' : ''}></label>`;
 
-    case 'choice': {
-      const buttons = Object.entries(field.options).map(([optionValue, text]) =>
-        `<button type="button" data-value="${optionValue}" class="${optionValue === value ? 'selected' : ''}">${text}</button>`
-      ).join('');
-      return `<div class="field">${label}<div class="segmented" ${key}>${buttons}</div></div>`;
-    }
+    case 'choice':
+      return `<div class="prop">${icon(field.icon)}${name}${segmentedHtml(field.key, field.options, value)}</div>`;
 
     case 'rating': {
       const buttons = [1, 2, 3, 4, 5].map(n =>
         `<button type="button" data-value="${n}" class="${n <= (value || 0) ? 'on' : ''}" aria-label="${n}">★</button>`
       ).join('');
-      return `<div class="field">${label}<div class="stars" ${key}>${buttons}</div></div>`;
+      return `<div class="prop">${icon(field.icon)}${name}<div class="stars" ${key}>${buttons}</div></div>`;
     }
 
     case 'photo':
-      return `<div class="field">${label}<div class="photo-field" ${key}>${photoFieldInner(value)}</div></div>`;
+      return `<div class="photo-field" ${key}>${photoFieldInner(value)}</div>`;
   }
   return '';
 }
 
+// Small buttons side by side; nothing chosen yet = the first one
+function segmentedHtml(key, options, value, extra = '') {
+  const current = value in options ? value : Object.keys(options)[0];
+  const buttons = Object.entries(options).map(([optionValue, text]) =>
+    `<button type="button" data-value="${optionValue}" class="${optionValue === current ? 'selected' : ''}">${text}</button>`
+  ).join('');
+  return `<div class="segmented" data-key="${key}" ${extra}>${buttons}</div>`;
+}
+
 function photoFieldInner(blob) {
+  if (!blob) {
+    return `<label class="prop prop-link">${icon('camera')}<span class="prop-name">${TEXT.addPhoto}</span>
+      <input type="file" accept="image/*" hidden></label>`;
+  }
   return `
-    ${blob ? `<img class="photo-preview" src="${photoUrl(blob)}" alt="">` : ''}
+    <img class="photo-preview" src="${photoUrl(blob)}" alt="">
     <div class="photo-buttons">
-      <label class="small-button">${icon('camera')} ${blob ? TEXT.changePhoto : TEXT.addPhoto}
-        <input type="file" accept="image/*" hidden></label>
-      ${blob ? `<button type="button" class="small-button" data-remove-photo>${TEXT.removePhoto}</button>` : ''}
-    </div>
-  `;
+      <label class="text-button">${TEXT.changePhoto}<input type="file" accept="image/*" hidden></label>
+      <button type="button" class="text-button" data-remove-photo>${TEXT.removePhoto}</button>
+    </div>`;
 }
 
 function editorHtml() {
   const { group, draft } = editor;
-  const fields = fieldsFor(group).map(field => fieldHtml(field, draft[field.key])).join('');
+  const fields = fieldsFor(group);
+  const title = fields.filter(f => f.type === 'title').map(f => fieldHtml(f, draft[f.key])).join('');
+  const props = fields.filter(f => !['title', 'textarea', 'photo'].includes(f.type)).map(f => fieldHtml(f, draft[f.key])).join('');
+  const photo = fields.filter(f => f.type === 'photo').map(f => fieldHtml(f, draft[f.key])).join('');
+  const texts = fields.filter(f => f.type === 'textarea').map(f => fieldHtml(f, draft[f.key])).join('');
+
   const groupOptions = GROUPS.map(g =>
     `<option value="${g.id}" ${g.id === group ? 'selected' : ''}>${groupTitle(g)}</option>`
   ).join('');
 
-  // Reminders get a button that adds them straight to Google Calendar
-  const calendarButton = group === 'reminders' ? `
-    <div class="calendar-box">
-      <button type="button" class="small-button wide" data-calendar>
-        ${icon('calendar')} <span>${draft.calendarEventId ? TEXT.calendarUpdate : TEXT.addToCalendar}</span>
-      </button>
-      <p class="backup-status" id="calendar-status">${draft.calendarEventId ? TEXT.calendarAlready : ''}</p>
-    </div>` : '';
+  // Reminders: one row that adds them straight to Google Calendar
+  const calendarRow = group === 'reminders' ? `
+    <button type="button" class="prop prop-link" data-calendar>${icon('calendar')}
+      <span class="prop-name">${TEXT.googleCalendar}</span>
+      <span class="prop-hint" id="calendar-status">${draft.calendarEventId ? `${TEXT.calendarInIt} · ${TEXT.calendarUpdate}` : TEXT.addToCalendar}</span>
+    </button>` : '';
 
   return `
     <form class="editor" id="editor">
-      ${fields}
-      ${calendarButton}
-      <label class="field">
-        <span class="field-label">${TEXT.moveToGroup}</span>
-        <select id="group-select">${groupOptions}</select>
-      </label>
-      <div class="editor-footer">
-        <span class="save-status" id="save-status">${editor.id ? '' : TEXT.typeTitleToSave}</span>
-        <button type="button" class="danger-button" id="delete-button">${icon('trash')} ${TEXT.deleteItem}</button>
+      ${title}
+      <div class="props">
+        ${props}
+        ${calendarRow}
+        <label class="prop">${groupBadge(findGroup(group), 'tiny')}<span class="prop-name">${TEXT.moveToGroup}</span>
+          <select class="prop-input" id="group-select">${groupOptions}</select></label>
       </div>
+      ${photo}
+      ${texts}
+      <button type="button" class="text-button danger" id="delete-button">${TEXT.deleteItem}</button>
     </form>
   `;
 }
@@ -507,7 +479,6 @@ function autoGrow(textarea) {
 
 function setupItemScreen() {
   const form = document.getElementById('editor');
-  const status = document.getElementById('save-status');
   let timer = null;
   let saving = Promise.resolve();  // saves happen one after another, never at the same time
 
@@ -521,7 +492,6 @@ function setupItemScreen() {
     } else {
       await updateItem(editor.id, { ...draft, group: editor.group });
     }
-    status.innerHTML = `${icon('check', 'inline')} ${TEXT.saved}`;
   }
 
   function saveNow() {
@@ -532,7 +502,6 @@ function setupItemScreen() {
   }
 
   function saveSoon() {
-    status.textContent = '';
     clearTimeout(timer);
     timer = setTimeout(saveNow, 400);
   }
@@ -541,7 +510,14 @@ function setupItemScreen() {
 
   form.addEventListener('submit', event => event.preventDefault());
 
-  // Typing in text boxes, dates and checkboxes
+  // A row that only makes sense with another field (בדיוק/בערך needs a time)
+  function updateDependentRows() {
+    form.querySelectorAll('[data-only]').forEach(element => {
+      element.hidden = !editor.draft[element.dataset.only];
+    });
+  }
+
+  // Typing in text boxes, dates and switches
   form.addEventListener('input', event => {
     const element = event.target;
     const key = element.dataset.key;
@@ -554,6 +530,7 @@ function setupItemScreen() {
       element.classList.toggle('invalid', !empty && !time);
       if (!empty && !time) return;  // still typing, or a mistake
       editor.draft[key] = empty ? '' : time;
+      updateDependentRows();
       saveSoon();
       return;
     }
@@ -578,8 +555,7 @@ function setupItemScreen() {
           text => { calendarStatus.textContent = text; });
         editor.draft.calendarEventId = added.id;
         editor.draft.inCalendar = true;
-        calendarButton.querySelector('span').textContent = TEXT.calendarUpdate;
-        calendarStatus.innerHTML = `${TEXT.calendarAdded} <a href="${escapeHtml(added.htmlLink)}" target="_blank" rel="noopener">${TEXT.openInCalendar}</a>`;
+        calendarStatus.textContent = TEXT.calendarInIt;
       } catch (error) {
         calendarStatus.textContent = error.message || TEXT.calendarError;
       }
@@ -651,15 +627,16 @@ function setupItemScreen() {
     editor.group = event.target.value;
     if (editor.id) await saveNow();
     else history.replaceState(null, '', `#/new/${editor.group}`);
-    const group = findGroup(editor.group);
-    document.getElementById('screen-title').textContent = group.name;
-    document.getElementById('back-button').href = `#/group/${group.id}`;
+    document.getElementById('back-button').href = `#/group/${editor.group}`;
     document.getElementById('screen').innerHTML = editorHtml();
     setupItemScreen();
   });
 
   form.querySelectorAll('textarea').forEach(autoGrow);
   setupPlaceField(form, saveSoon);
+
+  // A brand-new item: start typing the title right away
+  if (!editor.id) form.querySelector('.title-input')?.focus();
 
   // Reminders: load Google's sign-in now, so the calendar button can
   // open Google's window straight from the tap

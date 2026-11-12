@@ -74,17 +74,17 @@ async function calendarHtml() {
 
   return `
     <div class="cal-header">
-      <button type="button" class="cal-arrow" data-move="-1" aria-label="${TEXT.prevMonth}">
+      <h2 class="cal-title">${monthTitle}</h2>
+      ${showTodayButton ? `<button type="button" class="text-button" data-go-today>${TEXT.today}</button>` : ''}
+      <button type="button" class="icon-button" data-move="-1" aria-label="${TEXT.prevMonth}">
         <svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
       </button>
-      <h2 class="cal-title">${monthTitle}</h2>
-      <button type="button" class="cal-arrow" data-move="1" aria-label="${TEXT.nextMonth}">
+      <button type="button" class="icon-button" data-move="1" aria-label="${TEXT.nextMonth}">
         <svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg>
       </button>
     </div>
-    ${showTodayButton ? `<button type="button" class="chip cal-today-button" data-go-today>${TEXT.today}</button>` : ''}
 
-    <div class="card cal-grid-card">
+    <div class="cal-grid-card">
       <div class="cal-weekdays">${weekdays}</div>
       <div class="cal-grid" id="cal-grid">${cells}</div>
     </div>
@@ -101,13 +101,16 @@ function selectedDayHtml(reminders) {
   const items = remindersOn(reminders, date);
 
   const list = items.length
-    ? listCard(items.map(item => itemRow(item, [item.time, item.repeatYearly ? icon('repeat', 'inline') : ''].filter(Boolean).join(' · '))))
-    : `<p class="cal-empty">${TEXT.noRemindersThisDay}</p>`;
+    ? rowList(items.map(item => itemRow(item, '', { end: item.time || '' })))
+    : '';
 
   return `
-    <h2 class="section-title">${title}</h2>
+    ${sectionLabel(title)}
     ${list}
-    <a class="new-button cal-new" href="#/new/reminders/${calendarSelected}">${icon('plus')} ${TEXT.newReminderThisDay}</a>
+    <a class="row row-quiet" href="#/new/reminders/${calendarSelected}">
+      <span class="badge small plain">${icon('plus')}</span>
+      <span class="row-main"><span class="row-title">${TEXT.newReminderThisDay}</span></span>
+    </a>
   `;
 }
 

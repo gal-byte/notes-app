@@ -6,7 +6,7 @@
 //
 // The list of places and the bus planner belong to the bus app
 // "מתי לצאת" on the home server, so this needs Tailscale, like the
-// server reminders (serverpush.js). Nothing here goes to outside services.
+// sync server. Nothing here goes to outside services.
 // ============================================================
 
 const BUS_APP = 'https://home-server.tail7870b4.ts.net:10000/';
@@ -53,19 +53,18 @@ function placeShortName(place) {
 // ---------- The "where" box on the reminder screen ----------
 
 function placeFieldHtml(field, place) {
-  const note = !place ? TEXT.placeHint
-    : editor.draft.time ? TEXT.placeOn : TEXT.placeNeedsTime;
+  const note = place && !editor.draft.time ? TEXT.placeNeedsTime : place ? TEXT.placeOn : '';
   return `
-    <div class="field place-field">
-      <span class="field-label">${field.label}</span>
-      <div class="place-row">
-        <input type="text" data-place dir="auto" autocomplete="off"
+    <div class="place-field">
+      <label class="prop">
+        ${icon('pin')}
+        <input type="text" class="prop-input" data-place dir="auto" autocomplete="off"
                value="${escapeHtml(place?.name || '')}" placeholder="${TEXT.placePlaceholder}">
-        ${place ? `<button type="button" class="place-clear" data-place-clear aria-label="${TEXT.placeClear}">${icon('x')}</button>` : ''}
-      </div>
+        ${place ? `<button type="button" class="icon-button small" data-place-clear aria-label="${TEXT.placeClear}">${icon('x')}</button>` : ''}
+      </label>
       <div class="place-list" id="place-list" hidden></div>
-      <p class="field-hint">${note}</p>
-      ${place ? `<a class="small-button wide place-go" href="${escapeHtml(directionsUrl(editor.draft))}" target="_blank" rel="noopener">${icon('bus')} ${TEXT.placeDirections}</a>` : ''}
+      ${place ? `<a class="prop prop-link place-go" href="${escapeHtml(directionsUrl(editor.draft))}" target="_blank" rel="noopener">
+        ${icon('bus')}<span class="prop-name">${TEXT.placeDirections}</span><span class="prop-hint">${note}</span></a>` : ''}
     </div>`;
 }
 
@@ -80,7 +79,7 @@ function setupPlaceField(form, saveSoon) {
   let asked = 0;
 
   function redraw() {
-    box.outerHTML = placeFieldHtml({ label: box.querySelector('.field-label').textContent }, editor.draft.place);
+    box.outerHTML = placeFieldHtml({}, editor.draft.place);
     setupPlaceField(form, saveSoon);
   }
 

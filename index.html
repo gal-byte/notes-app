@@ -19,46 +19,35 @@
 </head>
 <body>
 
-  <!-- Top bar: back button (only on inner screens) + screen title -->
+  <!-- Top bar: back arrow (inner screens), title, and icon buttons -->
   <header class="topbar">
-    <a id="back-button" class="back-button" href="#/groups" hidden aria-label="חזרה">
+    <a id="back-button" class="icon-button back-button" href="#/home" hidden aria-label="חזרה">
       <!-- In right-to-left, "back" points to the right -->
       <svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
     </a>
     <h1 id="screen-title"></h1>
+    <div class="topbar-actions" id="topbar-actions"></div>
   </header>
 
   <!-- Each screen is drawn into here by app.js -->
   <main id="screen"></main>
 
-  <!-- Short messages like "Deleted · Undo" (see showToast in app.js) -->
-  <div class="toast" id="app-toast" hidden></div>
+  <!-- Quick add, at the bottom of Home and of each group (setupAddBar in app.js) -->
+  <form class="addbar" id="addbar" hidden>
+    <div class="addbar-inner">
+      <div class="group-picker" id="group-picker" hidden></div>
+      <button type="button" class="chip guess-chip" id="guess-chip" hidden></button>
+      <div class="addbar-row">
+        <textarea id="quick-text" rows="1" dir="auto" enterkeyhint="done"></textarea>
+        <button class="send-button" aria-label="שמירה">
+          <svg viewBox="0 0 24 24"><path d="M12 19V5m-6 6 6-6 6 6"/></svg>
+        </button>
+      </div>
+    </div>
+  </form>
 
-  <!-- Bottom navigation. In right-to-left, the first link appears on the right -->
-  <nav class="tabbar">
-    <a href="#/home" data-tab="home">
-      <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
-      <span data-text="home"></span>
-    </a>
-    <a href="#/search" data-tab="search">
-      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <span data-text="search"></span>
-    </a>
-    <a href="#/add" data-tab="add" class="add-tab">
-      <span class="add-circle">
-        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-      </span>
-      <span data-text="add"></span>
-    </a>
-    <a href="#/calendar" data-tab="calendar">
-      <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
-      <span data-text="calendar"></span>
-    </a>
-    <a href="#/groups" data-tab="groups">
-      <svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>
-      <span data-text="groups"></span>
-    </a>
-  </nav>
+  <!-- Short messages like "Saved · Undo" (see showToast in app.js) -->
+  <div class="toast" id="app-toast" hidden></div>
 
   <!-- db.js must load first, app.js last: it uses all the others.
        (Updates reach the phone through sw.js, which always asks for
@@ -76,6 +65,7 @@
   <script src="backup.js"></script>
   <script src="sync.js"></script>
   <script src="push.js"></script>
+  <script src="settings.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
