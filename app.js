@@ -41,7 +41,6 @@ const TEXT = {
   addExamples: ['מחר ב-10 רופא שיניים', 'ש: שיר חדש', 'סרט: דיון', 'מתכון שקשוקה'],
   send: 'שליחה',
   undo: 'ביטול',
-  deletedOne: 'נמחק',
   nothingHere: 'אין כאן כלום כרגע',
   savedIn: group => `נשמר ב־${groupTitle(group)}`,
   today: 'היום',
@@ -798,78 +797,3 @@ function showToast(text, options = {}) {
   clearTimeout(appToastTimer);
   appToastTimer = setTimeout(() => { toast.hidden = true; }, options.ms || 5000);
 }
-
-// ============================================================
-// SWIPE A ROW TO DELETE IT
-// Drag a row in a list sideways. Past a third of the width it is
-// deleted, with "ביטול" to bring it back.
-// ============================================================
-(function setupSwipeToDelete() {
-  let drag = null;  // { row, wrap, startX, startY, dx, decided }
-
-  document.addEventListener('pointerdown', event => {
-    const row = event.target.closest('.card.list .item-row[data-id]');
-    if (!row || event.button !== 0) return;
-    drag = { row, startX: event.clientX, startY: event.clientY, dx: 0, decided: false, swiping: false };
-  });
-
-  document.addEventListener('pointermove', event => {
-    if (!drag) return;
-    const dx = event.clientX - drag.startX;
-    const dy = event.clientY - drag.startY;
-    if (!drag.decided) {
-      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
-      drag.decided = true;
-      drag.swiping = Math.abs(dx) > Math.abs(dy) * 1.5;  // mostly sideways = swipe, else it's a scroll
-      if (!drag.swiping) { drag = null; return; }
-      // Put the row in a wrapper with the red "delete" layer under it
-      const wrap = document.createElement('div');
-      wrap.className = 'swipe-wrap dragging';
-      wrap.innerHTML = `<div class="swipe-under">${icon('trash')}</div>`;
-      drag.row.before(wrap);
-      wrap.append(drag.row);
-      drag.wrap = wrap;
-    }
-    drag.dx = dx;
-    drag.wrap.classList.toggle('from-left', dx > 0);
-    drag.row.style.transform = `translateX(${dx}px)`;
-  });
-
-  async function finish() {
-    if (!drag) return;
-    const { row, wrap, dx, swiping } = drag;
-    drag = null;
-    if (!swiping || !wrap) return;
-    wrap.classList.remove('dragging');
-    const width = row.offsetWidth;
-
-    if (Math.abs(dx) < width / 3) {   // not far enough: slide back
-      row.style.transform = '';
-      row.addEventListener('transitionend', () => { if (wrap.isConnected) { wrap.before(row); wrap.remove(); } }, { once: true });
-      return;
-    }
-
-    row.style.transform = `translateX(${dx > 0 ? width : -width}px)`;
-    haptic(12);
-    const id = row.dataset.id;
-    const item = await getItem(id);
-    setTimeout(() => wrap.classList.add('gone'), 150);
-    await deleteItem(id);
-    showToast(TEXT.deletedOne, {
-      action: TEXT.undo,
-      onAction: async () => {
-        await putItem({ ...item, updatedAt: Date.now() });
-        showScreen(true);
-      },
-    });
-  }
-
-  document.addEventListener('pointerup', finish);
-  document.addEventListener('pointercancel', finish);
-
-  // A swipe must not also open the item
-  document.addEventListener('click', event => {
-    const wrap = event.target.closest('.swipe-wrap');
-    if (wrap) event.preventDefault();
-  }, true);
-})();

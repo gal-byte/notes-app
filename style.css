@@ -295,24 +295,6 @@ svg.inline { width: 15px; height: 15px; vertical-align: -2px; stroke-width: 2.2;
 .date-box b { font-size: 18px; font-weight: 700; }
 .date-box small { font-size: 11px; font-weight: 500; }
 
-/* ---------- Swipe a row to delete it (see app.js) ---------- */
-.swipe-wrap { position: relative; overflow: hidden; }
-.swipe-wrap .item-row { transition: transform .25s var(--ease); }
-.card.list .item-row { touch-action: pan-y; }
-.swipe-wrap.dragging .item-row { transition: none; }
-.swipe-under {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 0 22px;
-  color: #fff;
-  background: var(--danger);
-}
-.swipe-wrap.from-left .swipe-under { justify-content: flex-start; }
-.swipe-wrap.gone { animation: row-gone .25s var(--ease) forwards; }
-@keyframes row-gone { to { height: 0; opacity: 0; } }
 
 /* "＋ פריט חדש" at the top of each group */
 .new-button {
