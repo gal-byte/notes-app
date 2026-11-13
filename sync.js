@@ -88,6 +88,15 @@ async function runSync() {
     if (!response.ok) throw new Error(String(response.status));
     const result = await response.json();
 
+    // The server went back in time (restored from a backup): send it
+    // everything again and take everything it has, on the next round
+    if ((result.before ?? result.seq) < syncSetting('syncSeq')) {
+      setSyncSetting('syncSeq', 0);
+      setSyncSetting('syncMark', 0);
+      syncAgain = true;
+      return 'ok';
+    }
+
     // Merge what came back, like a restore (backup.js)
     const theirs = { items: [], groups: [], deleted: [] };
     for (const change of result.changes) {
