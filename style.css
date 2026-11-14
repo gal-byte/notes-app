@@ -185,6 +185,7 @@ a.row:active, button.row:active { background: var(--fill); }
   font-variant-numeric: tabular-nums;
 }
 .stars-small { color: var(--star); letter-spacing: -1px; font-size: 14px; }
+.calories { font-size: 13px; white-space: nowrap; display: inline-block; max-width: 9em; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
 
 .thumb { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; }
 

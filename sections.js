@@ -46,6 +46,7 @@ const FIELDS = {
     TITLE_FIELD,
     { key: 'photo', type: 'photo', label: 'תמונה' },
     { key: 'tags', type: 'text', label: 'תגיות', icon: 'bookmark', hint: 'עוגות, טבעוני' },
+    { key: 'calories', type: 'text', label: 'קלוריות', icon: 'flame', hint: 'למנה, למשל 350', inputmode: 'decimal' },
     { key: 'ingredients', type: 'textarea', label: 'מצרכים', hint: 'מצרך בכל שורה' },
     { key: 'steps', type: 'textarea', label: 'הכנה', hint: 'שלב בכל שורה' },
   ],
@@ -270,7 +271,8 @@ function plainList(items) {
   return chips + rowList(items.map(item => {
     const tags = parseTags(item.tags);
     const sub = escapeHtml((item.text || '').split('\n')[0] || tags.join(', '));
-    return itemRow(item, sub, { photo: item.photo, filter: tags.join('|') });
+    const end = item.calories ? `<span class="calories">${escapeHtml(TEXT.calories(String(item.calories).trim()))}</span>` : '';
+    return itemRow(item, sub, { photo: item.photo, filter: tags.join('|'), end });
   }));
 }
 
@@ -322,7 +324,7 @@ function fieldHtml(field, value) {
 
     case 'text':
       return `<label class="prop">${icon(field.icon)}${name}
-        <input type="text" class="prop-input" ${key} dir="auto" value="${escapeHtml(value)}" placeholder="${field.hint || ''}"></label>`;
+        <input type="text" class="prop-input" ${key} dir="auto" value="${escapeHtml(value)}" placeholder="${field.hint || ''}"${field.inputmode ? ` inputmode="${field.inputmode}"` : ''}></label>`;
 
     case 'textarea':
       return `<label class="text-block">

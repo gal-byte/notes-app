@@ -99,6 +99,8 @@ const TEXT = {
   all: 'הכל',
   pastTitle: 'עבר',
   recommendedBy: name => `המלצה של ${name}`,
+  // "350" → "350 קל׳"; anything else as written
+  calories: value => /^\d+([.,]\d+)?$/.test(value) ? `${value} קל׳` : value,
 
   // Item screen
   titlePlaceholder: 'כותרת',
