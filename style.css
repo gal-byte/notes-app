@@ -470,6 +470,11 @@ input[type="date"].prop-input::-webkit-calendar-picker-indicator { display: none
 .journal-video { position: relative; grid-column: 1 / -1; border-radius: 14px; overflow: hidden; background: #000; }
 .journal-video video { display: block; width: 100%; max-height: 70vh; background: #000; }
 .journal-video .journal-photo-remove { z-index: 1; }
+.journal-video[data-waiting] video { min-height: 160px; pointer-events: none; }
+.journal-video[data-waiting]::after {
+  content: attr(data-waiting); position: absolute; inset-inline: 12px; bottom: 12px; padding: 6px 10px;
+  border-radius: 8px; background: rgb(0 0 0 / 0.6); color: #fff; font-size: 0.9rem; text-align: center;
+}
 
 /* Card frames: the day's photos wear its score color (light to dark) */
 .journal-photos[class*="tier-"] .journal-photo:not(.add),

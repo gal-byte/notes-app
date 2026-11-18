@@ -254,6 +254,53 @@ async function readPicked(file, fallbackType) {
   }
 }
 
+// Inside the phone app (the APK, see Desktop\notes-apk): Android opens its own
+// gallery and sends the original video to the home server in the background;
+// the server makes it smaller (videos.py in notify). null in a normal browser.
+let nativePlugin;
+function nativeApp() {
+  if (nativePlugin === undefined) {
+    const cap = window.Capacitor;
+    nativePlugin = cap?.isNativePlatform?.() ? cap.registerPlugin('NotesNative') : null;
+  }
+  return nativePlugin;
+}
+
+// → { id, seconds } or null if nothing was picked
+async function pickJournalVideoNative() {
+  const answer = await nativeApp().pickVideo({ server: SERVER });
+  if (!answer || answer.cancelled) return null;
+  let thumb = null;
+  try {
+    if (answer.thumb) thumb = await (await fetch(answer.thumb)).blob();
+  } catch { /* the server makes a still picture too */ }
+  await putPhotoRecord({
+    id: answer.id, kind: 'video', full: null, thumb, seconds: answer.seconds || 0, uploaded: !thumb, at: Date.now(),
+  }).catch(() => {});
+  uploadPendingPhotos();
+  return { id: answer.id, seconds: answer.seconds || 0 };
+}
+
+// The video isn't playable yet (still uploading, or the server is making it smaller):
+// say so on its still picture and try again every 15 seconds
+async function waitForServerVideo(player, id) {
+  const box = player.closest('.journal-video');
+  if (!player.isConnected || !box) return;
+  let status = 'missing';
+  try {
+    status = (await (await fetch(`${SERVER}/video/${id}?status`)).json()).status;
+  } catch { /* no connection */ }
+  if (!player.isConnected) return;
+  if (status === 'ready') {
+    delete box.dataset.waiting;
+    player.addEventListener('error', () => waitForServerVideo(player, id), { once: true });
+    player.src = `${SERVER}/video/${id}?t=${Date.now()}`;
+    return;
+  }
+  box.dataset.waiting = status === 'failed' ? JOURNAL_WORDS.videoFailed : JOURNAL_WORDS.videoOnItsWay;
+  if (status !== 'failed') setTimeout(() => waitForServerVideo(player, id), 15000);
+}
+
 // Where the player gets the video: this device until it's uploaded, then the server
 async function journalVideoSrc(id) {
   const record = await getPhotoRecord(id).catch(() => null);
@@ -268,6 +315,7 @@ function fillJournalVideos(root) {
     const [poster, src] = await Promise.all([journalPhotoBlob(id, true), journalVideoSrc(id)]);
     if (!player.isConnected) return;
     if (poster) player.poster = photoUrl(poster);
+    if (src.startsWith(SERVER)) player.addEventListener('error', () => waitForServerVideo(player, id), { once: true });
     player.src = src;
   });
 }

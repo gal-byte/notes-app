@@ -17,7 +17,7 @@
 // ============================================================
 
 // Shown at the bottom of settings, to tell which version a phone runs
-const APP_VERSION = '19.11 · 5';
+const APP_VERSION = '19.11 · 6';
 
 const JOURNAL_WORDS = {
   today: 'היום',
@@ -42,6 +42,8 @@ const JOURNAL_WORDS = {
   stayHere: 'נא להישאר במסך הזה',
   videoError: 'לא הצלחתי להכין את הסרטון',
   videoCut: 'נשמרה רק הדקה הראשונה',
+  videoOnItsWay: 'הסרטון בדרך לשרת…',
+  videoFailed: 'השרת לא הצליח לקרוא את הסרטון',
   makeReminder: 'להפוך לתזכורת למחר',
   reminderMade: 'נוספה תזכורת למחר',
   dateTaken: 'כבר יש יומן ליום הזה, הוא נפתח',
@@ -544,7 +546,7 @@ function journalPhotosHtml(draft, making = null) {
   if (making !== null) {
     video = `
       <div class="journal-photo add making">
-        <span>${JOURNAL_WORDS.makingVideo} ${Math.round(making * 100)}%</span>
+        <span>${JOURNAL_WORDS.makingVideo}${making >= 0 ? ` ${Math.round(making * 100)}%` : '…'}</span>
         <small>${JOURNAL_WORDS.stayHere}</small>
       </div>`;
   } else if (draft.video) {
@@ -555,7 +557,7 @@ function journalPhotosHtml(draft, making = null) {
       </div>`;
   } else {
     video = `
-      <label class="journal-photo add">${icon('video')}<span>${JOURNAL_WORDS.addVideo}</span>
+      <label class="journal-photo add" data-add-video>${icon('video')}<span>${JOURNAL_WORDS.addVideo}</span>
         <input type="file" accept="video/*" hidden data-journal-video></label>`;
   }
   return photos + addPhoto + video;
@@ -694,7 +696,30 @@ function setupJournalEditor(form, editor, saveSoon) {
 (${failed?.name || ''} ${failed?.message || failed})`);
     else if (input.files.length > room) showToast(JOURNAL_WORDS.tooManyPhotos);
   });
-  photosBox.addEventListener('click', event => {
+  photosBox.addEventListener('click', async event => {
+    // Inside the phone app (APK): Android's own gallery, uploaded in the background
+    if (nativeApp() && event.target.closest('[data-add-video]')) {
+      event.preventDefault();
+      if (making !== null) return;
+      making = -1;
+      redrawPhotos();
+      try {
+        const picked = await pickJournalVideoNative();
+        making = null;
+        if (picked) {
+          draft.video = picked.id;
+          saveSoon();
+          if (picked.seconds > VIDEO_MAX_SECONDS) showToast(JOURNAL_WORDS.videoCut);
+        }
+        redrawPhotos();
+      } catch (error) {
+        making = null;
+        redrawPhotos();
+        alert(`${JOURNAL_WORDS.videoError}
+(${error?.message || error})`);
+      }
+      return;
+    }
     if (event.target.closest('[data-remove-journal-video]')) {
       event.preventDefault();
       if (!confirm(JOURNAL_WORDS.removeVideo + '?')) return;
