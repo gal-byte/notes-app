@@ -107,6 +107,8 @@ const TEXT = {
   timeHint: '—',
   moveToGroup: 'קבוצה',
   deleteItem: 'מחיקה',
+  share: 'שיתוף',
+  copied: 'הועתק',
   confirmDelete: 'למחוק? אי אפשר לבטל.',
   addPhoto: 'תמונה',
   changePhoto: 'החלפה',
@@ -125,6 +127,7 @@ const BUILT_IN_GROUPS = [
   { id: 'movies',    name: 'סרטים',    icon: 'film',     tint: 'rose' },
   { id: 'shows',     name: 'סדרות',    icon: 'tv',       tint: 'sky' },
   { id: 'recipes',   name: 'מתכונים',  icon: 'utensils', tint: 'green' },
+  { id: 'gifts',     name: 'מתנות',    icon: 'gift',     tint: 'pink' },
   { id: 'inbox',     name: 'לא ממוין', icon: 'inbox',    tint: 'slate' },
 ];
 let GROUPS = [...BUILT_IN_GROUPS];
@@ -479,7 +482,7 @@ async function showScreen(quiet = false) {
   if (flushEditor) {
     const flush = flushEditor;
     flushEditor = null;
-    await flush();
+    await flush(true);
   }
 
   const oldPhotoUrls = takePhotoUrls();

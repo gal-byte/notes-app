@@ -47,8 +47,16 @@ const FIELDS = {
     { key: 'photo', type: 'photo', label: 'תמונה' },
     { key: 'tags', type: 'text', label: 'תגיות', icon: 'bookmark', hint: 'עוגות, טבעוני' },
     { key: 'calories', type: 'text', label: 'קלוריות', icon: 'flame', hint: 'למנה, למשל 350', inputmode: 'decimal' },
+    { key: 'servings', type: 'text', label: 'מנות', icon: 'users', hint: 'למשל 4', inputmode: 'numeric' },
     { key: 'ingredients', type: 'textarea', label: 'מצרכים', hint: 'מצרך בכל שורה' },
     { key: 'steps', type: 'textarea', label: 'הכנה', hint: 'שלב בכל שורה' },
+  ],
+  // One per person (gifts.js)
+  gifts: [
+    { key: 'title', type: 'title', placeholder: 'שם' },
+    { key: 'birthday', type: 'date', label: 'יום הולדת', icon: 'cake' },
+    { key: 'ideas', type: 'textarea', label: 'רעיונות למתנה', hint: 'רעיון בכל שורה' },
+    { key: 'given', type: 'textarea', label: 'כבר נתתי', hint: 'מה ומתי' },
   ],
   // לא ממוין
   default: [TITLE_FIELD, NOTES_FIELD],
@@ -285,6 +293,7 @@ async function groupScreen(group) {
     reminders: remindersList, songs: songsList,
     movies: items => moviesList(items, MOVIE_LISTS),
     shows: items => moviesList(items, SHOW_LISTS),
+    gifts: giftsList,
   };
   return (lists[group.id] || plainList)(items);
 }
@@ -320,7 +329,7 @@ function fieldHtml(field, value) {
 
   switch (field.type) {
     case 'title':
-      return `<textarea class="title-input" ${key} dir="auto" rows="1" placeholder="${TEXT.titlePlaceholder}">${escapeHtml(value)}</textarea>`;
+      return `<textarea class="title-input" ${key} dir="auto" rows="1" placeholder="${field.placeholder || TEXT.titlePlaceholder}">${escapeHtml(value)}</textarea>`;
 
     case 'text':
       return `<label class="prop">${icon(field.icon)}${name}
@@ -398,7 +407,9 @@ function editorHtml() {
   const title = fields.filter(f => f.type === 'title').map(f => fieldHtml(f, draft[f.key])).join('');
   const props = fields.filter(f => !['title', 'textarea', 'photo'].includes(f.type)).map(f => fieldHtml(f, draft[f.key])).join('');
   const photo = fields.filter(f => f.type === 'photo').map(f => fieldHtml(f, draft[f.key])).join('');
-  const texts = fields.filter(f => f.type === 'textarea').map(f => fieldHtml(f, draft[f.key])).join('');
+  // Recipes: the "for how many?" strip goes right under the ingredients
+  const texts = fields.filter(f => f.type === 'textarea').map(f =>
+    fieldHtml(f, draft[f.key]) + (group === 'recipes' && f.key === 'ingredients' ? '<div id="scaler"></div>' : '')).join('');
 
   const groupOptions = GROUPS.map(g =>
     `<option value="${g.id}" ${g.id === group ? 'selected' : ''}>${groupTitle(g)}</option>`
@@ -414,16 +425,88 @@ function editorHtml() {
           <select class="prop-input" id="group-select">${groupOptions}</select></label>
       </div>
       ${photo}
+      ${voiceFieldHtml(draft.voices)}
       ${texts}
-      <button type="button" class="text-button danger" id="delete-button">${TEXT.deleteItem}</button>
+      <div class="editor-actions">
+        <button type="button" class="text-button" id="share-button">${icon('share', 'inline')} ${TEXT.share}</button>
+        <button type="button" class="text-button danger" id="delete-button">${TEXT.deleteItem}</button>
+      </div>
     </form>
   `;
 }
 
-// Textareas grow with their text instead of scrolling inside
+// ============================================================
+// SHARING
+// Sends a note as neat text (and its photo, when there is one)
+// through the phone's share sheet: WhatsApp, mail, anything.
+// Nothing becomes public; it's like copying and pasting.
+// ============================================================
+
+function shareText(group, item) {
+  const lines = [];
+  if (item.title) lines.push(item.title);
+  for (const field of fieldsFor(group)) {
+    const value = item[field.key];
+    if (field.type === 'title' || field.type === 'photo' || value === undefined || value === '' || value === null || value === false) continue;
+    if (field.type === 'textarea') {
+      if (String(value).trim()) lines.push('', `${field.label}:`, String(value).trim());
+    } else if (field.type === 'choice') {
+      if (field.options[value]) lines.push(`${field.label}: ${field.options[value]}`);
+    } else if (field.type === 'rating') {
+      if (value) lines.push(`${field.label}: ${stars(value)}`);
+    } else if (field.type === 'checkbox') {
+      lines.push(field.label);
+    } else if (field.type === 'date') {
+      const [y, m, d] = String(value).split('-');
+      if (d) lines.push(`${field.label}: ${Number(d)}.${Number(m)}.${y}`);
+    } else if (field.type === 'place') {
+      if (value.name) lines.push(`${field.label}: ${value.name}`);
+    } else if (typeof value === 'string' || typeof value === 'number') {
+      lines.push(`${field.label}: ${value}`);
+    }
+  }
+  return lines.join('\n').trim();
+}
+
+async function shareItem(group, item) {
+  const text = shareText(group, item);
+  const data = { text };
+  if (item.photo instanceof Blob) {
+    const file = new File([item.photo], 'photo.jpg', { type: item.photo.type || 'image/jpeg' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) data.files = [file];
+  }
+  if (navigator.share) {
+    try {
+      await navigator.share(data);
+      return;
+    } catch (error) {
+      if (error.name === 'AbortError') return;  // closed the share sheet
+      if (data.files) {  // some apps take only text
+        try { await navigator.share({ text }); return; } catch (e) { if (e.name === 'AbortError') return; }
+      }
+    }
+  }
+  // No share sheet (a computer): copy the text instead
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast(TEXT.copied);
+  } catch {
+    prompt('', text);
+  }
+}
+
+// Textareas grow with their text instead of scrolling inside.
+// Measuring means shrinking the box for a moment, which makes the page
+// shorter and the browser scroll up — then it jumps back. To stop that
+// "jumping text", the page keeps its height while we measure.
 function autoGrow(textarea) {
+  const scrollY = window.scrollY;
+  const page = document.documentElement;
+  page.style.minHeight = page.scrollHeight + 'px';
   textarea.style.height = 'auto';
   textarea.style.height = textarea.scrollHeight + 'px';
+  page.style.minHeight = '';
+  if (window.scrollY !== scrollY) window.scrollTo(0, scrollY);
 }
 
 function setupItemScreen() {
@@ -434,12 +517,29 @@ function setupItemScreen() {
   async function save() {
     const { draft } = editor;
     if (!editor.id) {
+      // A recording with no title yet gets one ("הקלטה 18.11"), so it isn't lost
+      if (!(draft.title || '').trim() && draft.voices?.length) {
+        const now = new Date();
+        draft.title = `${VOICE_WORDS.record} ${now.getDate()}.${now.getMonth() + 1}`;
+        const titleBox = form.querySelector('.title-input');
+        if (titleBox && !titleBox.value.trim()) titleBox.value = draft.title;
+      }
       if (!(draft.title || '').trim()) return;  // don't create an item without a title
       const created = await addItem(editor.group, draft);
       editor.id = created.id;
-      history.replaceState(null, '', `#/item/${created.id}`);  // change the address quietly
+      // Change the address quietly (unless this save happened while leaving)
+      if (location.hash.startsWith('#/new/')) history.replaceState(null, '', `#/item/${created.id}`);
     } else {
       await updateItem(editor.id, { ...draft, group: editor.group });
+    }
+
+    // A gift item with a birthday keeps a yearly reminder (gifts.js)
+    if (editor.group === 'gifts') {
+      const reminderId = await syncGiftReminder(editor.id, draft);
+      if (reminderId !== (draft.reminderId || '')) {
+        draft.reminderId = reminderId;
+        await updateItem(editor.id, { reminderId });
+      }
     }
   }
 
@@ -455,7 +555,18 @@ function setupItemScreen() {
     timer = setTimeout(saveNow, 400);
   }
 
-  flushEditor = () => (timer ? saveNow() : saving);
+  // Recordings: saved into the note when one finishes
+  const finishVoice = setupVoiceField(form, () => editor.draft.voices || [], voices => {
+    editor.draft.voices = voices;
+    saveSoon();
+  });
+
+  // leaving = going to another screen (then a recording still going is
+  // stopped and kept). Switching apps keeps a recording going.
+  flushEditor = async (leaving = false) => {
+    if (leaving) await finishVoice();
+    return timer ? saveNow() : saving;
+  };
 
   form.addEventListener('submit', event => event.preventDefault());
 
@@ -486,6 +597,7 @@ function setupItemScreen() {
 
     editor.draft[key] = element.type === 'checkbox' ? element.checked : element.value;
     if (element.tagName === 'TEXTAREA') autoGrow(element);
+    if (key === 'servings' || key === 'ingredients') scaler.update(key === 'servings');
     saveSoon();
   });
 
@@ -513,6 +625,11 @@ function setupItemScreen() {
 
     if (event.target.closest('[data-remove-photo]')) {
       setPhoto(null);
+      return;
+    }
+
+    if (event.target.closest('#share-button')) {
+      shareItem(editor.group, editor.draft);
       return;
     }
 
@@ -563,6 +680,7 @@ function setupItemScreen() {
 
   form.querySelectorAll('textarea').forEach(autoGrow);
   setupPlaceField(form, saveSoon);
+  const scaler = setupScaler(form, () => editor.draft);
 
   // A brand-new item: start typing the title right away
   if (!editor.id) form.querySelector('.title-input')?.focus();

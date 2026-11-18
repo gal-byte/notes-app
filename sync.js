@@ -46,6 +46,7 @@ async function localChangesSince(mark) {
     if ((item.updatedAt || 0) <= mark) continue;
     const data = { ...item };
     if (item.photo instanceof Blob) data.photo = await blobToDataUrl(item.photo);
+    if (Array.isArray(item.voices)) data.voices = await voicesToText(item.voices);
     changes.push({ kind: 'item', id: item.id, updatedAt: item.updatedAt, data });
   }
   for (const group of await getCustomGroups()) {

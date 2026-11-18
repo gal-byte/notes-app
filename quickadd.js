@@ -18,6 +18,7 @@ const QUICK_ADD_RULES = {
     'ס': 'movies',    'סרט': 'movies',
     'סד': 'shows',    'סדרה': 'shows',
     'מ': 'recipes',   'מתכון': 'recipes',
+    'מתנה': 'gifts',  'מתנות': 'gifts',
   },
 
   // Words that hint at a group. Checked in this order.

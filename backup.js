@@ -58,6 +58,7 @@ function planMerge(local, backup) {
         const newer = { ...theirs };
         // A text-only backup has no photo field: keep the photo from here
         if (!('photo' in theirs) && here.photo) newer.photo = here.photo;
+        if (!('voices' in theirs) && here.voices) newer.voices = here.voices;
         put.push(newer);
         if (count) plan.counts.updated++;
       }
@@ -94,6 +95,7 @@ async function applyMerge(plan) {
   for (const item of plan.putItems) {
     const copy = { ...item };
     if (typeof copy.photo === 'string') copy.photo = await dataUrlToBlob(copy.photo);
+    if (Array.isArray(copy.voices)) copy.voices = await voicesFromText(copy.voices);
     await putItem(copy);
   }
 

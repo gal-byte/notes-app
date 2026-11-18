@@ -404,7 +404,47 @@ input[type="date"].prop-input::-webkit-calendar-picker-indicator { display: none
 .photo-preview { display: block; width: calc(100% - 2 * var(--side)); max-height: 300px; margin: 0 var(--side); object-fit: cover; border-radius: 14px; }
 .photo-buttons { display: flex; gap: 16px; padding: 4px var(--side); }
 
-#delete-button { align-self: center; margin-top: 28px; }
+/* Recipe scaler (scaler.js) */
+.scaler { display: flex; align-items: center; gap: 12px; margin: 4px var(--side) 8px; padding: 6px 6px 6px 14px; padding-inline-start: 14px; border-radius: 14px; background: var(--fill); }
+.scaler-label { flex: 1; font-size: 15px; color: var(--muted); }
+.scaler-buttons { display: flex; align-items: center; gap: 4px; }
+.scaler-buttons b { min-width: 5.5em; text-align: center; font-weight: 500; }
+.scaler-buttons button {
+  display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
+  color: var(--text); background: var(--raised); border: none; box-shadow: 0 1px 2px rgba(0, 0, 0, .12);
+}
+.scaler-buttons button:disabled { opacity: .4; }
+.scaler-buttons svg { width: 18px; height: 18px; }
+.scaled { display: flex; flex-direction: column; margin-bottom: 8px; }
+.scaled p { margin: 0; padding: 2px var(--side) 8px; line-height: 1.65; color: var(--accent); }
+
+/* Voice memos (voice.js) */
+.voice-field { margin-bottom: 8px; }
+.voice-field > .prop { border-bottom: 1px solid var(--line); color: inherit; }
+.voice-row { display: flex; align-items: center; gap: 12px; padding: 6px var(--side); }
+.voice-play {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 40px; height: 40px; border-radius: 50%;
+  color: var(--accent-text); background: var(--accent); border: none;
+}
+.voice-play svg { width: 16px; height: 16px; fill: currentColor; }
+.voice-bar { position: relative; flex: 1; height: 6px; border-radius: 3px; background: var(--fill); overflow: hidden; }
+.voice-bar i { position: absolute; inset-block: 0; inset-inline-start: 0; width: 0; background: var(--accent); }
+.voice-time { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; direction: ltr; }
+.voice-remove { padding: 6px; color: var(--faint); background: none; border: none; }
+.voice-remove svg { width: 16px; height: 16px; }
+.voice-recording { gap: 10px; }
+.rec-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--danger); animation: rec-blink 1s infinite; }
+@keyframes rec-blink { 50% { opacity: .3; } }
+.voice-stop {
+  display: flex; align-items: center; gap: 6px; margin-inline-start: auto; padding: 8px 14px;
+  font: inherit; font-size: 15px; color: var(--accent-text); background: var(--danger); border: none; border-radius: 999px;
+}
+.voice-stop svg { width: 14px; height: 14px; fill: currentColor; }
+@media (prefers-reduced-motion: reduce) { .rec-dot { animation: none; } }
+
+.editor-actions { display: flex; justify-content: center; gap: 28px; margin-top: 28px; }
+.editor-actions .icon.inline { width: 16px; height: 16px; vertical-align: -3px; }
 
 /* Place (places.js) */
 .place-list { margin: 0 var(--side) 8px; background: var(--raised); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
