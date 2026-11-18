@@ -208,17 +208,18 @@ async function sendVideoNow(id, full, thumb) {
 }
 
 async function addJournalVideo(file, onProgress) {
-  if (file.size > 400_000_000) throw new Error(`read: too big (${Math.round(file.size / 1e6)} MB)`);
-  const original = await readPicked(file, 'video/mp4');
+  // Never read the whole video into memory (a phone video can be hundreds of MB,
+  // and the phone then says it "could not be read"): the player streams it
+  const mb = Math.round(file.size / 1e6);
   let made;
   try {
-    made = await shrinkVideo(original, onProgress);
+    made = await shrinkVideo(file, onProgress);
   } catch (error) {
-    // Couldn't make it smaller on this phone: keep the original if it's small enough
-    if (original.size > 60_000_000 || !['video/mp4', 'video/webm'].includes(original.type)) {
-      throw new Error(`shrink: ${error?.name || ''} ${error?.message || error}`);
+    // Couldn't make it smaller on this phone: send the original if it's small enough
+    if (file.size > 60_000_000 || !['video/mp4', 'video/webm'].includes(file.type)) {
+      throw new Error(`shrink (${mb} MB, ${file.type || '?'}): ${error?.name || ''} ${error?.message || error}`);
     }
-    made = { full: original, thumb: null, seconds: 0 };
+    made = { full: file, thumb: null, seconds: 0, original: true };
   }
   const { full, thumb, seconds } = made;
   const id = crypto.randomUUID();
@@ -228,7 +229,11 @@ async function addJournalVideo(file, onProgress) {
   try {
     await sendVideoNow(id, full, thumb);
     uploaded = true;
-  } catch { /* offline: it waits on the phone */ }
+  } catch (error) {
+    // The original is the phone's own file: it can't wait here for later
+    if (made.original) throw new Error(`upload (${mb} MB): ${error?.message || error}`);
+    /* offline: the smaller copy waits on the phone */
+  }
   try {
     await putPhotoRecord({ id, kind: 'video', full: uploaded ? null : full, thumb, seconds, uploaded, at: Date.now() });
   } catch (error) {
