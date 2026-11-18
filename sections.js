@@ -678,7 +678,7 @@ function setupItemScreen() {
 
   // Choosing a photo (journal photos are handled in journal.js)
   form.addEventListener('change', async event => {
-    if (event.target.type !== 'file' || !event.target.files[0] || event.target.closest('#journal-photos')) return;
+    if (event.target.type !== 'file' || !event.target.files[0] || event.target.matches('[data-journal-photo], [data-journal-video]')) return;
     try {
       setPhoto(await shrinkPhoto(event.target.files[0]));
     } catch {

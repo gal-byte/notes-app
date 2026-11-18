@@ -24,10 +24,20 @@ async function putPhotoRecord(record) {
 
 // A photo from the phone → saved here, waiting to upload. Returns its id.
 async function addJournalPhoto(file) {
-  const full = await shrinkPhoto(file, PHOTO_FULL_SIDE);
-  const thumb = await shrinkPhoto(full, PHOTO_THUMB_SIDE);
+  const source = await readPicked(file, 'image/jpeg');
+  let full, thumb;
+  try {
+    full = await shrinkPhoto(source, PHOTO_FULL_SIDE);
+    thumb = await shrinkPhoto(full, PHOTO_THUMB_SIDE);
+  } catch (error) {
+    throw new Error(`shrink: ${error?.name || ''} ${error?.message || error}`);
+  }
   const id = crypto.randomUUID();
-  await putPhotoRecord({ id, full, thumb, uploaded: false, at: Date.now() });
+  try {
+    await putPhotoRecord({ id, full, thumb, uploaded: false, at: Date.now() });
+  } catch (error) {
+    throw new Error(`save: ${error?.name || ''} ${error?.message || error}`);
+  }
   uploadPendingPhotos();
   return id;
 }
@@ -111,14 +121,14 @@ async function shrinkVideo(file, onProgress = () => {}) {
     canvas.height = Math.round(video.videoHeight * scale / 2) * 2;
     const ctx = canvas.getContext('2d');
 
-    // The still picture, from a moment in
-    video.currentTime = Math.min(0.5, seconds / 2);
-    await waitFor(video, 'seeked');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const still = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
-    const thumb = await shrinkPhoto(still, PHOTO_THUMB_SIDE);
-    video.currentTime = 0;
-    await waitFor(video, 'seeked');
+    // The still picture is taken while it plays, half a second in (no jumping
+    // around in the video: some phone videos can't do that before playing)
+    let still = null;
+    let stillAt = null;
+    const takeStill = () => {
+      stillAt = video.currentTime;
+      still = new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+    };
 
     // Picture from the canvas, sound straight from the video (not to the speaker)
     const stream = canvas.captureStream(30);
@@ -148,6 +158,7 @@ async function shrinkVideo(file, onProgress = () => {}) {
     const draw = () => {
       if (done) return;
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      if (stillAt === null ? true : (stillAt < 0.5 && video.currentTime >= 0.5)) takeStill();
       onProgress(Math.min(1, video.currentTime / seconds));
       if (video.currentTime >= seconds) return finish();   // only the first minute
       if (video.requestVideoFrameCallback) video.requestVideoFrameCallback(draw);
@@ -157,15 +168,23 @@ async function shrinkVideo(file, onProgress = () => {}) {
     recorder.start(1000);
     try {
       await video.play();
-    } catch {
-      video.muted = true;      // the phone won't play it with sound: a silent copy then
-      await video.play();
+    } catch (error) {
+      if (error?.name === 'NotAllowedError' && !done) {
+        video.muted = true;    // the phone won't play it with sound: a silent copy then
+        await video.play();
+      } else if (!done && !video.ended) {
+        throw error;
+      } else {
+        finish();              // a very short video can end before play() answers
+      }
     }
     draw();
     await stopped;
     const full = new Blob(chunks, { type: 'video/webm' });
     if (!full.size) throw new Error('empty');
-    return { full, thumb, seconds: Math.round(seconds) };
+    const stillBlob = still && await still;
+    const thumb = stillBlob ? await shrinkPhoto(stillBlob, PHOTO_THUMB_SIDE).catch(() => null) : null;
+    return { full, thumb, seconds: Math.round(Math.min(video.currentTime || seconds, seconds)) };
   } finally {
     video.removeAttribute('src');
     video.load();
@@ -175,20 +194,59 @@ async function shrinkVideo(file, onProgress = () => {}) {
   }
 }
 
+async function sendVideoNow(id, full, thumb) {
+  if (thumb) {
+    const response = await fetch(`${SERVER}/photo?id=${id}&size=thumb`, {
+      method: 'POST', headers: { 'Content-Type': 'image/jpeg' }, body: thumb,
+    });
+    if (!response.ok) throw new Error(`photo ${response.status}`);
+  }
+  const response = await fetch(`${SERVER}/video?id=${id}`, {
+    method: 'POST', headers: { 'Content-Type': full.type === 'video/mp4' ? 'video/mp4' : 'video/webm' }, body: full,
+  });
+  if (!response.ok) throw new Error(`video ${response.status}`);
+}
+
 async function addJournalVideo(file, onProgress) {
+  if (file.size > 400_000_000) throw new Error(`read: too big (${Math.round(file.size / 1e6)} MB)`);
+  const original = await readPicked(file, 'video/mp4');
   let made;
   try {
-    made = await shrinkVideo(file, onProgress);
+    made = await shrinkVideo(original, onProgress);
   } catch (error) {
     // Couldn't make it smaller on this phone: keep the original if it's small enough
-    if (file.size > 60_000_000 || !['video/mp4', 'video/webm'].includes(file.type)) throw error;
-    made = { full: file, thumb: null, seconds: 0 };
+    if (original.size > 60_000_000 || !['video/mp4', 'video/webm'].includes(original.type)) {
+      throw new Error(`shrink: ${error?.name || ''} ${error?.message || error}`);
+    }
+    made = { full: original, thumb: null, seconds: 0 };
   }
   const { full, thumb, seconds } = made;
   const id = crypto.randomUUID();
-  await putPhotoRecord({ id, kind: 'video', full, thumb, seconds, uploaded: false, at: Date.now() });
-  uploadPendingPhotos();
+
+  // Straight to the home server. Kept on the phone only if that fails (no connection).
+  let uploaded = false;
+  try {
+    await sendVideoNow(id, full, thumb);
+    uploaded = true;
+  } catch { /* offline: it waits on the phone */ }
+  try {
+    await putPhotoRecord({ id, kind: 'video', full: uploaded ? null : full, thumb, seconds, uploaded, at: Date.now() });
+  } catch (error) {
+    if (!uploaded) throw new Error(`save: ${error?.name || ''} ${error?.message || error}`);
+    // The server has it all; only the phone's copy of the still picture is missing
+  }
   return id;
+}
+
+// Read a file from the picker into memory right away. A picked file
+// (from the gallery or the cloud) can stop being readable later, which
+// shows up as "Failed to write blobs" when saving it.
+async function readPicked(file, fallbackType) {
+  try {
+    return new Blob([await file.arrayBuffer()], { type: file.type || fallbackType });
+  } catch (error) {
+    throw new Error(`read: ${error?.name || ''} ${error?.message || error}`);
+  }
 }
 
 // Where the player gets the video: this device until it's uploaded, then the server
