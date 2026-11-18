@@ -16,6 +16,9 @@
 // Also here: the quote of the day, from the group ציטוטים.
 // ============================================================
 
+// Shown at the bottom of settings, to tell which version a phone runs
+const APP_VERSION = '19.11 · 2';
+
 const JOURNAL_WORDS = {
   today: 'היום',
   writeToday: 'לכתוב על היום',
@@ -663,10 +666,11 @@ function setupJournalEditor(form, editor, saveSoon) {
         saveSoon();
         const record = await getPhotoRecord(id).catch(() => null);
         if (record && record.seconds >= VIDEO_MAX_SECONDS) showToast(JOURNAL_WORDS.videoCut);
-      } catch {
+      } catch (error) {
         making = null;
         redrawPhotos();
-        alert(JOURNAL_WORDS.videoError);
+        alert(`${JOURNAL_WORDS.videoError}
+(${error?.name || ''} ${error?.message || error})`);
       }
       return;
     }
@@ -675,18 +679,19 @@ function setupJournalEditor(form, editor, saveSoon) {
     // You can pick several at once
     const room = JOURNAL_MAX_PHOTOS - (draft.photos || []).length;
     const files = [...input.files].slice(0, room);
-    let failed = false;
+    let failed = null;
     for (const file of files) {
       try {
         const id = await addJournalPhoto(file);
         draft.photos = [...(draft.photos || []), id].slice(0, JOURNAL_MAX_PHOTOS);
         redrawPhotos();
         saveSoon();
-      } catch {
-        failed = true;
+      } catch (error) {
+        failed = error;
       }
     }
-    if (failed) alert(TEXT.photoError);
+    if (failed) alert(`${TEXT.photoError}
+(${failed?.name || ''} ${failed?.message || failed})`);
     else if (input.files.length > room) showToast(JOURNAL_WORDS.tooManyPhotos);
   });
   photosBox.addEventListener('click', event => {

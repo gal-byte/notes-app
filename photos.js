@@ -83,10 +83,11 @@ function fillJournalPhotos(root) {
 const VIDEO_MAX_SECONDS = 60;
 const VIDEO_SIDE = 1280;
 
-function waitFor(target, okEvent, failEvent = 'error') {
+function waitFor(target, okEvent, failEvent = 'error', ms = 20000) {
   return new Promise((resolve, reject) => {
-    target.addEventListener(okEvent, resolve, { once: true });
-    target.addEventListener(failEvent, () => reject(new Error(failEvent)), { once: true });
+    const timer = setTimeout(() => reject(new Error(`no ${okEvent}`)), ms);
+    target.addEventListener(okEvent, event => { clearTimeout(timer); resolve(event); }, { once: true });
+    target.addEventListener(failEvent, () => { clearTimeout(timer); reject(new Error(failEvent)); }, { once: true });
   });
 }
 
@@ -96,6 +97,9 @@ async function shrinkVideo(file, onProgress = () => {}) {
   const video = document.createElement('video');
   video.playsInline = true;
   video.preload = 'auto';
+  // On the page (invisible): some phones don't load a video that isn't
+  video.style.cssText = 'position:fixed;top:0;left:0;width:2px;height:2px;opacity:0;pointer-events:none';
+  document.body.append(video);
   video.src = url;
   let audio = null;
   try {
@@ -151,7 +155,12 @@ async function shrinkVideo(file, onProgress = () => {}) {
     };
     video.addEventListener('ended', finish, { once: true });
     recorder.start(1000);
-    await video.play();
+    try {
+      await video.play();
+    } catch {
+      video.muted = true;      // the phone won't play it with sound: a silent copy then
+      await video.play();
+    }
     draw();
     await stopped;
     const full = new Blob(chunks, { type: 'video/webm' });
@@ -160,13 +169,22 @@ async function shrinkVideo(file, onProgress = () => {}) {
   } finally {
     video.removeAttribute('src');
     video.load();
+    video.remove();
     URL.revokeObjectURL(url);
     audio?.close().catch(() => {});
   }
 }
 
 async function addJournalVideo(file, onProgress) {
-  const { full, thumb, seconds } = await shrinkVideo(file, onProgress);
+  let made;
+  try {
+    made = await shrinkVideo(file, onProgress);
+  } catch (error) {
+    // Couldn't make it smaller on this phone: keep the original if it's small enough
+    if (file.size > 60_000_000 || !['video/mp4', 'video/webm'].includes(file.type)) throw error;
+    made = { full: file, thumb: null, seconds: 0 };
+  }
+  const { full, thumb, seconds } = made;
   const id = crypto.randomUUID();
   await putPhotoRecord({ id, kind: 'video', full, thumb, seconds, uploaded: false, at: Date.now() });
   uploadPendingPhotos();
@@ -215,7 +233,7 @@ function uploadPendingPhotos() {
           }
           if (isVideo && record.full) {
             const response = await fetch(`${SERVER}/video?id=${record.id}`, {
-              method: 'POST', headers: { 'Content-Type': 'video/webm' }, body: record.full,
+              method: 'POST', headers: { 'Content-Type': record.full.type === 'video/mp4' ? 'video/mp4' : 'video/webm' }, body: record.full,
             });
             if (!response.ok) throw new Error(String(response.status));
           }
