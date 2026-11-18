@@ -66,6 +66,8 @@ const TEXT = {
   notifyTest: 'הודעת ניסיון',
   notifyTestSent: 'נשלחה',
   notifyBlocked: 'ההתראות חסומות בהגדרות של Chrome',
+  notifyBlockedApp: 'ההתראות חסומות בהגדרות של האפליקציה',
+  needNtfy: 'בשביל התראות באפליקציה צריך גם את אפליקציית ntfy (חינם, ב-Google Play)',
   notifyUnsupported: 'לא נתמך בדפדפן הזה',
   pushTitle: 'התראות',
 
@@ -472,10 +474,21 @@ async function buildScreen(page, id, extra) {
     if (html) return { title: '', html, back: `#/group/${editor.group}`, setup: setupItemScreen };
   }
   // Anything unknown (or no hash at all) → home. "#/add" focuses the box.
+  // "#/add/<text>" also fills it in: text shared from another app (the phone app, see notes-apk)
   return {
     title: TEXT.appName, html: await homeScreen(), addTo: '', home: true,
     actions: headerLink('#/search', 'search', TEXT.search) + headerLink('#/settings', 'sliders', TEXT.settings),
-    setup: () => { setupHome(); if (page === 'add') document.getElementById('quick-text').focus(); },
+    setup: () => {
+      setupHome();
+      if (page !== 'add') return;
+      const box = document.getElementById('quick-text');
+      if (id) {
+        try { box.value = decodeURIComponent(id); } catch { box.value = id; }
+        box.dispatchEvent(new Event('input', { bubbles: true }));
+        history.replaceState(null, '', '#/add');   // so going back doesn't add it twice
+      }
+      box.focus();
+    },
   };
 }
 

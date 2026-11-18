@@ -11,7 +11,10 @@
 // sw.js shows them when they arrive.
 // ============================================================
 
+// Inside the phone app (APK) there is no Web Push: the ntfy app on the phone
+// brings the same messages instead (UnifiedPush, see the notes-apk project)
 function pushSupported() {
+  if (nativeApp()) return true;
   return 'serviceWorker' in navigator && 'PushManager' in window && typeof Notification !== 'undefined';
 }
 
@@ -37,6 +40,7 @@ async function postToServer(path, body) {
 
 // Subscribe this device and tell the server. Throws a message to show.
 async function turnOnPush() {
+  if (nativeApp()) return turnOnNativePush();
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') throw new Error(TEXT.notifyBlocked);
   let key;
@@ -54,8 +58,21 @@ async function turnOnPush() {
   try { localStorage.setItem('pushOn', 'yes'); } catch { /* not important */ }
 }
 
+async function turnOnNativePush() {
+  let key;
+  try {
+    key = (await (await fetch(`${SERVER}/push/key`)).json()).key;
+  } catch {
+    throw new Error(TEXT.syncNoServer);
+  }
+  const answer = await nativeApp().enablePush({ server: SERVER, key });
+  if (!answer.ok) throw new Error(answer.reason === 'no-ntfy' ? TEXT.needNtfy : TEXT.notifyBlockedApp);
+  try { localStorage.setItem('pushOn', 'yes'); } catch { /* not important */ }
+}
+
 async function turnOffPush() {
   try { localStorage.removeItem('pushOn'); } catch { /* not important */ }
+  if (nativeApp()) return nativeApp().disablePush({ server: SERVER });
   const registration = await navigator.serviceWorker.ready;
   const subscription = await registration.pushManager.getSubscription();
   if (!subscription) return;
@@ -73,6 +90,10 @@ function deviceName() {
 // When the app opens: make sure the server still has this device
 // (quietly; it may have been lost or changed by the browser)
 async function refreshPushSubscription() {
+  if (nativeApp()) {
+    if (pushOn()) turnOnNativePush().catch(() => {});
+    return;
+  }
   if (!pushSupported() || !pushOn() || Notification.permission !== 'granted') return;
   try {
     const registration = await navigator.serviceWorker.ready;

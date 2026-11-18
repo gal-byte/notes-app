@@ -35,7 +35,7 @@ async function settingsScreen() {
   const last = syncSetting('syncLast');
 
   const pushAvailable = pushSupported();
-  const pushIsOn = pushAvailable && pushOn() && Notification.permission === 'granted';
+  const pushIsOn = pushAvailable && pushOn() && (nativeApp() || Notification.permission === 'granted');
   const summaryIsOn = notificationsSupported() && dailySummaryOn() && Notification.permission === 'granted';
 
   const general = [
