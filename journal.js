@@ -2,7 +2,7 @@
 // JOURNAL (יומן)
 // One entry per day, in short fields: a 1-10 score for the day,
 // the day's question, what happened, a good thing, a hard thing,
-// tomorrow, up to 2 photos, people and places.
+// tomorrow, up to 10 photos and a video, people and places.
 //
 //   #/journal/today, #/journal/2026-11-18  → that day's entry
 //                                            (a new one if there's none)
@@ -32,6 +32,7 @@ const JOURNAL_WORDS = {
   addPlaces: 'איפה היית?',
   addPhoto: 'תמונה',
   removePhoto: 'הסרת התמונה',
+  tooManyPhotos: 'אפשר עד 10 תמונות ליום, נשמרו הראשונות',
   addVideo: 'סרטון',
   removeVideo: 'הסרת הסרטון',
   makingVideo: 'מכין את הסרטון',
@@ -524,7 +525,8 @@ function tomorrowButtonHtml(draft) {
   return `<button type="button" class="quiet-line text-button" data-make-reminder>${icon('bell', 'inline')} ${JOURNAL_WORDS.makeReminder}</button>`;
 }
 
-// Up to 2 photos and one video. making = 0..1 while a video is being made smaller.
+// Up to 10 photos and one video. making = 0..1 while a video is being made smaller.
+const JOURNAL_MAX_PHOTOS = 10;
 function journalPhotosHtml(draft, making = null) {
   const ids = draft.photos || [];
   const photos = ids.map((id, index) => `
@@ -532,9 +534,9 @@ function journalPhotosHtml(draft, making = null) {
       <img data-photo-id="${escapeHtml(id)}" data-size="full" alt="">
       <button type="button" class="journal-photo-remove" data-remove-journal-photo="${index}" aria-label="${JOURNAL_WORDS.removePhoto}">${icon('x')}</button>
     </div>`).join('');
-  const addPhoto = ids.length < 2 ? `
+  const addPhoto = ids.length < JOURNAL_MAX_PHOTOS ? `
     <label class="journal-photo add">${icon('camera')}<span>${JOURNAL_WORDS.addPhoto}</span>
-      <input type="file" accept="image/*" hidden data-journal-photo></label>` : '';
+      <input type="file" accept="image/*" multiple hidden data-journal-photo></label>` : '';
   let video = '';
   if (making !== null) {
     video = `
@@ -633,7 +635,7 @@ function setupJournalEditor(form, editor, saveSoon) {
     saveSoon();
   });
 
-  // Photos (up to 2)
+  // Photos (up to 10) and the video
   const photosBox = form.querySelector('#journal-photos');
   let making = null;
   function redrawPhotos() {
@@ -670,14 +672,22 @@ function setupJournalEditor(form, editor, saveSoon) {
     }
     const input = event.target.closest('[data-journal-photo]');
     if (!input || !input.files[0]) return;
-    try {
-      const id = await addJournalPhoto(input.files[0]);
-      draft.photos = [...(draft.photos || []), id].slice(0, 2);
-      redrawPhotos();
-      saveSoon();
-    } catch {
-      alert(TEXT.photoError);
+    // You can pick several at once
+    const room = JOURNAL_MAX_PHOTOS - (draft.photos || []).length;
+    const files = [...input.files].slice(0, room);
+    let failed = false;
+    for (const file of files) {
+      try {
+        const id = await addJournalPhoto(file);
+        draft.photos = [...(draft.photos || []), id].slice(0, JOURNAL_MAX_PHOTOS);
+        redrawPhotos();
+        saveSoon();
+      } catch {
+        failed = true;
+      }
     }
+    if (failed) alert(TEXT.photoError);
+    else if (input.files.length > room) showToast(JOURNAL_WORDS.tooManyPhotos);
   });
   photosBox.addEventListener('click', event => {
     if (event.target.closest('[data-remove-journal-video]')) {
