@@ -5,7 +5,10 @@ question, morning memories, "מחר" → reminder, quote of the day from the gro
 then the calendar with frames, the weekly graph, best days and people/places, as tabs
 on the journal screen). Also added: up to 10 photos a day (several picked at once) and one video per day (up to a minute, made smaller on
 the phone to ~720p WebM, ~15 MB a minute, stored next to the photos; its still picture
-stands in for a photo). Session 4 not built yet.
+stands in for a photo). Since 2026-11-19 the phone app (APK, Desktop
+otes-apk) picks the
+video from Android's gallery and uploads the original; the server makes it smaller with
+ffmpeg (720p H.264, first minute). Session 4 not built yet.
 All choices below were made by Gal on 2026-11-18.
 
 ## Goal
