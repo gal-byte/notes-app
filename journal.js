@@ -17,7 +17,7 @@
 // ============================================================
 
 // Shown at the bottom of settings, to tell which version a phone runs
-const APP_VERSION = '19.11 · 7';
+const APP_VERSION = '19.11 · 8';
 
 const JOURNAL_WORDS = {
   today: 'היום',
@@ -170,7 +170,7 @@ function quoteHtml(quote) {
 // Remembered while the app is open, so you come back to the same view
 
 const JOURNAL_VIEWS = {
-  list: 'רשימה', calendar: 'לוח', graph: 'גרף', best: 'הימים הטובים', people: 'אנשים ומקומות',
+  list: 'רשימה', calendar: 'לוח', graph: 'גרף', best: 'הימים הטובים', people: 'אנשים ומקומות', quotes: 'ציטוטים',
 };
 const JOURNAL_LOOK = {
   noScores: 'עוד אין מספיק ימים עם ציון',
@@ -179,6 +179,8 @@ const JOURNAL_LOOK = {
   noBest: 'כאן יופיעו הימים שקיבלו 9 או 10',
   noPeople: 'כאן יופיעו האנשים והמקומות מהיומן',
   graphTitle: 'ממוצע שבועי',
+  newQuote: 'ציטוט חדש',
+  noQuotes: 'כאן יופיעו הציטוטים. אחד מהם מופיע כל יום בראש היומן',
 };
 let journalView = 'list';
 let journalMonth = null;      // first day of the month on the calendar
@@ -232,11 +234,25 @@ async function journalViewHtml(items) {
     const best = entries.filter(entry => entry.score >= 9);
     body = best.length ? journalRows(best, true) : `<p class="day-empty">${JOURNAL_LOOK.noBest}</p>`;
   } else if (journalView === 'people') body = journalPeopleHtml(entries);
+  else if (journalView === 'quotes') body = await journalQuotesHtml();
   else {
     body = quoteHtml(await quoteOfTheDay()) +
       (entries.length ? journalRows(entries) : `<p class="day-empty">${JOURNAL_WORDS.empty}</p>`);
   }
   return todayButton + tabs + body;
+}
+
+// The group ציטוטים, inside the journal: newest first, today's quote marked
+async function journalQuotesHtml() {
+  const quotes = (await getItemsInGroup('quotes')).filter(q => (q.title || '').trim())
+    .sort((a, b) => b.createdAt - a.createdAt);
+  const today = await quoteOfTheDay();
+  const add = `
+    <a class="journal-today" href="#/new/quotes">${icon('plus')}<span>${JOURNAL_LOOK.newQuote}</span></a>`;
+  if (!quotes.length) return add + `<p class="day-empty">${JOURNAL_LOOK.noQuotes}</p>`;
+  return add + rowList(quotes.map(quote => itemRow(quote,
+    [quote.author ? escapeHtml(quote.author) : '', quote.id === today?.id ? JOURNAL_WORDS.quoteOfDay : '']
+      .filter(Boolean).join(' · '))));
 }
 
 // The calendar: every day with an entry shows its picture in a frame

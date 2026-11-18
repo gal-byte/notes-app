@@ -52,7 +52,7 @@ async function settingsScreen() {
   return `
     ${rowList(general)}
     ${await journalSettingsHtml()}
-    <p class="footnote">${TEXT.itemCounts(items.length, photos)} · גרסה ${APP_VERSION}</p>
+    <p class="footnote">${TEXT.itemCounts(items.length, photos)} · גרסה ${APP_VERSION} · ${nativeApp() ? 'אפליקציה' : window.Capacitor ? 'אפליקציה (בלי חיבור לטלפון)' : 'דפדפן'}</p>
   `;
 }
 
