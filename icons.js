@@ -56,6 +56,7 @@ const ICONS = {
   play: '<path d="M6 3l14 9-14 9z"/>',
   pause: '<path d="M8 4v16M16 4v16"/>',
   stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>',
+  video: '<rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 10 6-3v10l-6-3z"/>',
   mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4"/>',
   share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>',
   minus: '<path d="M5 12h14"/>',

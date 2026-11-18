@@ -443,6 +443,7 @@ async function buildScreen(page, id, extra) {
   if (page === 'group' && groupExists(id)) {
     const group = findGroup(id);
     return { title: group.name, html: await groupScreen(group), back: '#/home', addTo: group.id,
+             setup: group.id === 'journal' ? setupJournalScreen : undefined,
              actions: group.custom ? headerLink(`#/group-settings/${group.id}`, 'pencil', TEXT.editGroupButton) : '' };
   }
   // "#/journal/today" or "#/journal/2026-11-18": that day's entry, or a new one

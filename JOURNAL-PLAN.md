@@ -1,8 +1,11 @@
 # Journal ("יומן") — plan
 
-Status: sessions 1 and 2 built on 2026-11-18 (journal, photos on the server, 21:30
-question, morning memories, "מחר" → reminder), plus quote of the day from the new
-group ציטוטים. Sessions 3 (calendar frames, graph, best days) and 4 not built yet.
+Status: sessions 1, 2 and 3 built on 2026-11-18 (journal, photos on the server, 21:30
+question, morning memories, "מחר" → reminder, quote of the day from the group ציטוטים,
+then the calendar with frames, the weekly graph, best days and people/places, as tabs
+on the journal screen). Also added: one video per day (up to a minute, made smaller on
+the phone to ~720p WebM, ~15 MB a minute, stored next to the photos; its still picture
+stands in for a photo). Session 4 not built yet.
 All choices below were made by Gal on 2026-11-18.
 
 ## Goal
