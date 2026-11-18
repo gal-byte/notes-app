@@ -32,6 +32,8 @@ const APP_FILES = [
   'voice.js',
   'scaler.js',
   'gifts.js',
+  'photos.js',
+  'journal.js',
   'sections.js',
   'calendar.js',
   'groups.js',
@@ -88,6 +90,7 @@ self.addEventListener('push', event => {
     renotify: !!message.tag,
     lang: 'he',
     dir: 'rtl',
+    image: message.image || undefined,   // "לפני שנה היום" comes with that day's photo
     actions,
     data: { url: message.url || './', title: message.title, body: message.body, tag: message.tag },
   }));

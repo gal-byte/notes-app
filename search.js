@@ -6,7 +6,8 @@
 // ============================================================
 
 // Which parts of an item are searched
-const SEARCH_FIELDS = ['title', 'text', 'lyrics', 'ingredients', 'steps', 'tags', 'recommendedBy'];
+const SEARCH_FIELDS = ['title', 'text', 'lyrics', 'ingredients', 'steps', 'tags', 'recommendedBy',
+                       'happened', 'good', 'hard', 'tomorrow', 'answer', 'people', 'places', 'ideas', 'given', 'author'];
 
 // Remembered while the app is open, so after opening a result
 // and going back, your search is still there

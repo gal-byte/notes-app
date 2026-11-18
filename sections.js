@@ -58,6 +58,13 @@ const FIELDS = {
     { key: 'ideas', type: 'textarea', label: 'רעיונות למתנה', hint: 'רעיון בכל שורה' },
     { key: 'given', type: 'textarea', label: 'כבר נתתי', hint: 'מה ומתי' },
   ],
+  // The journal draws its own screen (journal.js); these are for sharing
+  journal: JOURNAL_FIELDS,
+  // Quote of the day comes from here (shown on the journal screen)
+  quotes: [
+    { key: 'title', type: 'title', placeholder: 'הציטוט' },
+    { key: 'author', type: 'text', label: 'מי אמר', icon: 'quote' },
+  ],
   // לא ממוין
   default: [TITLE_FIELD, NOTES_FIELD],
 };
@@ -76,6 +83,7 @@ const NEW_ITEM_DEFAULTS = {
   songs: () => ({ status: 'idea' }),
   movies: () => ({ list: 'watchlist' }),
   shows: () => ({ list: 'watchlist' }),
+  journal: () => ({ date: toISODate(new Date()), photos: [], people: [], places: [] }),
 };
 
 function fieldsFor(groupId) {
@@ -286,6 +294,7 @@ function plainList(items) {
 
 async function groupScreen(group) {
   const items = await getItemsInGroup(group.id);
+  if (group.id === 'journal') return journalScreen(items);
   if (!items.length) {
     return `<div class="empty">${groupBadge(group, 'large')}<span>${TEXT.nothingHere}</span></div>`;
   }
@@ -403,6 +412,7 @@ function photoFieldInner(blob) {
 
 function editorHtml() {
   const { group, draft } = editor;
+  if (group === 'journal') return journalEditorHtml(draft);
   const fields = fieldsFor(group);
   const title = fields.filter(f => f.type === 'title').map(f => fieldHtml(f, draft[f.key])).join('');
   const props = fields.filter(f => !['title', 'textarea', 'photo'].includes(f.type)).map(f => fieldHtml(f, draft[f.key])).join('');
@@ -454,6 +464,10 @@ function shareText(group, item) {
       if (field.options[value]) lines.push(`${field.label}: ${field.options[value]}`);
     } else if (field.type === 'rating') {
       if (value) lines.push(`${field.label}: ${stars(value)}`);
+    } else if (field.type === 'score') {
+      if (value) lines.push(`${field.label}: ${value}/10`);
+    } else if (Array.isArray(value)) {
+      if (value.length && typeof value[0] === 'string') lines.push(`${field.label}: ${value.join(', ')}`);
     } else if (field.type === 'checkbox') {
       lines.push(field.label);
     } else if (field.type === 'date') {
@@ -471,10 +485,14 @@ function shareText(group, item) {
 async function shareItem(group, item) {
   const text = shareText(group, item);
   const data = { text };
-  if (item.photo instanceof Blob) {
-    const file = new File([item.photo], 'photo.jpg', { type: item.photo.type || 'image/jpeg' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) data.files = [file];
+  const blobs = item.photo instanceof Blob ? [item.photo] : [];
+  // Journal photos live on the server; this device has a copy once they were shown
+  for (const id of item.photos || []) {
+    const blob = await journalPhotoBlob(id, false);
+    if (blob) blobs.push(blob);
   }
+  const files = blobs.map((blob, i) => new File([blob], `photo${i + 1}.jpg`, { type: blob.type || 'image/jpeg' }));
+  if (files.length && navigator.canShare && navigator.canShare({ files })) data.files = files;
   if (navigator.share) {
     try {
       await navigator.share(data);
@@ -516,6 +534,12 @@ function setupItemScreen() {
 
   async function save() {
     const { draft } = editor;
+    // Journal: the title is the day; an entry with nothing in it isn't saved
+    if (editor.group === 'journal') {
+      draft.title = journalTitle(draft.date);
+      if (draft.answer && !draft.question) draft.question = questionFor(draft.date);
+      if (!editor.id && !journalHasContent(draft)) return;
+    }
     if (!editor.id) {
       // A recording with no title yet gets one ("הקלטה 18.11"), so it isn't lost
       if (!(draft.title || '').trim() && draft.voices?.length) {
@@ -652,9 +676,9 @@ function setupItemScreen() {
     if (time) element.value = time;
   });
 
-  // Choosing a photo
+  // Choosing a photo (journal photos are handled in journal.js)
   form.addEventListener('change', async event => {
-    if (event.target.type !== 'file' || !event.target.files[0]) return;
+    if (event.target.type !== 'file' || !event.target.files[0] || event.target.closest('#journal-photos')) return;
     try {
       setPhoto(await shrinkPhoto(event.target.files[0]));
     } catch {
@@ -669,7 +693,7 @@ function setupItemScreen() {
   }
 
   // Moving to another group: save, then redraw the form with that group's fields
-  document.getElementById('group-select').addEventListener('change', async event => {
+  document.getElementById('group-select')?.addEventListener('change', async event => {
     editor.group = event.target.value;
     if (editor.id) await saveNow();
     else history.replaceState(null, '', `#/new/${editor.group}`);
@@ -681,6 +705,7 @@ function setupItemScreen() {
   form.querySelectorAll('textarea').forEach(autoGrow);
   setupPlaceField(form, saveSoon);
   const scaler = setupScaler(form, () => editor.draft);
+  if (editor.group === 'journal') setupJournalEditor(form, editor, saveSoon);
 
   // A brand-new item: start typing the title right away
   if (!editor.id) form.querySelector('.title-input')?.focus();

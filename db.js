@@ -16,7 +16,7 @@
 // ============================================================
 
 const DB_NAME = 'notes-app';
-const DB_VERSION = 2;  // raise this when the structure changes
+const DB_VERSION = 3;  // raise this when the structure changes
 
 let databasePromise = null;
 
@@ -39,6 +39,9 @@ function openDatabase() {
       }
       if (event.oldVersion < 2) {
         db.createObjectStore('deleted', { keyPath: 'id' });
+      }
+      if (event.oldVersion < 3) {
+        db.createObjectStore('photos', { keyPath: 'id' });  // journal photos (photos.js)
       }
     };
 

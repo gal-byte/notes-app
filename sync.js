@@ -80,6 +80,8 @@ function syncNow() {
 async function runSync() {
   const startedAt = Date.now() - 1;
   try {
+    // Journal photos first, so another device finds them when the entry arrives
+    await uploadPendingPhotos().catch(() => {});
     const changes = await localChangesSince(syncSetting('syncMark'));
     const response = await fetch(`${SERVER}/sync`, {
       method: 'POST',

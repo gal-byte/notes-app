@@ -51,6 +51,7 @@ async function settingsScreen() {
 
   return `
     ${rowList(general)}
+    ${await journalSettingsHtml()}
     <p class="footnote">${TEXT.itemCounts(items.length, photos)}</p>
   `;
 }
@@ -76,6 +77,9 @@ function setupSettings() {
           status.textContent = on ? TEXT.working : '';
           if (on) await turnOnPush(); else await turnOffPush();
           status.textContent = '';
+        }
+        if (box.dataset.switch.startsWith('journal-')) {
+          await changeJournalSetting(box.dataset.switch, on);
         }
         if (box.dataset.switch === 'summary') {
           if (on) {

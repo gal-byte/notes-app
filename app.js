@@ -128,6 +128,8 @@ const BUILT_IN_GROUPS = [
   { id: 'shows',     name: 'סדרות',    icon: 'tv',       tint: 'sky' },
   { id: 'recipes',   name: 'מתכונים',  icon: 'utensils', tint: 'green' },
   { id: 'gifts',     name: 'מתנות',    icon: 'gift',     tint: 'pink' },
+  { id: 'journal',   name: 'יומן',     icon: 'book',     tint: 'indigo' },
+  { id: 'quotes',    name: 'ציטוטים',  icon: 'quote',    tint: 'teal' },
   { id: 'inbox',     name: 'לא ממוין', icon: 'inbox',    tint: 'slate' },
 ];
 let GROUPS = [...BUILT_IN_GROUPS];
@@ -443,6 +445,13 @@ async function buildScreen(page, id, extra) {
     return { title: group.name, html: await groupScreen(group), back: '#/home', addTo: group.id,
              actions: group.custom ? headerLink(`#/group-settings/${group.id}`, 'pencil', TEXT.editGroupButton) : '' };
   }
+  // "#/journal/today" or "#/journal/2026-11-18": that day's entry, or a new one
+  if (page === 'journal') {
+    const iso = /^\d{4}-\d{2}-\d{2}$/.test(id || '') ? id : toISODate(new Date());
+    const entry = await journalEntryFor(iso);
+    const html = entry ? await itemScreen(entry.id) : newItemScreen('journal', iso);
+    return { title: '', html, back: '#/group/journal', setup: setupItemScreen };
+  }
   if (page === 'new' && groupExists(id)) {
     // "#/new/reminders/2026-11-20" → a new reminder already set to that day
     return { title: '', html: newItemScreen(id, extra), back: `#/group/${id}`, setup: setupItemScreen };
@@ -519,6 +528,7 @@ async function showScreen(quiet = false) {
 
   setupFilters();
   if (screen.setup) screen.setup();
+  fillJournalPhotos(screenBox);
 }
 
 // The back arrow: go back like the phone's back button, but if
