@@ -106,6 +106,7 @@ function setupSettings() {
       const action = button.dataset.action;
       const status = statusOf(button);
       try {
+        if (await healthAction(action, status)) return;
         if (await stravaAction(action, status)) return;
         if (action === 'push-test') {
           status.textContent = TEXT.working;

@@ -1,7 +1,7 @@
 // ============================================================
 // STRAVA
 // Your workouts from Strava, read-only, shown on the journal day
-// and on the calendar. The home server reads them from Strava every
+// and on the calendar (with Health Connect's, health.js). The home server reads them from Strava every
 // hour (strava.py in ~/notify); this file only asks the server.
 // Kept per month, also offline (localStorage), so screens stay fast.
 // Connect / disconnect in settings (journalSettingsHtml).
@@ -34,6 +34,7 @@ const WORKOUT_TYPES = {
   Yoga: ['יוגה', '🧘'], Pilates: ['פילאטיס', '🧘'], Elliptical: ['אליפטיקל', '💪'], StairStepper: ['מדרגות', '💪'],
   Soccer: ['כדורגל', '⚽'], Basketball: ['כדורסל', '🏀'], Tennis: ['טניס', '🎾'], Padel: ['פאדל', '🎾'],
   RockClimbing: ['טיפוס', '🧗'], Skateboard: ['סקייטבורד', '🛹'], Golf: ['גולף', '⛳'],
+  HIIT: ['אימון אינטרוולים', '🔥'], Boxing: ['אגרוף', '🥊'], Dance: ['ריקוד', '💃'],
 };
 const PACED = ['Run', 'TrailRun', 'VirtualRun', 'Walk', 'Hike'];
 const RIDES = ['Ride', 'MountainBikeRide', 'GravelRide', 'EBikeRide', 'EMountainBikeRide', 'VirtualRide'];
@@ -50,7 +51,19 @@ function storedMonth(key) {
   try { return JSON.parse(localStorage.getItem(`strava-${key}`)); } catch { return null; }
 }
 
+// Strava's and Health Connect's (health.js) together; a run that's in both shows once
 async function workoutsInMonth(year, month) {
+  const [strava, health] = await Promise.all([stravaInMonth(year, month), healthInMonth(year, month)]);
+  const minutes = w => {
+    const [h, m] = (w.time || '0:0').split(':').map(Number);
+    return h * 60 + m;
+  };
+  const extra = health.workouts.filter(h =>
+    !strava.some(s => s.date === h.date && Math.abs(minutes(s) - minutes(h)) <= 10));
+  return [...strava, ...extra].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+}
+
+async function stravaInMonth(year, month) {
   const key = `${year}-${String(month + 1).padStart(2, '0')}`;
   if (workoutMonths.has(key)) return workoutMonths.get(key);
   const last = new Date(year, month + 1, 0).getDate();
@@ -141,15 +154,19 @@ function routeSvg(encoded) {
 function workoutCardHtml(w) {
   const [kind, emoji] = workoutKind(w.type);
   const route = routeSvg(w.route);
+  // Strava's open on strava.com; Health Connect's ("hc-…") have nowhere to open
+  const fromStrava = !String(w.id).startsWith('hc-');
+  const tag = fromStrava ? 'a' : 'div';
+  const link = fromStrava ? ` href="https://www.strava.com/activities/${encodeURIComponent(w.id)}" target="_blank" rel="noopener"` : '';
   return `
-    <a class="workout" href="https://www.strava.com/activities/${encodeURIComponent(w.id)}" target="_blank" rel="noopener">
+    <${tag} class="workout"${link}>
       ${route || `<span class="workout-emoji">${emoji}</span>`}
       <span class="workout-main">
         <span class="workout-kind">${route ? `${emoji} ` : ''}${kind}${w.time ? ` · ${w.time}` : ''}</span>
         ${w.name ? `<span class="workout-name" dir="auto">${escapeHtml(w.name)}</span>` : ''}
         <span class="workout-stats">${workoutStats(w).map(s => `<span>${s}</span>`).join('')}</span>
       </span>
-    </a>`;
+    </${tag}>`;
 }
 
 function workoutsHtml(workouts) {

@@ -17,7 +17,7 @@
 // ============================================================
 
 // Shown at the bottom of settings, to tell which version a phone runs
-const APP_VERSION = '19.11 · 14';
+const APP_VERSION = '19.11 · 15';
 
 const JOURNAL_WORDS = {
   today: 'היום',
@@ -568,9 +568,10 @@ function setupJournalEditor(form, editor, saveSoon) {
     showWorkouts(iso);
   });
 
-  // That day's workouts from Strava (read-only, not part of the entry)
+  // That day's sleep, steps and workouts (Health Connect / Strava; read-only, not part of the entry)
   async function showWorkouts(iso) {
-    form.querySelector('#journal-workouts').innerHTML = workoutsHtml(await workoutsOn(iso));
+    const [day, workouts] = await Promise.all([healthDayOn(iso), workoutsOn(iso)]);
+    form.querySelector('#journal-workouts').innerHTML = dayActivityHtml(day, workouts);
   }
   showWorkouts(draft.date);
 
@@ -756,6 +757,7 @@ async function journalSettingsHtml() {
     settingRow({ id: 'set-morning', iconName: 'sparkle', title: JOURNAL_WORDS.morningTitle,
       sub: disabled ? '' : JOURNAL_WORDS.morningSub,
       end: switchHtml('journal-morning', options?.morning, disabled) }),
+    ...await healthSettingsRows(),
     ...await stravaSettingsRows(),
   ]);
 }

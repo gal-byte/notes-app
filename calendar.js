@@ -2,7 +2,7 @@
 // CALENDAR
 // A month grid (Sunday on the right, Israeli style) with a dot
 // on every day that has a reminder, an orange corner on days with a
-// Strava workout (strava.js). Days with a journal entry show
+// workout (Health Connect or Strava: health.js, strava.js). Days with a journal entry show
 // its picture in a frame colored by the day's score (journal.js).
 // Tap a day to see its reminders and journal entry underneath.
 // ============================================================
@@ -106,7 +106,7 @@ async function calendarHtml() {
     </div>
 
     ${selectedDayHtml(reminders, journal)}
-    ${calendarSelected ? workoutsHtml(workouts.filter(w => w.date === calendarSelected)) : ''}
+    ${calendarSelected ? dayActivityHtml(await healthDayOn(calendarSelected), workouts.filter(w => w.date === calendarSelected)) : ''}
   `;
 }
 

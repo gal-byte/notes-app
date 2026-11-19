@@ -701,6 +701,12 @@ button.setting { cursor: pointer; }
    STRAVA WORKOUTS (strava.js): cards on the journal day and the
    calendar's day list, an orange corner on the calendar's days
    ============================================================ */
+/* The day from Health Connect: sleep, steps, resting heart rate (health.js) */
+.health-day {
+  display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 2px var(--side) 8px; padding: 10px 12px;
+  background: var(--fill); border-radius: 14px; font-size: 14px; color: var(--text);
+}
+.health-day small { color: var(--muted); font-size: 12px; }
 .workouts { display: flex; flex-direction: column; gap: 8px; padding: 2px var(--side) 8px; }
 .workout {
   display: flex; align-items: center; gap: 12px; padding: 10px 12px;
