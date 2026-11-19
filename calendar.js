@@ -1,8 +1,7 @@
 // ============================================================
 // CALENDAR
 // A month grid (Sunday on the right, Israeli style) with a dot
-// on every day that has a reminder, an orange corner on days with a
-// workout (Health Connect or Strava: health.js, strava.js). Days with a journal entry show
+// on every day that has a reminder. Days with a journal entry show
 // its picture in a frame colored by the day's score (journal.js).
 // Tap a day to see its reminders and journal entry underneath.
 // ============================================================
@@ -43,7 +42,6 @@ async function calendarHtml() {
   const reminders = await getItemsInGroup('reminders');
   const journal = new Map(datedEntries(await getItemsInGroup('journal')).map(entry => [entry.date, entry]));
   const workouts = await workoutsInMonth(calendarMonth.getFullYear(), calendarMonth.getMonth());
-  const workoutDays = new Set(workouts.map(w => w.date));
   const year = calendarMonth.getFullYear();
   const month = calendarMonth.getMonth();
   const todayIso = toISODate(todayStart());
@@ -80,7 +78,6 @@ async function calendarHtml() {
     cells += `
       <button type="button" class="${classes.join(' ')}" data-day="${iso}">
         ${picture}
-        ${workoutDays.has(iso) ? '<i class="cal-sport" aria-hidden="true"></i>' : ''}
         <span>${day}</span>
         <span class="cal-dots">${dots}</span>
       </button>`;

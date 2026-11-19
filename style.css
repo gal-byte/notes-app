@@ -726,7 +726,3 @@ button.setting { cursor: pointer; }
 .journal-editor #journal-workouts:empty { display: none; }
 
 .cal-day { position: relative; }
-.cal-sport {
-  position: absolute; top: 3px; inset-inline-end: 3px; z-index: 1;
-  width: 7px; height: 7px; border-radius: 50%; background: #FC4C02; box-shadow: 0 0 0 1.5px var(--bg);
-}
