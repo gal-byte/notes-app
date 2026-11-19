@@ -17,7 +17,7 @@
 // ============================================================
 
 // Shown at the bottom of settings, to tell which version a phone runs
-const APP_VERSION = '19.11 · 13';
+const APP_VERSION = '19.11 · 14';
 
 const JOURNAL_WORDS = {
   today: 'היום',
@@ -440,6 +440,7 @@ function journalEditorHtml(draft) {
         <span class="label">${JOURNAL_WORDS.score}</span>
         <div class="score-buttons">${scoreButtons(draft.score)}</div>
       </div>
+      <div id="journal-workouts"></div>
       ${area('answer', escapeHtml(question))}
       ${area('happened', JOURNAL_WORDS.happened)}
       ${area('good', JOURNAL_WORDS.good)}
@@ -564,7 +565,14 @@ function setupJournalEditor(form, editor, saveSoon) {
       return;
     }
     form.querySelector('#journal-title').textContent = journalTitle(iso);
+    showWorkouts(iso);
   });
+
+  // That day's workouts from Strava (read-only, not part of the entry)
+  async function showWorkouts(iso) {
+    form.querySelector('#journal-workouts').innerHTML = workoutsHtml(await workoutsOn(iso));
+  }
+  showWorkouts(draft.date);
 
   // "מחר" → a reminder for the next day
   form.addEventListener('input', event => {
@@ -748,6 +756,7 @@ async function journalSettingsHtml() {
     settingRow({ id: 'set-morning', iconName: 'sparkle', title: JOURNAL_WORDS.morningTitle,
       sub: disabled ? '' : JOURNAL_WORDS.morningSub,
       end: switchHtml('journal-morning', options?.morning, disabled) }),
+    ...await stravaSettingsRows(),
   ]);
 }
 

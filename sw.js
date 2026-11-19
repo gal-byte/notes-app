@@ -34,6 +34,7 @@ const APP_FILES = [
   'gifts.js',
   'photos.js',
   'journal.js',
+  'strava.js',
   'sections.js',
   'calendar.js',
   'groups.js',

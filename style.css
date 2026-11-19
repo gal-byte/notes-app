@@ -696,3 +696,31 @@ button.setting { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ============================================================
+   STRAVA WORKOUTS (strava.js): cards on the journal day and the
+   calendar's day list, an orange corner on the calendar's days
+   ============================================================ */
+.workouts { display: flex; flex-direction: column; gap: 8px; padding: 2px var(--side) 8px; }
+.workout {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+  color: var(--text); text-decoration: none; background: var(--fill); border-radius: 14px;
+}
+.workout-route, .workout-emoji {
+  flex: none; width: 56px; height: 56px; border-radius: 10px; background: var(--bg);
+}
+.workout-route path { fill: none; stroke: #FC4C02; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+.workout-route circle { fill: var(--text); stroke: none; }
+.workout-emoji { display: grid; place-items: center; font-size: 28px; }
+.workout-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.workout-kind { font-size: 13px; color: var(--muted); }
+.workout-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.workout-stats { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 14px; font-variant-numeric: tabular-nums; }
+.workout-stats span { white-space: nowrap; }
+.journal-editor #journal-workouts:empty { display: none; }
+
+.cal-day { position: relative; }
+.cal-sport {
+  position: absolute; top: 3px; inset-inline-end: 3px; z-index: 1;
+  width: 7px; height: 7px; border-radius: 50%; background: #FC4C02; box-shadow: 0 0 0 1.5px var(--bg);
+}
