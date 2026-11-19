@@ -125,12 +125,12 @@ const TEXT = {
 // ============================================================
 const BUILT_IN_GROUPS = [
   { id: 'reminders', name: 'תזכורות',  icon: 'bell',     tint: 'amber' },
+  { id: 'journal',   name: 'יומן',     icon: 'book',     tint: 'indigo' },
   { id: 'songs',     name: 'שירים',    icon: 'music',    tint: 'violet' },
   { id: 'movies',    name: 'סרטים',    icon: 'film',     tint: 'rose' },
   { id: 'shows',     name: 'סדרות',    icon: 'tv',       tint: 'sky' },
   { id: 'recipes',   name: 'מתכונים',  icon: 'utensils', tint: 'green' },
   { id: 'gifts',     name: 'מתנות',    icon: 'gift',     tint: 'pink' },
-  { id: 'journal',   name: 'יומן',     icon: 'book',     tint: 'indigo' },
   { id: 'quotes',    name: 'ציטוטים',  icon: 'quote',    tint: 'teal' },
   { id: 'inbox',     name: 'לא ממוין', icon: 'inbox',    tint: 'slate' },
 ];
