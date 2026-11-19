@@ -17,7 +17,7 @@
 // ============================================================
 
 // Shown at the bottom of settings, to tell which version a phone runs
-const APP_VERSION = '19.11 · 11';
+const APP_VERSION = '19.11 · 12';
 
 const JOURNAL_WORDS = {
   today: 'היום',
@@ -48,6 +48,7 @@ const JOURNAL_WORDS = {
   reminderMade: 'נוספה תזכורת למחר',
   dateTaken: 'כבר יש יומן ליום הזה, הוא נפתח',
   quoteOfDay: 'ציטוט היום',
+  writeThisDay: 'לכתוב יומן על היום הזה',
   quoteHint: 'משפט ששמעת או קראת היום',
   quoteBy: 'מי אמר?',
   saveQuote: 'לשמור בציטוטים',
@@ -172,11 +173,12 @@ function quoteHtml(quote, label = true) {
     </a>`;
 }
 
-// ---------- The journal screen: list, calendar, graph, best days, people ----------
+// ---------- The journal screen: list, graph, best days, people, quotes ----------
+// (journal days show on the app's calendar, calendar.js)
 // Remembered while the app is open, so you come back to the same view
 
 const JOURNAL_VIEWS = {
-  list: 'רשימה', calendar: 'לוח', graph: 'גרף', best: 'הימים הטובים', people: 'אנשים ומקומות', quotes: 'ציטוטים',
+  list: 'רשימה', graph: 'גרף', best: 'הימים הטובים', people: 'אנשים ומקומות', quotes: 'ציטוטים',
 };
 const JOURNAL_LOOK = {
   noScores: 'עוד אין מספיק ימים עם ציון',
@@ -189,7 +191,6 @@ const JOURNAL_LOOK = {
   noQuotes: 'כאן יופיעו הציטוטים. אחד מהם מופיע כל יום בראש היומן',
 };
 let journalView = 'list';
-let journalMonth = null;      // first day of the month on the calendar
 let journalTag = null;        // { key: 'people' | 'places', value }
 
 // The picture for a day: photo 1, or else the video's still picture
@@ -234,8 +235,7 @@ async function journalViewHtml(items) {
 
   const entries = datedEntries(items);
   let body;
-  if (journalView === 'calendar') body = journalCalendarHtml(entries);
-  else if (journalView === 'graph') body = journalGraphHtml(entries);
+  if (journalView === 'graph') body = journalGraphHtml(entries);
   else if (journalView === 'best') {
     const best = entries.filter(entry => entry.score >= 9);
     body = best.length ? journalRows(best, true) : `<p class="day-empty">${JOURNAL_LOOK.noBest}</p>`;
@@ -259,58 +259,6 @@ async function journalQuotesHtml() {
   return add + rowList(quotes.map(quote => itemRow(quote,
     [quote.author ? escapeHtml(quote.author) : '', quote.id === today?.id ? JOURNAL_WORDS.quoteOfDay : '']
       .filter(Boolean).join(' · '))));
-}
-
-// The calendar: every day with an entry shows its picture in a frame
-// colored by the day's score; with no picture, the cell is the score
-// color with the number. Empty days stay plain.
-function journalCalendarHtml(entries) {
-  if (!journalMonth) {
-    const now = todayStart();
-    journalMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  }
-  const byDate = new Map(entries.map(entry => [entry.date, entry]));
-  const year = journalMonth.getFullYear();
-  const month = journalMonth.getMonth();
-  const todayIso = toISODate(todayStart());
-  const isThisMonth = toISODate(journalMonth).slice(0, 7) === todayIso.slice(0, 7);
-  const title = journalMonth.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
-
-  let cells = '<span class="cal-blank"></span>'.repeat(journalMonth.getDay());
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  for (let day = 1; day <= daysInMonth; day++) {
-    const iso = toISODate(new Date(year, month, day));
-    const entry = byDate.get(iso);
-    const isToday = iso === todayIso ? ' today' : '';
-    if (iso > todayIso) {
-      cells += `<span class="jcal-day future">${day}</span>`;
-    } else if (!entry) {
-      cells += `<a class="jcal-day${isToday}" href="#/journal/${iso}">${day}</a>`;
-    } else {
-      const tier = entry.score ? ` tier-${scoreTier(entry.score)}` : '';
-      const cover = journalCover(entry);
-      cells += cover
-        ? `<a class="jcal-day framed${tier}${isToday}" href="#/item/${entry.id}">
-             <img data-photo-id="${escapeHtml(cover)}" alt=""><span class="jcal-num">${day}</span></a>`
-        : `<a class="jcal-day filled${tier}${isToday}" href="#/item/${entry.id}">${entry.score || day}</a>`;
-    }
-  }
-  const weekdays = TEXT.weekdaysShort.map(name => `<span>${name}</span>`).join('');
-  return `
-    <div class="cal-header">
-      <h2 class="cal-title">${title}</h2>
-      ${isThisMonth ? '' : `<button type="button" class="text-button" data-journal-month="0">${TEXT.today}</button>`}
-      <button type="button" class="icon-button" data-journal-month="-1" aria-label="${TEXT.prevMonth}">
-        <svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
-      </button>
-      <button type="button" class="icon-button" data-journal-month="1" aria-label="${TEXT.nextMonth}"${isThisMonth ? ' disabled' : ''}>
-        <svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg>
-      </button>
-    </div>
-    <div class="cal-grid-card">
-      <div class="cal-weekdays">${weekdays}</div>
-      <div class="cal-grid jcal-grid" id="jcal-grid">${cells}</div>
-    </div>`;
 }
 
 // Weekly average score (weeks start on Sunday), the last year at most
@@ -446,16 +394,6 @@ function setupJournalScreen() {
     const view = event.target.closest('[data-journal-view]');
     if (view) { journalView = view.dataset.journalView; redraw(); return; }
 
-    const move = event.target.closest('[data-journal-month]');
-    if (move) {
-      const step = Number(move.dataset.journalMonth);
-      const now = todayStart();
-      journalMonth = step ? new Date(journalMonth.getFullYear(), journalMonth.getMonth() + step, 1)
-                          : new Date(now.getFullYear(), now.getMonth(), 1);
-      redraw();
-      return;
-    }
-
     const tag = event.target.closest('[data-journal-tag]');
     if (tag) {
       const same = journalTag?.key === tag.dataset.journalTag && journalTag.value === tag.dataset.value;
@@ -481,23 +419,6 @@ function setupJournalScreen() {
     graph.querySelectorAll('.g-dot.on').forEach(dot => dot.classList.remove('on'));
     week.querySelector('.g-dot').classList.add('on');
   }
-
-  // Swipe sideways on the calendar to change month (next month is to the left)
-  let startX = null;
-  box.addEventListener('touchstart', event => {
-    startX = event.target.closest('#jcal-grid') ? event.touches[0].clientX : null;
-  }, { passive: true });
-  box.addEventListener('touchend', event => {
-    if (startX === null) return;
-    const dx = event.changedTouches[0].clientX - startX;
-    startX = null;
-    if (Math.abs(dx) < 60) return;
-    const now = todayStart();
-    const next = new Date(journalMonth.getFullYear(), journalMonth.getMonth() + (dx > 0 ? 1 : -1), 1);
-    if (next > now) return;
-    journalMonth = next;
-    redraw();
-  });
 }
 
 // ---------- The entry screen ----------

@@ -496,23 +496,6 @@ input[type="date"].prop-input::-webkit-calendar-picker-indicator { display: none
 .filter-chips.wrap { flex-wrap: wrap; overflow: visible; }
 .chip small { font-size: 12px; opacity: .7; margin-inline-start: 2px; }
 
-/* The journal's calendar */
-.jcal-grid { gap: 4px; }
-.jcal-day {
-  position: relative; display: grid; place-items: center; aspect-ratio: 1;
-  font-size: 15px; color: var(--text); text-decoration: none; border-radius: 10px;
-  font-variant-numeric: tabular-nums;
-}
-.jcal-day.today { font-weight: 700; color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
-.jcal-day.future { color: var(--faint); }
-.jcal-day.filled { font-weight: 700; color: #1b1a18; background: var(--tier, var(--fill)); }
-.jcal-day.framed { padding: 3px; background: var(--tier, var(--fill)); }
-.jcal-day.framed img { width: 100%; height: 100%; object-fit: cover; border-radius: 7px; background: var(--fill); }
-.jcal-num {
-  position: absolute; bottom: 4px; inset-inline-start: 5px; font-size: 11px; font-weight: 700;
-  color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .7);
-}
-
 /* The score graph */
 .journal-graph { padding: 0 var(--side) 8px; }
 .journal-graph svg { display: block; width: 100%; height: auto; overflow: visible; stroke: none; stroke-width: 0; fill: none; }
@@ -657,6 +640,24 @@ mark { padding: 0 1px; color: inherit; background: rgba(240, 184, 40, .35); bord
 .cal-dots { display: flex; gap: 3px; height: 4px; }
 .cal-dots i { width: 4px; height: 4px; border-radius: 50%; background: #d99a06; }
 .cal-day.selected .cal-dots i { background: var(--bg); }
+
+/* Journal days on the calendar: the day's picture in its score's frame (journal.js) */
+.cal-grid:has(.journal-framed, .journal-filled) { gap: 3px; }
+.cal-day.journal-framed, .cal-day.journal-filled {
+  position: relative; border-radius: 10px; background: var(--tier, var(--fill)); overflow: hidden;
+}
+.cal-day.journal-filled { color: #1b1a18; font-weight: 700; }
+.cal-day.journal-filled .cal-dots i { background: #1b1a18; }
+.cal-photo {
+  position: absolute; inset: 3px; width: calc(100% - 6px); height: calc(100% - 6px);
+  object-fit: cover; border-radius: 7px; background: var(--fill);
+}
+.cal-day.journal-framed > span { position: relative; color: #fff; font-weight: 700; text-shadow: 0 1px 3px rgba(0, 0, 0, .8); }
+.cal-day.journal-framed .cal-dots i { background: #fff; }
+.cal-day.journal-framed.selected, .cal-day.journal-filled.selected { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text); }
+.cal-day.journal-framed.selected > span:first-child { color: #fff; }
+.cal-day.journal-filled.selected > span:first-child { color: #1b1a18; }
+.cal-day.journal-framed.today > span:first-child, .cal-day.journal-filled.today > span:first-child { text-decoration: underline; text-underline-offset: 3px; }
 
 /* ---------- Week strip on Home ---------- */
 .week { padding: 4px 12px 0; }
