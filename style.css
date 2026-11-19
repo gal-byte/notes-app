@@ -445,6 +445,14 @@ input[type="date"].prop-input::-webkit-calendar-picker-indicator { display: none
 
 .journal-title { margin: 4px var(--side) 0; font-size: 28px; font-weight: 700; }
 .journal-editor .text-block textarea { min-height: 2.5em; }
+.journal-quote textarea { font-size: 17px; }
+.journal-quote-by {
+  margin: 0 var(--side) 6px; padding: 2px 0; font: inherit; font-size: 14px; color: var(--muted);
+  background: none; border: none; outline: none;
+}
+.journal-quote-by::placeholder { color: var(--faint); }
+.journal-quote :placeholder-shown { direction: rtl; }
+.journal-quote .quote-card { margin-top: 2px; }
 
 .score-field { display: flex; flex-direction: column; padding-bottom: 6px; }
 .score-buttons { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; padding: 0 var(--side); }
