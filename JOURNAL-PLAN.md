@@ -3,7 +3,7 @@
 Status: sessions 1, 2 and 3 built on 2026-11-18 (journal, photos on the server, 21:30
 question, morning memories, "מחר" → reminder, quote of the day from the group ציטוטים,
 then the calendar with frames (since 19.11 on the app's one calendar, not a journal tab), the weekly graph, best days and people/places, as tabs
-on the journal screen). Also added: up to 10 photos a day (several picked at once) and one video per day (up to a minute, made smaller on
+on the journal screen). Also added: a "ציטוט היום" field in each day (a quote from that day and who said it), up to 10 photos a day (several picked at once) and one video per day (up to a minute, made smaller on
 the phone to ~720p WebM, ~15 MB a minute, stored next to the photos; its still picture
 stands in for a photo). Since 2026-11-19 the phone app (APK, the notes-apk folder on the Desktop) picks the
 video from Android's gallery and uploads the original; the server makes it smaller with

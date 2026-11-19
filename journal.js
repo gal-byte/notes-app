@@ -17,7 +17,7 @@
 // ============================================================
 
 // Shown at the bottom of settings, to tell which version a phone runs
-const APP_VERSION = '19.11 · 12';
+const APP_VERSION = '19.11 · 13';
 
 const JOURNAL_WORDS = {
   today: 'היום',
@@ -51,8 +51,6 @@ const JOURNAL_WORDS = {
   writeThisDay: 'לכתוב יומן על היום הזה',
   quoteHint: 'משפט ששמעת או קראת היום',
   quoteBy: 'מי אמר?',
-  saveQuote: 'לשמור בציטוטים',
-  quoteSaved: 'נשמר בציטוטים',
   empty: 'עוד אין כאן כלום',
   eveningTitle: 'שאלה בערב (21:30)',
   eveningSub: 'רק אם עוד לא כתבת היום',
@@ -156,18 +154,18 @@ async function journalEntryFor(iso) {
 
 // ---------- Quote of the day (group ציטוטים) ----------
 
-async function quoteOfTheDay(iso = toISODate(new Date())) {
+async function quoteOfTheDay() {
   const quotes = (await getItemsInGroup('quotes')).filter(q => (q.title || '').trim())
     .sort((a, b) => a.createdAt - b.createdAt);
   if (!quotes.length) return null;
-  return quotes[dayNumber(iso) % quotes.length];
+  return quotes[dayNumber(toISODate(new Date())) % quotes.length];
 }
 
-function quoteHtml(quote, label = true) {
+function quoteHtml(quote) {
   if (!quote) return '';
   return `
     <a class="quote-card" href="#/item/${quote.id}">
-      ${label ? `<span class="label">${JOURNAL_WORDS.quoteOfDay}</span>` : ''}
+      <span class="label">${JOURNAL_WORDS.quoteOfDay}</span>
       <q dir="auto">${escapeHtml(quote.title)}</q>
       ${quote.author ? `<cite dir="auto">${escapeHtml(quote.author)}</cite>` : ''}
     </a>`;
@@ -450,10 +448,8 @@ function journalEditorHtml(draft) {
       <div id="tomorrow-reminder">${tomorrowButtonHtml(draft)}</div>
       <div class="text-block journal-quote">
         <span class="label">${JOURNAL_WORDS.quoteOfDay}</span>
-        <div id="journal-day-quote"></div>
         <textarea data-key="quote" dir="auto" rows="2" placeholder="${JOURNAL_WORDS.quoteHint}">${escapeHtml(draft.quote || '')}</textarea>
         <input type="text" class="journal-quote-by" data-key="quoteBy" dir="auto" placeholder="${JOURNAL_WORDS.quoteBy}" value="${escapeHtml(draft.quoteBy || '')}">
-        <div id="quote-saved">${quoteButtonHtml(draft)}</div>
       </div>
       <div class="journal-photos tier-frame ${draft.score ? `tier-${scoreTier(draft.score)}` : ''}" id="journal-photos">${journalPhotosHtml(draft)}</div>
       ${chipsFieldHtml('people', JOURNAL_WORDS.people, JOURNAL_WORDS.addPeople, draft.people || [])}
@@ -478,15 +474,6 @@ function tomorrowButtonHtml(draft) {
   }
   if (!(draft.tomorrow || '').trim()) return '';
   return `<button type="button" class="quiet-line text-button" data-make-reminder>${icon('bell', 'inline')} ${JOURNAL_WORDS.makeReminder}</button>`;
-}
-
-// The day's own quote → one tap saves it in the group ציטוטים
-function quoteButtonHtml(draft) {
-  if (draft.quoteItemId) {
-    return `<a class="quiet-line text-button" href="#/item/${escapeHtml(draft.quoteItemId)}">${icon('check', 'inline')} ${JOURNAL_WORDS.quoteSaved}</a>`;
-  }
-  if (!(draft.quote || '').trim()) return '';
-  return `<button type="button" class="quiet-line text-button" data-save-quote>${icon('quote', 'inline')} ${JOURNAL_WORDS.saveQuote}</button>`;
 }
 
 // Up to 10 photos and one video. making = 0..1 while a video is being made smaller.
@@ -584,22 +571,6 @@ function setupJournalEditor(form, editor, saveSoon) {
     if (event.target.dataset.key === 'tomorrow' && !draft.tomorrowReminderId) {
       form.querySelector('#tomorrow-reminder').innerHTML = tomorrowButtonHtml(draft);
     }
-    if (event.target.dataset.key === 'quote' && !draft.quoteItemId) {
-      form.querySelector('#quote-saved').innerHTML = quoteButtonHtml(draft);
-    }
-  });
-
-  // "ציטוט היום": the rotating quote from the group (when there is one), and the day's own
-  quoteOfTheDay(draft.date).then(quote => {
-    if (quote && quote.id !== draft.quoteItemId) form.querySelector('#journal-day-quote').innerHTML = quoteHtml(quote, false);
-  });
-  form.querySelector('#quote-saved').addEventListener('click', async event => {
-    if (!event.target.closest('[data-save-quote]')) return;
-    const quote = await addItem('quotes', { title: draft.quote.trim(), author: (draft.quoteBy || '').trim() });
-    draft.quoteItemId = quote.id;
-    form.querySelector('#quote-saved').innerHTML = quoteButtonHtml(draft);
-    haptic();
-    saveSoon();
   });
   form.querySelector('#tomorrow-reminder').addEventListener('click', async event => {
     if (!event.target.closest('[data-make-reminder]')) return;
