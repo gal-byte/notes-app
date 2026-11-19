@@ -266,6 +266,26 @@ function nativeApp() {
   return nativePlugin;
 }
 
+// Inside an Android app's web view (the APK): tell the home server what this page
+// can see, and any errors, so problems there can be found without a USB cable
+// (the server prints them: docker logs notify-reminders-1 | grep diag)
+if (/; wv\)/.test(navigator.userAgent)) {
+  const report = extra => fetch(`${SERVER}/diag`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      version: typeof APP_VERSION === 'undefined' ? '?' : APP_VERSION, hash: location.hash,
+      capacitor: !!window.Capacitor, native: !!window.Capacitor?.isNativePlatform?.(),
+      plugins: Object.keys(window.Capacitor?.Plugins || {}), controller: !!navigator.serviceWorker?.controller,
+      ...extra,
+    }),
+  }).catch(() => {});
+  let sent = 0;
+  const error = text => { if (sent++ < 20) report({ error: String(text).slice(0, 500) }); };
+  window.addEventListener('error', event => error(`${event.message} @ ${event.filename}:${event.lineno}`));
+  window.addEventListener('unhandledrejection', event => error(event.reason?.stack || event.reason));
+  window.addEventListener('load', () => report({ start: true }));
+}
+
 // → { id, seconds } or null if nothing was picked
 async function pickJournalVideoNative() {
   const answer = await nativeApp().pickVideo({ server: SERVER });
