@@ -165,6 +165,8 @@ async function healthAction(action, status) {
   if (action === 'health-sync') {
     status.textContent = TEXT.working;
     const result = await plugin.healthSync({ server: SERVER, days: 30 });
+    // What the phone app could read, for the server's log (docker logs … | grep diag)
+    plugin.healthStatus().then(state => postToServer('/diag', { health: state, synced: result })).catch(() => {});
     try { localStorage.setItem('health-sent', String(Date.now())); } catch { /* fine */ }
     forgetHealthCopies();
     status.textContent = HEALTH_WORDS.done(result.workouts, result.days);

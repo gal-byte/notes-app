@@ -17,7 +17,7 @@
 // ============================================================
 
 // Shown at the bottom of settings, to tell which version a phone runs
-const APP_VERSION = '19.11 · 15';
+const APP_VERSION = '19.11 · 16';
 
 const JOURNAL_WORDS = {
   today: 'היום',
