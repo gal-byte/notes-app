@@ -469,6 +469,15 @@ async function buildScreen(page, id, extra) {
                back: id === 'new' ? '#/home' : `#/group/${id}`, setup: setupGroupSettings };
     }
   }
+  // "#/watched/<item id or new>/<tmdb id>/<title>": the TV hub's "finished the movie?" notification.
+  // Marks the movie as seen (adds it if it isn't in the list), then opens it with the stars waiting.
+  if (page === 'watched') {
+    const item = await markMovieWatched(id, extra, location.hash.split('/').slice(4).join('/'));
+    history.replaceState(null, '', `#/item/${item.id}`);
+    const html = await itemScreen(item.id);
+    return { title: '', html, back: '#/group/movies',
+             setup: () => { setupItemScreen(); highlightStars(); } };
+  }
   if (page === 'item') {
     const html = await itemScreen(id);
     if (html) return { title: '', html, back: `#/group/${editor.group}`, setup: setupItemScreen };
@@ -490,6 +499,30 @@ async function buildScreen(page, id, extra) {
       box.focus();
     },
   };
+}
+
+// The movie the TV just finished: the list's item (by id, TMDB id or title), or a new one
+async function markMovieWatched(id, tmdb, encodedTitle) {
+  let title = '';
+  try { title = decodeURIComponent(encodedTitle || '').trim(); } catch { title = encodedTitle || ''; }
+  const same = text => (text || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/^(the|סרט) /, '').trim();
+  let item = id && id !== 'new' ? await getItem(id) : null;
+  if (!item || item.group !== 'movies') {
+    const movies = await getItemsInGroup('movies');
+    item = movies.find(m => tmdb && String(m.tmdb) === String(tmdb))
+        || movies.find(m => title && same(m.title) === same(title)) || null;
+  }
+  const fields = { list: 'watched', ...(tmdb ? { tmdb: String(tmdb) } : {}) };
+  if (item) return (await updateItem(item.id, fields)) || item;
+  return addItem('movies', { title: title || 'סרט', ...fields });
+}
+
+// Draw the eye to the stars (opened from the "finished the movie?" notification)
+function highlightStars() {
+  const stars = document.querySelector('.stars');
+  if (!stars) return;
+  stars.scrollIntoView({ block: 'center' });
+  stars.classList.add('ask');
 }
 
 // Counts screen changes. If you tap quickly, an older screen

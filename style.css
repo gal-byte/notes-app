@@ -387,6 +387,13 @@ input[type="date"].prop-input::-webkit-calendar-picker-indicator { display: none
 }
 .stars button.on { color: var(--star); }
 .stars button:active { transform: scale(1.2); }
+/* "finished the movie?" from the TV: the stars pulse until one is tapped */
+.stars.ask button:not(.on) { animation: starAsk 1.4s ease-in-out 3; }
+.stars.ask button:nth-child(2) { animation-delay: .08s; }
+.stars.ask button:nth-child(3) { animation-delay: .16s; }
+.stars.ask button:nth-child(4) { animation-delay: .24s; }
+.stars.ask button:nth-child(5) { animation-delay: .32s; }
+@keyframes starAsk { 50% { color: var(--star); transform: scale(1.18); } }
 
 /* Long text: notes, lyrics, ingredients */
 .text-block { display: flex; flex-direction: column; }
