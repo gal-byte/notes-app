@@ -261,7 +261,8 @@ let nativePlugin;
 function nativeApp() {
   if (nativePlugin === undefined) {
     const cap = window.Capacitor;
-    nativePlugin = cap?.isNativePlatform?.() ? cap.registerPlugin('NotesNative') : null;
+    // The APK puts its native parts on window.Capacitor.Plugins (no registerPlugin there)
+    nativePlugin = (cap?.isNativePlatform?.() && cap.Plugins?.NotesNative) || null;
   }
   return nativePlugin;
 }
