@@ -283,6 +283,18 @@ function posterImg(url) {
   return `<img class="thumb poster" src="${escapeHtml(url)}" alt="" loading="lazy">`;
 }
 
+function posterBig({ poster, year }) {
+  return `<div class="poster-side"><img class="poster-big" src="${escapeHtml(poster)}" alt="">` +
+    (year ? `<span class="poster-year">${escapeHtml(year)}</span>` : '') + '</div>';
+}
+
+// The top of a movie or show page: the poster beside the title (with the year under it)
+function posterHead(id, titleHtml) {
+  refreshPosters();
+  const found = posters[id];
+  return `<div class="poster-head">${found?.poster ? posterBig(found) : ''}<div class="poster-title">${titleHtml}</div></div>`;
+}
+
 // Ask the server for new posters (at most once a minute) and add them to the rows on screen
 async function refreshPosters() {
   if (Date.now() - postersAt < 60_000) return;
@@ -297,6 +309,11 @@ async function refreshPosters() {
       const url = found[row.dataset.id]?.poster;
       if (url && !row.querySelector('.thumb')) row.insertAdjacentHTML('afterbegin', posterImg(url));
     });
+    // A movie page open now (just added, say): its poster as soon as the TV hub finds it
+    const head = document.querySelector('#editor .poster-head');
+    if (head && editor && !head.querySelector('.poster-big') && found[editor.id]?.poster) {
+      head.insertAdjacentHTML('afterbegin', posterBig(found[editor.id]));
+    }
   } catch { /* offline: the kept ones are fine */ }
 }
 
@@ -460,7 +477,7 @@ function editorHtml() {
 
   return `
     <form class="editor" id="editor">
-      ${title}
+      ${group === 'movies' || group === 'shows' ? posterHead(editor.id, title) : title}
       <div class="props">
         ${props}
         <label class="prop">${groupBadge(findGroup(group), 'tiny')}<span class="prop-name">${TEXT.moveToGroup}</span>
