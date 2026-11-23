@@ -11,6 +11,8 @@ const SHOW_LISTS = { watchlist: 'לראות', watching: 'בצפייה', watched:
 
 const TITLE_FIELD = { key: 'title', type: 'title' };
 const NOTES_FIELD = { key: 'text', type: 'textarea', label: 'הערות' };
+// Movies and shows: the day you saw it (set by itself when it's marked seen or gets stars; shown in that day's journal)
+const WATCHED_ON_FIELD = { key: 'watchedOn', type: 'date', label: 'מתי ראיתי', icon: 'calendar' };
 
 // Field types: title · text · textarea · date · time · place · checkbox · choice · rating · photo
 // Short fields show as small rows with an icon; long text (notes, lyrics) as open text below.
@@ -32,6 +34,7 @@ const FIELDS = {
     TITLE_FIELD,
     { key: 'list', type: 'choice', label: 'רשימה', icon: 'bookmark', options: MOVIE_LISTS },
     { key: 'rating', type: 'rating', label: 'דירוג', icon: 'star' },
+    WATCHED_ON_FIELD,
     { key: 'recommendedBy', type: 'text', label: 'מי המליץ', icon: 'heart' },
     NOTES_FIELD,
   ],
@@ -39,6 +42,7 @@ const FIELDS = {
     TITLE_FIELD,
     { key: 'list', type: 'choice', label: 'רשימה', icon: 'bookmark', options: SHOW_LISTS },
     { key: 'rating', type: 'rating', label: 'דירוג', icon: 'star' },
+    WATCHED_ON_FIELD,
     { key: 'recommendedBy', type: 'text', label: 'מי המליץ', icon: 'heart' },
     NOTES_FIELD,
   ],
@@ -283,16 +287,150 @@ function posterImg(url) {
   return `<img class="thumb poster" src="${escapeHtml(url)}" alt="" loading="lazy">`;
 }
 
-function posterBig({ poster, year }) {
-  return `<div class="poster-side"><img class="poster-big" src="${escapeHtml(poster)}" alt="">` +
-    (year ? `<span class="poster-year">${escapeHtml(year)}</span>` : '') + '</div>';
+function posterBig({ poster }) {
+  return `<div class="poster-side"><img class="poster-big" src="${escapeHtml(poster)}" alt=""></div>`;
 }
 
-// The top of a movie or show page: the poster beside the title (with the year under it)
+// ---------- The movie page ----------
+// The TV hub also gets each title's details from TMDB (summary, runtime, genres, cast, trailer, where it
+// streams in Israel); the server passes them on at /movie/<note id>. Kept on the phone per movie, so the
+// page draws at once (and offline), then updates.
+const TV_HUB = 'https://home-server.tail7870b4.ts.net:8801';
+const MOVIE_WORDS = {
+  onTv: 'לנגן בטלוויזיה', trailer: 'טריילר', streaming: 'לצפייה ב', cast: 'שחקנים',
+  director: 'בימוי', creator: 'יצירה', minutes: 'דק׳', seasons: n => n === 1 ? 'עונה אחת' : `${n} עונות`,
+  opening: 'נפתח בטלוויזיה', tvError: 'הטלוויזיה לא ענתה', credit: 'המידע מ-TMDB',
+};
+
+function movieCached(id) {
+  try { return JSON.parse(localStorage.getItem('movie:' + id)); } catch { return null; }
+}
+
+function runtimeText(minutes) {
+  const m = Number(minutes);
+  if (!m) return '';
+  return m < 60 ? `${m} ${MOVIE_WORDS.minutes}` : `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')} ש׳`;
+}
+
+// year · 1:59 ש׳ · דרמה, מותחן · TMDB 7.4
+function movieMetaHtml(movie, found) {
+  const bits = [movie?.year || found?.year,
+    movie?.seasons ? MOVIE_WORDS.seasons(movie.seasons) : runtimeText(movie?.runtime),
+    (movie?.genres || []).join(', '),
+    movie?.score ? `TMDB ${movie.score}` : ''].filter(Boolean);
+  return bits.map(b => `<span>${escapeHtml(String(b))}</span>`).join('');
+}
+
+function movieBackdropHtml(movie) {
+  return movie?.backdrop ? `<img class="movie-backdrop" src="${escapeHtml(movie.backdrop)}" alt="">` : '';
+}
+
+// The top of a movie or show page: backdrop, the poster beside the title, and the short facts
 function posterHead(id, titleHtml) {
   refreshPosters();
   const found = posters[id];
-  return `<div class="poster-head">${found?.poster ? posterBig(found) : ''}<div class="poster-title">${titleHtml}</div></div>`;
+  const movie = id ? movieCached(id) : null;
+  if (id) setTimeout(() => loadMovie(id));
+  return `<div class="movie-head${movie?.backdrop ? ' has-backdrop' : ''}" id="movie-head">
+      <div class="movie-backdrop-box" id="movie-backdrop">${movieBackdropHtml(movie)}</div>
+      <div class="poster-head">${found?.poster ? posterBig(found) : ''}<div class="poster-title">${titleHtml}
+        <div class="movie-meta" id="movie-meta">${movieMetaHtml(movie, found)}</div></div></div>
+    </div>`;
+}
+
+// Under the list / stars rows: play on the TV, trailer, where it streams, summary, cast
+function movieMoreHtml(id, movie) {
+  if (!id) return '';
+  const m = movie || {};
+  const actions = `<div class="movie-actions">
+      <button type="button" class="pill-button" data-play-tv>${icon('tv', 'inline')} ${MOVIE_WORDS.onTv}</button>
+      ${m.trailer ? `<a class="pill-button" href="https://www.youtube.com/watch?v=${encodeURIComponent(m.trailer)}" target="_blank" rel="noopener">${icon('play', 'inline')} ${MOVIE_WORDS.trailer}</a>` : ''}
+    </div>`;
+  const providers = m.providers?.length ? `<a class="movie-providers" href="${escapeHtml(m.providersLink || m.tmdbUrl || '#')}" target="_blank" rel="noopener">
+      <span>${MOVIE_WORDS.streaming}</span>${m.providers.map(p => `<img src="${escapeHtml(p.logo)}" alt="${escapeHtml(p.name)}" title="${escapeHtml(p.name)}">`).join('')}</a>` : '';
+  const people = m.directors?.length
+    ? `<div class="movie-crew">${m.seasons ? MOVIE_WORDS.creator : MOVIE_WORDS.director}: ${escapeHtml(m.directors.join(', '))}</div>` : '';
+  const overview = m.overview ? `<p class="movie-overview" dir="auto">${m.tagline ? `<em>${escapeHtml(m.tagline)}</em> ` : ''}${escapeHtml(m.overview)}</p>` : '';
+  const cast = m.cast?.length ? `<span class="label movie-label">${MOVIE_WORDS.cast}</span><div class="cast-row">${m.cast.map(c => `
+      <div class="cast">${c.photo ? `<img src="${escapeHtml(c.photo)}" alt="" loading="lazy">` : `<span class="cast-blank">${escapeHtml((c.name || '?')[0])}</span>`}
+        <span class="cast-name" dir="auto">${escapeHtml(c.name)}</span><span class="cast-role" dir="auto">${escapeHtml(c.role)}</span></div>`).join('')}</div>` : '';
+  const credit = m.tmdbUrl ? `<a class="movie-credit" href="${escapeHtml(m.tmdbUrl)}" target="_blank" rel="noopener">${MOVIE_WORDS.credit}</a>` : '';
+  return actions + providers + overview + people + cast + credit;
+}
+
+// Ask the server for this movie's details; redraw the parts of the page that changed
+async function loadMovie(id) {
+  let movie;
+  try {
+    const response = await fetch(`${SERVER}/movie/${encodeURIComponent(id)}`, { signal: AbortSignal.timeout(6000) });
+    movie = (await response.json()).movie;
+  } catch { return; }   // offline: the kept copy stays
+  if (!movie) return;
+  try { localStorage.setItem('movie:' + id, JSON.stringify(movie)); } catch { /* full: fine */ }
+  if (editor?.id !== id) return;
+  const head = document.getElementById('movie-head');
+  if (!head) return;
+  if (movie.backdrop && !head.querySelector('.movie-backdrop')) {
+    document.getElementById('movie-backdrop').innerHTML = movieBackdropHtml(movie);
+    head.classList.add('has-backdrop');
+  }
+  document.getElementById('movie-meta').innerHTML = movieMetaHtml(movie, posters[id]);
+  document.getElementById('movie-more').innerHTML = movieMoreHtml(id, movie);
+}
+
+// The page takes a soft tint from the poster's colors. Read from a small copy loaded with
+// crossOrigin (the poster on screen may be cached without it, and then the canvas can't read it).
+function tintFromPoster(form) {
+  const shown = form.querySelector('.poster-big');
+  if (!shown) return;
+  const image = new Image();
+  image.crossOrigin = 'anonymous';
+  image.src = shown.src.replace('/w342/', '/w92/');
+  const paint = () => {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 12;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      context.drawImage(image, 0, 0, 12, 12);
+      const data = context.getImageData(0, 0, 12, 12).data;
+      let r = 0, g = 0, b = 0, n = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        const light = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        if (light < 25 || light > 235) continue;   // skip black bars and white text
+        r += data[i]; g += data[i + 1]; b += data[i + 2]; n++;
+      }
+      if (n) form.style.setProperty('--tint', `${Math.round(r / n)}, ${Math.round(g / n)}, ${Math.round(b / n)}`);
+    } catch { /* no colors: plain page */ }
+  };
+  image.addEventListener('load', paint, { once: true });
+}
+
+// "לנגן בטלוויזיה": the TV hub opens the movie on its movie site
+async function playOnTv(id) {
+  try {
+    const response = await fetch(`${TV_HUB}/api/watchlist/${encodeURIComponent(id)}`,
+      { method: 'POST', signal: AbortSignal.timeout(15000) });
+    if (!response.ok) throw new Error(response.status);
+    showToast(MOVIE_WORDS.opening);
+  } catch {
+    showToast(MOVIE_WORDS.tvError);
+  }
+}
+
+// Just seen it (moved to the "seen" list, or given stars): today is kept, for the journal's סרטים.
+// Movies seen before this page opened keep no date unless you pick one.
+function isSeen(draft) {
+  return draft.list === 'watched' || !!draft.rating;
+}
+
+function markWatchDate(draft, form, seenBefore = true) {
+  const seen = isSeen(draft);
+  if (seen && !seenBefore && !draft.watchedOn) draft.watchedOn = toISODate(new Date());
+  const input = form?.querySelector('[data-key="watchedOn"]');
+  if (input) {
+    if (input.value !== (draft.watchedOn || '')) input.value = draft.watchedOn || '';
+    input.closest('.prop').hidden = !seen && !draft.watchedOn;
+  }
 }
 
 // Ask the server for new posters (at most once a minute) and add them to the rows on screen
@@ -310,9 +448,11 @@ async function refreshPosters() {
       if (url && !row.querySelector('.thumb')) row.insertAdjacentHTML('afterbegin', posterImg(url));
     });
     // A movie page open now (just added, say): its poster as soon as the TV hub finds it
-    const head = document.querySelector('#editor .poster-head');
-    if (head && editor && !head.querySelector('.poster-big') && found[editor.id]?.poster) {
-      head.insertAdjacentHTML('afterbegin', posterBig(found[editor.id]));
+    const head = document.getElementById('movie-head');
+    const posterRow = head?.querySelector('.poster-head');
+    if (posterRow && editor && !head.querySelector('.poster-big') && found[editor.id]?.poster) {
+      posterRow.insertAdjacentHTML('afterbegin', posterBig(found[editor.id]));
+      tintFromPoster(document.getElementById('editor'));
     }
   } catch { /* offline: the kept ones are fine */ }
 }
@@ -483,6 +623,7 @@ function editorHtml() {
         <label class="prop">${groupBadge(findGroup(group), 'tiny')}<span class="prop-name">${TEXT.moveToGroup}</span>
           <select class="prop-input" id="group-select">${groupOptions}</select></label>
       </div>
+      ${group === 'movies' || group === 'shows' ? `<div class="movie-more" id="movie-more">${movieMoreHtml(editor.id, editor.id ? movieCached(editor.id) : null)}</div>` : ''}
       ${photo}
       ${voiceFieldHtml(draft.voices)}
       ${texts}
@@ -574,6 +715,13 @@ function autoGrow(textarea) {
   textarea.style.height = textarea.scrollHeight + 'px';
   page.style.minHeight = '';
   if (window.scrollY !== scrollY) window.scrollTo(0, scrollY);
+  // Typing on the last line: keep that line in view (above the keyboard), or it slips under it
+  if (document.activeElement === textarea && !textarea.value.slice(textarea.selectionEnd).includes('\n')) {
+    const view = window.visualViewport;
+    const visibleBottom = view ? view.offsetTop + view.height : window.innerHeight;
+    const overflow = textarea.getBoundingClientRect().bottom + 24 - visibleBottom;
+    if (overflow > 0) window.scrollBy(0, overflow);
+  }
 }
 
 function setupItemScreen() {
@@ -589,6 +737,7 @@ function setupItemScreen() {
       if (draft.answer && !draft.question) draft.question = questionFor(draft.date);
       if (!editor.id && !journalHasContent(draft)) return;
     }
+    if (editor.group === 'movies' || editor.group === 'shows') markWatchDate(draft, form, editor.seenBefore);
     if (!editor.id) {
       // A recording with no title yet gets one ("הקלטה 18.11"), so it isn't lost
       if (!(draft.title || '').trim() && draft.voices?.length) {
@@ -755,6 +904,15 @@ function setupItemScreen() {
   setupPlaceField(form, saveSoon);
   const scaler = setupScaler(form, () => editor.draft);
   if (editor.group === 'journal') setupJournalEditor(form, editor, saveSoon);
+  if (editor.group === 'movies' || editor.group === 'shows') {
+    editor.seenBefore = !!editor.id && isSeen(editor.draft);
+    markWatchDate(editor.draft, form);   // the "מתי ראיתי" row only once it's seen
+    tintFromPoster(form);
+    form.addEventListener('click', event => {
+      const button = event.target.closest('[data-play-tv]');
+      if (button && editor.id) playOnTv(editor.id);
+    });
+  }
 
   // A brand-new item: start typing the title right away
   if (!editor.id) form.querySelector('.title-input')?.focus();

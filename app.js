@@ -361,9 +361,12 @@ function setupAddBar(fixedGroup) {
     updateGuess();
     textBox.focus();
   };
-  // Enter saves (Shift+Enter = new line, for lyrics and lists)
+  // With a real keyboard Enter saves (Shift+Enter = new line, for lyrics and lists).
+  // Phone keyboards have no Shift+Enter, so there Enter is a new line and the arrow button saves.
+  const touch = matchMedia('(pointer: coarse)').matches;
+  textBox.enterKeyHint = touch ? 'enter' : 'done';
   textBox.onkeydown = event => {
-    if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); bar.requestSubmit(); }
+    if (event.key === 'Enter' && !event.shiftKey && !touch) { event.preventDefault(); bar.requestSubmit(); }
   };
   // Keep the keyboard open when tapping buttons in the bar
   bar.onmousedown = event => { if (event.target.closest('button')) event.preventDefault(); };
@@ -512,7 +515,7 @@ async function markMovieWatched(id, tmdb, encodedTitle) {
     item = movies.find(m => tmdb && String(m.tmdb) === String(tmdb))
         || movies.find(m => title && same(m.title) === same(title)) || null;
   }
-  const fields = { list: 'watched', ...(tmdb ? { tmdb: String(tmdb) } : {}) };
+  const fields = { list: 'watched', watchedOn: item?.watchedOn || toISODate(new Date()), ...(tmdb ? { tmdb: String(tmdb) } : {}) };
   if (item) return (await updateItem(item.id, fields)) || item;
   return addItem('movies', { title: title || 'סרט', ...fields });
 }

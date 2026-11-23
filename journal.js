@@ -17,7 +17,7 @@
 // ============================================================
 
 // Shown at the bottom of settings, to tell which version a phone runs
-const APP_VERSION = '19.11 · 17';
+const APP_VERSION = '23.11 · 1';
 
 const JOURNAL_WORDS = {
   today: 'היום',
@@ -57,6 +57,7 @@ const JOURNAL_WORDS = {
   morningTitle: 'זיכרונות בבוקר',
   morningSub: '"לפני שנה היום" עם תמונה',
   journalSettings: 'יומן',
+  movies: 'סרטים',
 };
 
 // Same list and order as journal.py on the server: the day picks the question.
@@ -441,6 +442,7 @@ function journalEditorHtml(draft) {
         <div class="score-buttons">${scoreButtons(draft.score)}</div>
       </div>
       <div id="journal-workouts"></div>
+      <div id="journal-movies"></div>
       ${area('answer', escapeHtml(question))}
       ${area('happened', JOURNAL_WORDS.happened)}
       ${area('good', JOURNAL_WORDS.good)}
@@ -566,6 +568,7 @@ function setupJournalEditor(form, editor, saveSoon) {
     }
     form.querySelector('#journal-title').textContent = journalTitle(iso);
     showWorkouts(iso);
+    showMovies(iso);
   });
 
   // That day's sleep, steps and workouts (Health Connect / Strava; read-only, not part of the entry)
@@ -574,6 +577,18 @@ function setupJournalEditor(form, editor, saveSoon) {
     form.querySelector('#journal-workouts').innerHTML = dayActivityHtml(day, workouts);
   }
   showWorkouts(draft.date);
+
+  // Movies and shows seen that day (their "מתי ראיתי"; read-only here, tap one to open it)
+  async function showMovies(iso) {
+    const day = iso || toISODate(new Date());
+    const seen = [...await getItemsInGroup('movies'), ...await getItemsInGroup('shows')]
+      .filter(item => item.watchedOn === day);
+    form.querySelector('#journal-movies').innerHTML = seen.length
+      ? sectionLabel(JOURNAL_WORDS.movies) + rowList(seen.map(item => itemRow(item, '',
+          { poster: posters[item.id]?.poster, end: item.rating ? `<span class="stars-small">${stars(item.rating)}</span>` : '' })))
+      : '';
+  }
+  showMovies(draft.date);
 
   // "מחר" → a reminder for the next day
   form.addEventListener('input', event => {
