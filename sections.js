@@ -69,6 +69,12 @@ const FIELDS = {
     { key: 'title', type: 'title', placeholder: 'הציטוט' },
     { key: 'author', type: 'text', label: 'מי אמר', icon: 'quote' },
   ],
+  // Shared reels and Shorts (the server reads them, Claude sums them up; see REELS below)
+  reels: [
+    TITLE_FIELD,
+    { key: 'tags', type: 'text', label: 'תגיות', icon: 'bookmark', hint: '' },
+    NOTES_FIELD,
+  ],
   // לא ממוין
   default: [TITLE_FIELD, NOTES_FIELD],
 };
@@ -467,6 +473,62 @@ function moviesList(items, lists = MOVIE_LISTS) {
         poster: posters[item.id]?.poster })));
 }
 
+// ---------- REELS ----------
+// Quick add puts a shared reel link here ({ url, reelStatus: 'new' }). The server (reels.py in notify)
+// downloads it, writes down the speech and saves the cover (reelStatus 'ready'); Claude writes the
+// summary through the notes connector when asked ('done'). 'failed' + reelError if it couldn't be read.
+const REEL_TYPES = {
+  recipe: 'מתכון', place: 'מקום', tip: 'טיפ', product: 'מוצר', funny: 'מצחיק', music: 'מוזיקה', news: 'חדשות', other: 'אחר',
+};
+const REEL_WORDS = {
+  new: 'בתור לקריאה', working: 'נקרא עכשיו', ready: 'מחכה לסיכום', failed: 'נכשל',
+  open: 'לפתוח את הסרטון', retry: 'לנסות שוב', summary: 'סיכום', transcript: 'תמלול',
+  caption: 'כיתוב', by: 'מאת', recipe: 'למתכון', retrying: 'ינסה שוב בדקה הקרובה',
+};
+
+function coverImg(id, size = 'thumb', cls = 'thumb') {
+  return `<img class="${cls}" data-photo-id="${escapeHtml(id)}" data-size="${size}" alt="">`;
+}
+
+function withCover(row, item) {
+  return item.cover ? row.replace('<span class="row-main">', `${coverImg(item.cover)}<span class="row-main">`) : row;
+}
+
+function reelsList(items) {
+  return rowList(items.map(item => {
+    const status = item.reelStatus || 'done';
+    const end = status === 'done' ? '' : `<span class="reel-status s-${escapeHtml(status)}">${REEL_WORDS[status] || ''}</span>`;
+    const sub = [REEL_TYPES[item.reelType], item.by].filter(Boolean).map(escapeHtml).join(' · ');
+    return withCover(itemRow(item, sub, { end }), item);
+  }));
+}
+
+// The reel page, under the title: cover, open the link, status, summary, place, transcript
+function reelHtml(draft) {
+  const status = draft.reelStatus || 'done';
+  const url = /^https?:\/\//.test(draft.url || '') ? draft.url : '';
+  const statusLine = status === 'done' ? '' : `<div class="reel-state s-${escapeHtml(status)}">${REEL_WORDS[status] || ''}${
+    status === 'failed' && draft.reelError ? ` · ${escapeHtml(draft.reelError)}` : ''}${
+    status === 'failed' ? ` <button type="button" class="pill-button" data-reel-retry>${icon('repeat', 'inline')} ${REEL_WORDS.retry}</button>` : ''}</div>`;
+  const facts = [REEL_TYPES[draft.reelType], draft.by && `${REEL_WORDS.by} ${draft.by}`].filter(Boolean)
+    .map(f => `<span>${escapeHtml(f)}</span>`).join('');
+  const summary = draft.summary ? `<span class="label">${REEL_WORDS.summary}</span><div class="reel-summary" dir="auto">${
+    escapeHtml(draft.summary)}</div>` : '';
+  const place = draft.placeName ? `<div class="reel-place" dir="auto">${icon('pin', 'inline')} ${escapeHtml(draft.placeName)}</div>` : '';
+  const recipe = draft.recipeId ? `<a class="pill-button" href="#/item/${escapeHtml(draft.recipeId)}">${icon('utensils', 'inline')} ${REEL_WORDS.recipe}</a>` : '';
+  const more = (label, text) => text ? `<details class="reel-more"><summary>${label}</summary><div dir="auto">${escapeHtml(text)}</div></details>` : '';
+  return `<div class="reel-box">
+      ${draft.cover ? coverImg(draft.cover, 'full', 'reel-cover') : ''}
+      ${facts ? `<div class="movie-meta reel-facts">${facts}</div>` : ''}
+      <div class="movie-actions">${url ? `<a class="pill-button reel-open" href="${escapeHtml(url)}" target="_blank" rel="noopener">${icon('play', 'inline')} ${REEL_WORDS.open}</a>` : ''}${recipe}</div>
+      ${statusLine}${summary}${place}
+      ${more(REEL_WORDS.transcript, draft.transcript)}${more(REEL_WORDS.caption, draft.caption)}
+    </div>`;
+}
+
+// A recipe Claude made from a reel stays a draft (טיוטה) until it's checked
+const DRAFT_BADGE = '<span class="draft-badge">טיוטה</span>';
+
 // Recipes and your own groups: photo, first line or tags, tag filters
 function plainList(items) {
   const allTags = [...new Set(items.flatMap(item => parseTags(item.tags)))];
@@ -477,7 +539,8 @@ function plainList(items) {
     const tags = parseTags(item.tags);
     const sub = escapeHtml((item.text || '').split('\n')[0] || tags.join(', '));
     const end = item.calories ? `<span class="calories">${escapeHtml(TEXT.calories(String(item.calories).trim()))}</span>` : '';
-    return itemRow(item, sub, { photo: item.photo, filter: tags.join('|'), end });
+    const row = itemRow(item, sub, { photo: item.photo, filter: tags.join('|'), end, after: item.draft ? ' ' + DRAFT_BADGE : '' });
+    return item.photo ? row : withCover(row, item);
   }));
 }
 
@@ -491,7 +554,7 @@ async function groupScreen(group) {
     reminders: remindersList, songs: songsList,
     movies: items => moviesList(items, MOVIE_LISTS),
     shows: items => moviesList(items, SHOW_LISTS),
-    gifts: giftsList,
+    gifts: giftsList, reels: reelsList,
   };
   return (lists[group.id] || plainList)(items);
 }
@@ -618,6 +681,8 @@ function editorHtml() {
   return `
     <form class="editor" id="editor">
       ${group === 'movies' || group === 'shows' ? posterHead(editor.id, title) : title}
+      ${draft.draft ? `<div class="draft-line">${DRAFT_BADGE}</div>` : ''}
+      ${group === 'reels' ? reelHtml(draft) : ''}
       <div class="props">
         ${props}
         <label class="prop">${groupBadge(findGroup(group), 'tiny')}<span class="prop-name">${TEXT.moveToGroup}</span>
@@ -842,6 +907,14 @@ function setupItemScreen() {
       editor.draft[box.dataset.key] = rating;
       box.querySelectorAll('button').forEach(b => b.classList.toggle('on', Number(b.dataset.value) <= rating));
       saveSoon();
+      return;
+    }
+
+    if (event.target.closest('[data-reel-retry]')) {
+      editor.draft.reelStatus = 'new';
+      editor.draft.reelError = '';
+      event.target.closest('.reel-state').textContent = REEL_WORDS.retrying;
+      saveNow();
       return;
     }
 

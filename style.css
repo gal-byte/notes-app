@@ -795,3 +795,22 @@ button.setting { cursor: pointer; }
 .journal-editor #journal-workouts:empty { display: none; }
 
 .cal-day { position: relative; }
+
+/* Reels (רילס) */
+.reel-status { font-size: 13px; padding: 2px 8px; border-radius: 999px; background: var(--fill); color: var(--muted); white-space: nowrap; }
+.reel-status.s-failed, .reel-state.s-failed { color: #c0392b; }
+.reel-status.s-ready { color: var(--text); }
+.reel-box { padding: 0 var(--side) 6px; }
+.reel-cover { display: block; width: 100%; max-height: 46vh; object-fit: cover; border-radius: 14px; margin-bottom: 10px; background: var(--fill); }
+.reel-cover:not(.loaded) { min-height: 120px; }
+.reel-facts { padding: 0 0 10px; }
+.reel-state { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 15px; color: var(--muted); }
+.reel-summary { white-space: pre-wrap; line-height: 1.55; margin: 4px 0 12px; }
+.reel-place { margin-bottom: 12px; }
+.reel-more { margin: 6px 0 12px; }
+.reel-more summary { cursor: pointer; color: var(--muted); font-size: 15px; padding: 4px 0; }
+.reel-more div { white-space: pre-wrap; line-height: 1.5; font-size: 15px; padding-top: 6px; }
+.draft-badge { display: inline-block; font-size: 12px; font-weight: 500; padding: 1px 8px; border-radius: 999px; vertical-align: middle;
+  color: #8a5a00; background: #fdf0cf; }
+@media (prefers-color-scheme: dark) { .draft-badge { color: #f5c96a; background: #3a2e12; } }
+.draft-line { padding: 0 var(--side) 6px; }

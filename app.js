@@ -132,6 +132,7 @@ const BUILT_IN_GROUPS = [
   { id: 'recipes',   name: 'מתכונים',  icon: 'utensils', tint: 'green' },
   { id: 'gifts',     name: 'מתנות',    icon: 'gift',     tint: 'pink' },
   { id: 'quotes',    name: 'ציטוטים',  icon: 'quote',    tint: 'teal' },
+  { id: 'reels',     name: 'רילס',     icon: 'video',    tint: 'orange' },
   { id: 'inbox',     name: 'לא ממוין', icon: 'inbox',    tint: 'slate' },
 ];
 let GROUPS = [...BUILT_IN_GROUPS];

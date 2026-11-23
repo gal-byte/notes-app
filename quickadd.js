@@ -282,7 +282,18 @@ function removeFromTitle(title, piece) {
 // now         = current time (can be changed for testing)
 //
 // Returns { group, fields } — ready to save with addItem(group, fields)
+// Reels and Shorts shared from Instagram, YouTube or TikTok → רילס. The server reads them
+// (reels.py in notify: download, speech to text, cover); Claude writes the summary later.
+const REEL_LINK = /https?:\/\/(?:[\w-]+\.)?(?:instagram\.com\/(?:[\w.]+\/)?(?:reels?|p|tv)\/[\w-]+|youtube\.com\/shorts\/[\w-]+|youtu\.be\/[\w-]+|tiktok\.com\/\S+)\S*/i;
+const REEL_PLACEHOLDER = 'רילס חדש';
+
 function analyzeQuickAdd(text, chosenGroup = null, now = new Date()) {
+  const reel = text.match(REEL_LINK);
+  if (reel && (!chosenGroup || chosenGroup === 'reels')) {
+    return { group: 'reels', fields: {
+      title: REEL_PLACEHOLDER, url: reel[0].replace(/[).,!?"']+$/, ''), reelStatus: 'new', titleIsPlaceholder: true,
+    } };
+  }
   const lines = text.trim().split('\n');
   let title = lines[0].trim();
   const rest = lines.slice(1).join('\n').trim();  // more lines = lyrics / notes
