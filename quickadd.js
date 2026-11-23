@@ -287,7 +287,30 @@ function removeFromTitle(title, piece) {
 const REEL_LINK = /https?:\/\/(?:[\w-]+\.)?(?:instagram\.com\/(?:[\w.]+\/)?(?:reels?|p|tv)\/[\w-]+|youtube\.com\/shorts\/[\w-]+|youtu\.be\/[\w-]+|tiktok\.com\/\S+)\S*/i;
 const REEL_PLACEHOLDER = 'רילס חדש';
 
+// A recipe from a link: any link typed with "מ:" / "מתכון:" or the מתכונים chip (or "מתכון מקישור")
+// becomes a draft recipe. The server (recipelinks.py in notify) reads the site's recipe or the
+// video's description/captions and fills it in; Claude tidies it up later through the connector.
+const ANY_LINK = /https?:\/\/[^\s<>"]+/i;
+const RECIPE_PLACEHOLDER = 'מתכון חדש';
+
+function recipeFromLink(text, chosenGroup) {
+  const link = text.match(ANY_LINK);
+  if (!link) return null;
+  let rest = text.replace(link[0], ' ');
+  const shortcut = rest.trim().match(/^([^:\n]{1,30}?)\s*:\s*/);
+  const byShortcut = shortcut && groupForShortcut(shortcut[1].trim()) === 'recipes';
+  if (!(chosenGroup === 'recipes' || (!chosenGroup && byShortcut))) return null;
+  if (byShortcut) rest = rest.trim().slice(shortcut[0].length);
+  const title = rest.replace(/\s+/g, ' ').trim();
+  return { group: 'recipes', fields: {
+    title: title || RECIPE_PLACEHOLDER, titleIsPlaceholder: !title,
+    url: link[0].replace(/[).,!?"']+$/, ''), recipeStatus: 'new', draft: true,
+  } };
+}
+
 function analyzeQuickAdd(text, chosenGroup = null, now = new Date()) {
+  const fromLink = recipeFromLink(text, chosenGroup);
+  if (fromLink) return fromLink;
   const reel = text.match(REEL_LINK);
   if (reel && (!chosenGroup || chosenGroup === 'reels')) {
     return { group: 'reels', fields: {

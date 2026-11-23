@@ -341,6 +341,11 @@ a.row:active, button.row:active { background: var(--fill); }
   color: var(--accent); background: var(--accent-soft);
   animation: fade-up .2s var(--ease);
 }
+.recipe-link-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin: 0 0 6px;
+  animation: fade-up .2s var(--ease);
+}
 .group-picker {
   display: flex; flex-wrap: wrap; gap: 6px;
   margin: 0 4px 8px; padding: 10px;

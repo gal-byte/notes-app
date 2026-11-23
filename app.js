@@ -110,6 +110,7 @@ const TEXT = {
   moveToGroup: 'קבוצה',
   deleteItem: 'מחיקה',
   share: 'שיתוף',
+  recipeFromLink: 'מתכון מקישור',
   copied: 'הועתק',
   confirmDelete: 'למחוק? אי אפשר לבטל.',
   addPhoto: 'תמונה',
@@ -188,6 +189,7 @@ function groupLabel(groupId, fields) {
   if (fields.date) label += ` · ${formatDate(fields.date)}`;
   if (fields.time) label += ` · ${fields.time}`;
   if (groupId === 'songs' && SONG_STATUS[fields.status]) label += ` · ${SONG_STATUS[fields.status]}`;
+  if (groupId === 'recipes' && fields.recipeStatus) label += ` · ${TEXT.recipeFromLink}`;
   if (fields.repeatYearly) label += ` · ${TEXT.everyYear}`;
   const lists = groupId === 'shows' ? SHOW_LISTS : groupId === 'movies' ? MOVIE_LISTS : null;
   if (lists && fields.list && fields.list !== 'watchlist') label += ` · ${lists[fields.list]}`;
@@ -350,7 +352,19 @@ function setupAddBar(fixedGroup) {
     const { group, fields } = analyzeQuickAdd(textBox.value, chosenGroup);
     guessChip.innerHTML = `${groupLabel(group, fields)} ${icon('chevron', 'inline down')}`;
     guessChip.hidden = false;
+    // A link that isn't going to recipes: offer to make a recipe from it
+    recipeChip.hidden = !ANY_LINK.test(textBox.value) || group === 'recipes';
   }
+
+  const recipeChip = document.getElementById('recipe-link-chip');
+  recipeChip.hidden = true;
+  recipeChip.innerHTML = `${icon('utensils', 'inline')} ${TEXT.recipeFromLink}`;
+  recipeChip.onclick = () => {
+    chosenGroup = 'recipes';
+    picker.hidden = true;
+    updateGuess();
+    textBox.focus();
+  };
 
   textBox.oninput = updateGuess;
   guessChip.onclick = () => { picker.hidden = !picker.hidden; };

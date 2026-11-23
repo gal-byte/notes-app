@@ -529,6 +529,41 @@ function reelHtml(draft) {
 // A recipe Claude made from a reel stays a draft (טיוטה) until it's checked
 const DRAFT_BADGE = '<span class="draft-badge">טיוטה</span>';
 
+// A recipe from a link ({ url, recipeStatus: 'new', draft: true }, see quickadd.js): the server
+// (recipelinks.py in notify) reads the site or video and fills it in ('ready'); Claude tidies it up
+// through the connector (fill_recipe) and clears the draft ('done'). 'failed' + recipeError otherwise.
+const RECIPE_LINK_WORDS = {
+  new: 'בתור לקריאה', working: 'נקרא עכשיו', ready: 'מחכה לסידור של קלוד', failed: 'נכשל',
+  source: 'למקור', fromSource: 'מהמקור', retry: 'לנסות שוב', retrying: 'ינסה שוב בדקה הקרובה',
+};
+
+function recipeStatusPill(item) {
+  const status = item.recipeStatus;
+  return ['new', 'working', 'failed'].includes(status)
+    ? `<span class="reel-status s-${status}">${RECIPE_LINK_WORDS[status]}</span>` : '';
+}
+
+// Under the recipe's title: the picture from the site (when you haven't added a photo), the source link,
+// how far the server got, and the text it found there
+function recipeLinkHtml(draft) {
+  const url = /^https?:\/\//.test(draft.url || '') ? draft.url : '';
+  const status = draft.recipeStatus;
+  const host = url ? url.replace(/^https?:\/\/(?:www\.)?([^/]+).*$/, '$1') : '';
+  const statusLine = ['new', 'working', 'ready', 'failed'].includes(status)
+    ? `<div class="reel-state s-${status}">${RECIPE_LINK_WORDS[status]}${
+      status === 'failed' && draft.recipeError ? ` · ${escapeHtml(draft.recipeError)}` : ''}${
+      status === 'failed' ? ` <button type="button" class="pill-button" data-recipe-retry>${icon('repeat', 'inline')} ${RECIPE_LINK_WORDS.retry}</button>` : ''}</div>`
+    : '';
+  const source = draft.sourceText ? `<details class="reel-more"><summary>${RECIPE_LINK_WORDS.fromSource}</summary><div dir="auto">${
+    escapeHtml(draft.sourceText)}</div></details>` : '';
+  return `<div class="reel-box">
+      ${draft.cover && !draft.photo ? coverImg(draft.cover, 'full', 'reel-cover') : ''}
+      ${url ? `<div class="movie-actions"><a class="pill-button reel-open" href="${escapeHtml(url)}" target="_blank" rel="noopener">${
+        icon('link', 'inline')} ${RECIPE_LINK_WORDS.source} · <span dir="ltr">${escapeHtml(host)}</span></a></div>` : ''}
+      ${statusLine}${source}
+    </div>`;
+}
+
 // Recipes and your own groups: photo, first line or tags, tag filters
 function plainList(items) {
   const allTags = [...new Set(items.flatMap(item => parseTags(item.tags)))];
@@ -538,7 +573,8 @@ function plainList(items) {
   return chips + rowList(items.map(item => {
     const tags = parseTags(item.tags);
     const sub = escapeHtml((item.text || '').split('\n')[0] || tags.join(', '));
-    const end = item.calories ? `<span class="calories">${escapeHtml(TEXT.calories(String(item.calories).trim()))}</span>` : '';
+    const end = recipeStatusPill(item) ||
+      (item.calories ? `<span class="calories">${escapeHtml(TEXT.calories(String(item.calories).trim()))}</span>` : '');
     const row = itemRow(item, sub, { photo: item.photo, filter: tags.join('|'), end, after: item.draft ? ' ' + DRAFT_BADGE : '' });
     return item.photo ? row : withCover(row, item);
   }));
@@ -683,6 +719,7 @@ function editorHtml() {
       ${group === 'movies' || group === 'shows' ? posterHead(editor.id, title) : title}
       ${draft.draft ? `<div class="draft-line">${DRAFT_BADGE}</div>` : ''}
       ${group === 'reels' ? reelHtml(draft) : ''}
+      ${group === 'recipes' && (draft.url || draft.cover) ? recipeLinkHtml(draft) : ''}
       <div class="props">
         ${props}
         <label class="prop">${groupBadge(findGroup(group), 'tiny')}<span class="prop-name">${TEXT.moveToGroup}</span>
@@ -914,6 +951,14 @@ function setupItemScreen() {
       editor.draft.reelStatus = 'new';
       editor.draft.reelError = '';
       event.target.closest('.reel-state').textContent = REEL_WORDS.retrying;
+      saveNow();
+      return;
+    }
+
+    if (event.target.closest('[data-recipe-retry]')) {
+      editor.draft.recipeStatus = 'new';
+      editor.draft.recipeError = '';
+      event.target.closest('.reel-state').textContent = RECIPE_LINK_WORDS.retrying;
       saveNow();
       return;
     }
