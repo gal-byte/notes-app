@@ -117,6 +117,12 @@ const TEXT = {
   changePhoto: 'החלפה',
   removePhoto: 'הסרה',
   photoError: 'לא הצלחתי לפתוח את התמונה',
+  pin: 'נעיצה',
+  unpin: 'ביטול נעיצה',
+  pinnedTitle: 'נעוצים',
+  created: 'נוצר',
+  edited: 'נערך',
+  sorts: { edited: 'נערך לאחרונה', created: 'תאריך יצירה', abc: 'א-ב' },
 };
 
 // ============================================================
@@ -281,7 +287,18 @@ async function homeScreen() {
       <span class="row-main"><span class="row-title">${TEXT.newGroup}</span></span>
     </a>`);
 
-  return upcomingHtml + sectionLabel(TEXT.groups) + rowList(groupRows);
+  return upcomingHtml + await pinnedHtml() + sectionLabel(TEXT.groups) + rowList(groupRows);
+}
+
+// Pinned notes from every group, newest change first
+async function pinnedHtml() {
+  const pinned = (await getAllItems()).filter(item => item.pinned && groupExists(item.group))
+    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  if (!pinned.length) return '';
+  return sectionLabel(TEXT.pinnedTitle) + rowList(pinned.map(item => {
+    const group = findGroup(item.group);
+    return itemRow(item, escapeHtml(groupTitle(group)), { lead: groupBadge(group, 'small'), noPin: true });
+  }));
 }
 
 // Tap a day in the strip: show that day. Swipe down on the strip: the whole month.
@@ -471,11 +488,11 @@ async function buildScreen(page, id, extra) {
     const iso = /^\d{4}-\d{2}-\d{2}$/.test(id || '') ? id : toISODate(new Date());
     const entry = await journalEntryFor(iso);
     const html = entry ? await itemScreen(entry.id) : newItemScreen('journal', iso);
-    return { title: '', html, back: '#/group/journal', setup: setupItemScreen };
+    return { title: '', html, back: '#/group/journal', setup: setupItemScreen, actions: pinButtonHtml() };
   }
   if (page === 'new' && groupExists(id)) {
     // "#/new/reminders/2026-11-20" → a new reminder already set to that day
-    return { title: '', html: newItemScreen(id, extra), back: `#/group/${id}`, setup: setupItemScreen };
+    return { title: '', html: newItemScreen(id, extra), back: `#/group/${id}`, setup: setupItemScreen, actions: pinButtonHtml() };
   }
   if (page === 'settings') {
     return { title: TEXT.backupScreenTitle, html: await settingsScreen(), back: '#/home', setup: setupSettings };
@@ -498,7 +515,7 @@ async function buildScreen(page, id, extra) {
   }
   if (page === 'item') {
     const html = await itemScreen(id);
-    if (html) return { title: '', html, back: `#/group/${editor.group}`, setup: setupItemScreen };
+    if (html) return { title: '', html, back: `#/group/${editor.group}`, setup: setupItemScreen, actions: pinButtonHtml() };
   }
   // Anything unknown (or no hash at all) → home. "#/add" focuses the box.
   // "#/add/<text>" also fills it in: text shared from another app (the phone app, see notes-apk)

@@ -210,7 +210,7 @@ async function shrinkPhoto(file, maxSide = 1000) {
 
 // One tappable row. sub and end are already safe HTML.
 function itemRow(item, sub = '', options = {}) {
-  let lead = '';
+  let lead = options.lead || '';
   if (options.photo) lead = `<img class="thumb" src="${photoUrl(options.photo)}" alt="">`;
   else if (options.poster) lead = posterImg(options.poster);
 
@@ -221,8 +221,10 @@ function itemRow(item, sub = '', options = {}) {
     <a class="row${options.dim ? ' dim' : ''}" href="#/item/${item.id}" data-id="${item.id}" ${filter}>
       ${lead}
       <span class="row-main">
-        <span class="row-title" dir="auto">${options.titleHtml || escapeHtml(item.title) || TEXT.untitled}${options.after || ''}</span>
-        ${sub ? `<span class="row-sub">${sub}</span>` : ''}
+        <span class="row-title" dir="auto">${item.pinned && !options.noPin ? icon('pushpin', 'inline pinned') : ''}${options.titleHtml || escapeHtml(item.title) || TEXT.untitled}${options.after || ''}</span>
+        ${rowDateKey && item[rowDateKey]
+          ? `<span class="row-sub with-date"><span class="sub-text">${sub}</span><span class="row-date">${timeAgo(item[rowDateKey])}</span></span>`
+          : sub ? `<span class="row-sub">${sub}</span>` : ''}
       </span>
       ${options.end ? `<span class="row-end">${options.end}</span>` : ''}
     </a>
@@ -592,7 +594,77 @@ async function groupScreen(group) {
     shows: items => moviesList(items, SHOW_LISTS),
     gifts: giftsList, reels: reelsList,
   };
-  return (lists[group.id] || plainList)(items);
+  const draw = lists[group.id] || plainList;
+  // Reminders and gifts go by their own dates; the rest can be sorted, pinned first
+  if (group.id === 'reminders' || group.id === 'gifts') return draw(items);
+  const how = sortFor(group.id);
+  rowDateKey = how === 'created' ? 'createdAt' : 'updatedAt';
+  try {
+    return (items.length > 1 ? sortButtonHtml(group.id, how) : '') + draw(sortItems(items, how));
+  } finally {
+    rowDateKey = null;
+  }
+}
+
+// ---------- Dates, sorting and pins ----------
+// Each row in a group shows a small grey date (edited, or created when sorted by that).
+// The sort is kept per group on this device. Pinned notes stay on top and are
+// also collected on the home screen (pinnedHtml in app.js).
+
+let rowDateKey = null;   // which date itemRow shows, while a group list is drawn
+
+function sortFor(groupId) {
+  try {
+    const how = localStorage.getItem(`sort-${groupId}`);
+    return how in TEXT.sorts ? how : 'edited';
+  } catch { return 'edited'; }
+}
+
+function sortItems(items, how) {
+  const by = how === 'created' ? (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
+    : how === 'abc' ? (a, b) => (a.title || '').localeCompare(b.title || '', 'he')
+    : (a, b) => (b.updatedAt || 0) - (a.updatedAt || 0);
+  return [...items].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || by(a, b));
+}
+
+function sortButtonHtml(groupId, how) {
+  return `<div class="list-tools"><button type="button" class="sort-button" data-sort-group="${escapeHtml(groupId)}">${
+    icon('sort', 'inline')} ${TEXT.sorts[how]}</button></div>`;
+}
+
+// Tap the sort button: the next way of sorting
+document.addEventListener('click', event => {
+  const button = event.target.closest('[data-sort-group]');
+  if (!button) return;
+  const group = button.dataset.sortGroup;
+  const ways = Object.keys(TEXT.sorts);
+  const next = ways[(ways.indexOf(sortFor(group)) + 1) % ways.length];
+  try { localStorage.setItem(`sort-${group}`, next); } catch { /* fine: this visit only */ }
+  haptic(5);
+  showScreen(true);
+});
+
+// "12.11.26 14:05"
+function fullDate(timestamp) {
+  const d = new Date(timestamp);
+  return `${d.getDate()}.${d.getMonth() + 1}.${String(d.getFullYear()).slice(2)} ${
+    String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+// Under the note: "נוצר 12.11.26 14:05 · נערך לפני 5 דק׳"
+function noteDatesHtml(draft) {
+  if (!draft.createdAt) return '';
+  const edited = draft.updatedAt && draft.updatedAt - draft.createdAt > 60000
+    ? ` · ${TEXT.edited} ${timeAgo(draft.updatedAt)}` : '';
+  return `<p class="note-dates">${TEXT.created} <span dir="ltr">${fullDate(draft.createdAt)}</span>${edited}</p>`;
+}
+
+// The pin in the top bar of a note
+function pinButtonHtml() {
+  const on = !!editor?.draft.pinned;
+  const label = on ? TEXT.unpin : TEXT.pin;
+  return `<button type="button" class="icon-button pin-button${on ? ' on' : ''}" id="pin-button" aria-pressed="${on}"
+    aria-label="${label}" title="${label}">${icon('pushpin')}</button>`;
 }
 
 // ============================================================
@@ -733,6 +805,7 @@ function editorHtml() {
         <button type="button" class="text-button" id="share-button">${icon('share', 'inline')} ${TEXT.share}</button>
         <button type="button" class="text-button danger" id="delete-button">${TEXT.deleteItem}</button>
       </div>
+      ${noteDatesHtml(draft)}
     </form>
   `;
 }
@@ -893,6 +966,20 @@ function setupItemScreen() {
   };
 
   form.addEventListener('submit', event => event.preventDefault());
+
+  // The pin in the top bar
+  document.getElementById('pin-button')?.addEventListener('click', event => {
+    const button = event.currentTarget;
+    editor.draft.pinned = !editor.draft.pinned;
+    const label = editor.draft.pinned ? TEXT.unpin : TEXT.pin;
+    button.classList.toggle('on', editor.draft.pinned);
+    button.setAttribute('aria-pressed', editor.draft.pinned);
+    button.setAttribute('aria-label', label);
+    button.title = label;
+    showToast(editor.draft.pinned ? TEXT.pinnedTitle : TEXT.unpin);
+    haptic(5);
+    saveNow();
+  });
 
   // A row that only makes sense with another field (בדיוק/בערך needs a time)
   function updateDependentRows() {

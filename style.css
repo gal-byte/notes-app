@@ -819,3 +819,18 @@ button.setting { cursor: pointer; }
   color: #8a5a00; background: #fdf0cf; }
 @media (prefers-color-scheme: dark) { .draft-badge { color: #f5c96a; background: #3a2e12; } }
 .draft-line { padding: 0 var(--side) 6px; }
+
+/* ---------- Dates, sorting and pins ---------- */
+.row-sub.with-date { display: flex; gap: 8px; }
+.row-sub.with-date .sub-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.row-date { flex-shrink: 0; font-size: 12px; color: var(--faint); }
+.icon.pinned { width: 14px; height: 14px; margin-inline-end: 4px; vertical-align: -1px; color: var(--accent); }
+.list-tools { display: flex; justify-content: flex-end; padding: 0 var(--side) 6px; }
+.sort-button {
+  display: inline-flex; align-items: center; gap: 5px; padding: 4px 2px;
+  font: inherit; font-size: 13px; color: var(--muted); background: none; border: none; cursor: pointer;
+}
+.sort-button .icon.inline { width: 15px; height: 15px; }
+.pin-button.on { color: var(--accent); }
+.pin-button.on svg { fill: currentColor; fill-opacity: .25; }
+.note-dates { margin: 18px var(--side) 0; font-size: 12px; color: var(--faint); text-align: center; }
