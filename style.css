@@ -188,6 +188,7 @@ a.row:active, button.row:active { background: var(--fill); }
 .calories { font-size: 13px; white-space: nowrap; display: inline-block; max-width: 9em; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
 
 .thumb { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; }
+.thumb.poster { width: 36px; height: 54px; border-radius: 6px; background: var(--line, #ddd); flex-shrink: 0; }
 
 /* Group icon in a soft colored square */
 .badge {

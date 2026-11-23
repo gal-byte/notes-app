@@ -202,6 +202,7 @@ async function shrinkPhoto(file, maxSide = 1000) {
 function itemRow(item, sub = '', options = {}) {
   let lead = '';
   if (options.photo) lead = `<img class="thumb" src="${photoUrl(options.photo)}" alt="">`;
+  else if (options.poster) lead = posterImg(options.poster);
 
   const filter = options.filter !== undefined
     ? `data-filter-values="${escapeHtml(options.filter)}"` : '';
@@ -270,12 +271,43 @@ function songsList(items) {
       itemRow(item, '', { end: SONG_STATUS[item.status] || '', filter: item.status || '' })));
 }
 
+// POSTERS
+// The TV hub finds each movie and show once on its movie site; the server passes the posters on
+// ({ note id: { poster, year } }). Kept on the phone, so the list shows them at once and offline.
+let posters = (() => {
+  try { return JSON.parse(localStorage.getItem('posters')) || {}; } catch { return {}; }
+})();
+let postersAt = 0;
+
+function posterImg(url) {
+  return `<img class="thumb poster" src="${escapeHtml(url)}" alt="" loading="lazy">`;
+}
+
+// Ask the server for new posters (at most once a minute) and add them to the rows on screen
+async function refreshPosters() {
+  if (Date.now() - postersAt < 60_000) return;
+  postersAt = Date.now();
+  try {
+    const response = await fetch(`${SERVER}/posters`, { signal: AbortSignal.timeout(5000) });
+    const found = (await response.json()).posters;
+    if (!found || typeof found !== 'object') return;
+    posters = found;
+    try { localStorage.setItem('posters', JSON.stringify(found)); } catch { /* full: fine */ }
+    document.querySelectorAll('.rows .row[data-id]').forEach(row => {
+      const url = found[row.dataset.id]?.poster;
+      if (url && !row.querySelector('.thumb')) row.insertAdjacentHTML('afterbegin', posterImg(url));
+    });
+  } catch { /* offline: the kept ones are fine */ }
+}
+
 // Movies and shows look the same, only the lists differ
 function moviesList(items, lists = MOVIE_LISTS) {
+  refreshPosters();
   return filterChips(lists, 'watchlist') +
     rowList(items.map(item => itemRow(item,
       item.recommendedBy ? TEXT.recommendedBy(escapeHtml(item.recommendedBy)) : '',
-      { end: item.rating ? `<span class="stars-small">${stars(item.rating)}</span>` : '', filter: item.list || 'watchlist' })));
+      { end: item.rating ? `<span class="stars-small">${stars(item.rating)}</span>` : '', filter: item.list || 'watchlist',
+        poster: posters[item.id]?.poster })));
 }
 
 // Recipes and your own groups: photo, first line or tags, tag filters
