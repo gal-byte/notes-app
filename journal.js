@@ -556,16 +556,21 @@ function setupJournalEditor(form, editor, saveSoon) {
     saveSoon();
   });
 
-  // The date: one entry per day
+  // The date: one entry per day. Picking a day that already has an entry opens that one, and this
+  // entry keeps its own day (before 23.11 it was saved with the taken day and hid behind the other one).
+  let savedDate = draft.date;
   form.querySelector('input[data-key="date"]').addEventListener('change', async event => {
     const iso = event.target.value;
     if (!iso) return;
     const other = await journalEntryFor(iso);
     if (other && other.id !== editor.id) {
+      draft.date = savedDate;
+      event.target.value = savedDate || '';
       showToast(JOURNAL_WORDS.dateTaken);
       location.replace(`#/item/${other.id}`);
       return;
     }
+    savedDate = iso;
     form.querySelector('#journal-title').textContent = journalTitle(iso);
     showWorkouts(iso);
     showMovies(iso);
