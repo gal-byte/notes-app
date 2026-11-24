@@ -18,6 +18,7 @@
   ],
   "shortcuts": [
     { "name": "הוספה מהירה", "url": "./#/add", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "מה אכלתי 📷", "short_name": "מה אכלתי", "url": "./#/meal", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "לוח שנה", "url": "./#/calendar", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }

@@ -38,6 +38,7 @@ const APP_FILES = [
   'strava.js',
   'health.js',
   'sections.js',
+  'food.js',
   'calendar.js',
   'groups.js',
   'search.js',

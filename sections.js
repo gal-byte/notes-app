@@ -574,8 +574,8 @@ function plainList(items) {
     : '';
   return chips + rowList(items.map(item => {
     const tags = parseTags(item.tags);
-    const sub = escapeHtml((item.text || '').split('\n')[0] || tags.join(', '));
-    const end = recipeStatusPill(item) ||
+    const sub = escapeHtml((item.text || '').split('\n').filter(line => !ESTIMATE_LINE.test(line))[0] || tags.join(', '));
+    const end = recipeStatusPill(item) || mealPillHtml(item) ||
       (item.calories ? `<span class="calories">${escapeHtml(TEXT.calories(String(item.calories).trim()))}</span>` : '');
     const row = itemRow(item, sub, { photo: item.photo, filter: tags.join('|'), end, after: item.draft ? ' ' + DRAFT_BADGE : '' });
     return item.photo ? row : withCover(row, item);
@@ -619,7 +619,8 @@ async function groupScreen(group) {
     shows: items => moviesList(items, SHOW_LISTS),
     gifts: giftsList, reels: reelsList,
   };
-  const draw = lists[group.id] || (isClaudeGroup(group) ? claudeTodoList : plainList);
+  const draw = lists[group.id] || (isClaudeGroup(group) ? claudeTodoList
+    : isMealsGroup(group.id) ? items => mealsTodayHtml(items) + plainList(items) : plainList);
   // Reminders and gifts go by their own dates; the rest can be sorted, pinned first
   if (group.id === 'reminders' || group.id === 'gifts') return draw(items);
   const how = sortFor(group.id);
@@ -813,6 +814,9 @@ function editorHtml() {
       </details>`;
   }
 
+  // The shopping list: its lines as checkboxes, the text folded underneath (food.js)
+  if (isShoppingList(group, draft)) texts = shopListHtml(texts, draft.text);
+
   const groupOptions = GROUPS.map(g =>
     `<option value="${g.id}" ${g.id === group ? 'selected' : ''}>${groupTitle(g)}</option>`
   ).join('');
@@ -950,6 +954,12 @@ function setupItemScreen() {
       if (!(draft.title || '').trim() && draft.voices?.length) {
         const now = new Date();
         draft.title = `${VOICE_WORDS.record} ${now.getDate()}.${now.getMonth() + 1}`;
+        const titleBox = form.querySelector('.title-input');
+        if (titleBox && !titleBox.value.trim()) titleBox.value = draft.title;
+      }
+      // A meal that is only a photo: "ארוחה 13:05" (food.js)
+      if (!(draft.title || '').trim() && draft.photo && isMealsGroup(editor.group)) {
+        draft.title = mealTitle();
         const titleBox = form.querySelector('.title-input');
         if (titleBox && !titleBox.value.trim()) titleBox.value = draft.title;
       }
@@ -1145,6 +1155,7 @@ function setupItemScreen() {
   form.querySelector('.recipe-table-edit')?.addEventListener('toggle', event =>
     event.currentTarget.querySelectorAll('textarea').forEach(autoGrow));
   if (editor.group === 'journal') setupJournalEditor(form, editor, saveSoon);
+  if (isShoppingList(editor.group, editor.draft)) setupShopList(form);
   if (editor.group === 'movies' || editor.group === 'shows') {
     editor.seenBefore = !!editor.id && isSeen(editor.draft);
     markWatchDate(editor.draft, form);   // the "מתי ראיתי" row only once it's seen

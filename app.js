@@ -494,6 +494,13 @@ async function buildScreen(page, id, extra) {
     // "#/new/reminders/2026-11-20" → a new reminder already set to that day
     return { title: '', html: newItemScreen(id, extra), back: `#/group/${id}`, setup: setupItemScreen, actions: pinButtonHtml() };
   }
+  // "#/meal" (the app icon's shortcut "מה אכלתי"): a new note in ארוחות, the photo button waiting (food.js)
+  if (page === 'meal' && mealsGroup()) {
+    const meals = mealsGroup().id;
+    history.replaceState(null, '', `#/new/${meals}`);
+    return { title: '', html: newItemScreen(meals), back: `#/group/${meals}`, actions: pinButtonHtml(),
+             setup: () => { setupItemScreen(); askForMealPhoto(); } };
+  }
   if (page === 'settings') {
     return { title: TEXT.backupScreenTitle, html: await settingsScreen(), back: '#/home', setup: setupSettings };
   }
