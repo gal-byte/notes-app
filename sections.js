@@ -582,6 +582,31 @@ function plainList(items) {
   }));
 }
 
+// ---------- CLAUDE'S TO-DO LIST (the group named קלוד) ----------
+// Ideas and requests you leave for Claude. Claude tags them בעבודה while working and טופל when
+// done (mark_notes in the connector). Open ones are the to-do list; done ones fold away at the bottom.
+const CLAUDE_GROUP_NAME = 'קלוד';
+const TODO_WORDS = { heading: n => `רשימת משימות לקלוד · ${n} פתוחות`, working: 'בעבודה', done: n => `טופלו (${n})` };
+
+function isClaudeGroup(group) {
+  return (group.name || '').trim() === CLAUDE_GROUP_NAME;
+}
+
+function claudeTodoList(items) {
+  const done = items.filter(item => parseTags(item.tags).includes('טופל'));
+  const open = items.filter(item => !done.includes(item));
+  const row = item => {
+    const working = parseTags(item.tags).includes(TODO_WORDS.working);
+    const firstLine = (item.text || '').split('\n').find(line => line.trim() && !line.startsWith('— Claude')) || '';
+    return itemRow(item, escapeHtml(firstLine), {
+      end: working ? `<span class="reel-status s-working">${TODO_WORDS.working}</span>` : '',
+    });
+  };
+  return `<p class="todo-heading">${TODO_WORDS.heading(open.length)}</p>` +
+    rowList(open.map(row)) +
+    (done.length ? `<details class="todo-done"><summary>${TODO_WORDS.done(done.length)}</summary>${rowList(done.map(row))}</details>` : '');
+}
+
 async function groupScreen(group) {
   const items = await getItemsInGroup(group.id);
   if (group.id === 'journal') return journalScreen(items);
@@ -594,7 +619,7 @@ async function groupScreen(group) {
     shows: items => moviesList(items, SHOW_LISTS),
     gifts: giftsList, reels: reelsList,
   };
-  const draw = lists[group.id] || plainList;
+  const draw = lists[group.id] || (isClaudeGroup(group) ? claudeTodoList : plainList);
   // Reminders and gifts go by their own dates; the rest can be sorted, pinned first
   if (group.id === 'reminders' || group.id === 'gifts') return draw(items);
   const how = sortFor(group.id);

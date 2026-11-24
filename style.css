@@ -812,6 +812,10 @@ button.setting { cursor: pointer; }
 .reel-state { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 15px; color: var(--muted); }
 .reel-summary { white-space: pre-wrap; line-height: 1.55; margin: 4px 0 12px; }
 .reel-place { margin-bottom: 12px; }
+.todo-heading { margin: 4px 0 8px; color: var(--muted); font-size: 15px; }
+.todo-done { margin-top: 18px; }
+.todo-done summary { cursor: pointer; color: var(--muted); font-size: 15px; padding: 6px 0; }
+.todo-done .rows { opacity: 0.6; }
 .reel-more { margin: 6px 0 12px; }
 .reel-more summary { cursor: pointer; color: var(--muted); font-size: 15px; padding: 4px 0; }
 .reel-more div { white-space: pre-wrap; line-height: 1.5; font-size: 15px; padding-top: 6px; }
