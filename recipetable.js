@@ -55,6 +55,11 @@ function parseRecipeTable(text, ingredientCount) {
   return { steps, problems };
 }
 
+// "--- רוטב ---" / "לרוטב:" — a heading inside the ingredients, not an ingredient
+function isIngredientHeader(line) {
+  return /^[-–—=*\s]{2,}.*[-–—=*]{2,}\s*$/.test(line) || /^[^\d]{1,25}:$/.test(line);
+}
+
 // Lays the tree out as table cells. Each ingredient and each step is
 // used once (a second use of the same one is dropped), so every step's
 // rows are next to each other. Returns rows of cells
@@ -104,8 +109,10 @@ function layoutRecipeTable(ingredientLines, steps) {
 
   // The last steps (the ones nothing else uses) are the roots, top to bottom
   steps.forEach((_, i) => { if (!usedStep.has(i + 1)) place({ kind: 'step', n: i + 1 }, width - 1); });
-  // Ingredients no step uses
-  ingredientLines.forEach((_, i) => { if (!usedIng.has(i + 1)) place({ kind: 'ing', n: i + 1 }, width - 1); });
+  // Ingredients no step uses (but not section lines like "--- רוטב ---")
+  ingredientLines.forEach((line, i) => {
+    if (!usedIng.has(i + 1) && !isIngredientHeader(line)) place({ kind: 'ing', n: i + 1 }, width - 1);
+  });
   return rows;
 }
 
