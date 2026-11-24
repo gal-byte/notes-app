@@ -31,6 +31,7 @@ const APP_FILES = [
   'places.js',
   'voice.js',
   'scaler.js',
+  'recipetable.js',
   'gifts.js',
   'photos.js',
   'journal.js',

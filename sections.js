@@ -803,8 +803,15 @@ function editorHtml() {
   const props = fields.filter(f => !['title', 'textarea', 'photo'].includes(f.type)).map(f => fieldHtml(f, draft[f.key])).join('');
   const photo = fields.filter(f => f.type === 'photo').map(f => fieldHtml(f, draft[f.key])).join('');
   // Recipes: the "for how many?" strip goes right under the ingredients
-  const texts = fields.filter(f => f.type === 'textarea').map(f =>
+  let texts = fields.filter(f => f.type === 'textarea').map(f =>
     fieldHtml(f, draft[f.key]) + (group === 'recipes' && f.key === 'ingredients' ? '<div id="scaler"></div>' : '')).join('');
+  // Recipes: the engineer-style table on top, its text (folded) at the bottom (recipetable.js)
+  if (group === 'recipes') {
+    texts = `<div id="recipe-table"></div>${texts}
+      <details class="reel-more recipe-table-edit"><summary>${TABLE_WORDS.edit}</summary>
+        <label class="text-block"><textarea data-key="table" dir="auto" rows="3" placeholder="${escapeHtml(TABLE_WORDS.hint)}">${escapeHtml(draft.table)}</textarea></label>
+      </details>`;
+  }
 
   const groupOptions = GROUPS.map(g =>
     `<option value="${g.id}" ${g.id === group ? 'selected' : ''}>${groupTitle(g)}</option>`
@@ -1034,6 +1041,7 @@ function setupItemScreen() {
     editor.draft[key] = element.type === 'checkbox' ? element.checked : element.value;
     if (element.tagName === 'TEXTAREA') autoGrow(element);
     if (key === 'servings' || key === 'ingredients') scaler.update(key === 'servings');
+    if (key === 'ingredients' || key === 'table') recipeTable.update();
     saveSoon();
   });
 
@@ -1132,7 +1140,10 @@ function setupItemScreen() {
 
   form.querySelectorAll('textarea').forEach(autoGrow);
   setupPlaceField(form, saveSoon);
-  const scaler = setupScaler(form, () => editor.draft);
+  const recipeTable = setupRecipeTable(form, () => editor.draft);
+  const scaler = setupScaler(form, () => editor.draft, factor => recipeTable.update(factor));
+  form.querySelector('.recipe-table-edit')?.addEventListener('toggle', event =>
+    event.currentTarget.querySelectorAll('textarea').forEach(autoGrow));
   if (editor.group === 'journal') setupJournalEditor(form, editor, saveSoon);
   if (editor.group === 'movies' || editor.group === 'shows') {
     editor.seenBefore = !!editor.id && isSeen(editor.draft);

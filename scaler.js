@@ -68,14 +68,18 @@ function servingsNumber(text) {
 
 // Hooks up the strip under the ingredients. update() redraws it
 // (after the servings or ingredients change).
-function setupScaler(form, getDraft) {
+// onFactor (optional) hears the current scale, e.g. 1.5, for the recipe table.
+function setupScaler(form, getDraft, onFactor) {
   const box = form.querySelector('#scaler');
   if (!box) return { update() {} };
   let target = 0;   // 0 = as written
+  let lastFactor = 1;
 
   function draw() {
     const draft = getDraft();
     const base = servingsNumber(draft.servings);
+    const factor = base && target ? target / base : 1;
+    if (onFactor && factor !== lastFactor) { lastFactor = factor; onFactor(factor); }
     if (!base || !(draft.ingredients || '').trim()) { box.innerHTML = ''; return; }
     const showing = target || base;
     const changed = showing !== base;

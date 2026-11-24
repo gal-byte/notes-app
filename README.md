@@ -10,3 +10,9 @@ Plain HTML, CSS and JavaScript. Notes are kept on each device and synced through
 - Reminders arrive as the app's own notifications (Web Push, `push.js` + `sw.js`), with
   "תזכיר בעוד שעה". Turn them on once per device in הגדרות וגיבוי. ntfy is only the fallback.
 - Testing: set `localStorage.testServer` to a test sync server so tests don't touch real notes.
+
+## Recipe table (2026-11-24)
+A recipe with a `table` field shows a "Cooking for Engineers" style table on top (`recipetable.js`):
+ingredients down the first column, each step a cell spanning what it combines. The text is under
+"עריכת הטבלה", one step per line: `1, 2 | מערבבים` (ingredient line numbers), `ש1` / `s1` = what
+step 1 made. Claude's connector fills it; the servings scaler also scales the amounts in it.
