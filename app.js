@@ -282,7 +282,7 @@ async function homeScreen() {
   // The אוכל row shows today's numbers (food.js), or the count when nothing is logged today
   const foodEnd = await foodHomeEnd(counts.food);
   const groupRows = homeGroups.map(group => `
-    <a class="row" href="#/group/${group.id}">
+    <a class="row" href="${group.id === 'food' ? '#/food' : `#/group/${group.id}`}">
       ${groupBadge(group, 'small')}
       <span class="row-main"><span class="row-title">${escapeHtml(group.name)}</span></span>
       <span class="row-end">${group.id === 'food' ? foodEnd : counts[group.id] || ''}</span>
@@ -489,7 +489,8 @@ async function buildScreen(page, id, extra) {
     return { title: '', html: await calendarScreen(), back: '#/home', setup: setupCalendar };
   }
   // "#/food": meals, recipes, shopping list and kitchen in one place; the box at the bottom logs a meal
-  if (page === 'food') {
+  // (an old "#/group/food" link lands here too)
+  if (page === 'food' || (page === 'group' && id === 'food')) {
     return { title: HUB_WORDS.title, html: await foodScreen(), back: '#/home', addTo: mealsGroup()?.id,
              setup: setupFoodHub };
   }
