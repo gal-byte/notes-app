@@ -46,3 +46,9 @@ idle (with the last run's result, a waiting question or a failure from the last 
 "<note>" since <time> / a change waiting for your approval / Claude in a chat changing notes (last 15 minutes).
 It polls notify's light `GET /dashboard/now` every 45 s while home is open and the app is in front, and is
 hidden when the server doesn't answer. Tapping it opens `#/server`.
+When the server Claude asked a question (an open קלוד note, not טופל / בעבודה, whose last line starts
+"— Claude"; found in the app's own notes, so it works offline too, oldest first), the bar shows
+"קלוד שואל: <question>" (it ranks below working and a waiting change, above chat and idle). Tapping it
+opens a small panel instead: the note, the question, a box, and "שליחה" / "שליחה והרצה עכשיו". Sending
+appends "— תשובה (date): <answer>" to the note (synced as usual); the second button also asks the server
+to run the to-do list now (`run-todo`). The next run reads the answer and continues the request.

@@ -288,7 +288,9 @@ async function homeScreen() {
     </a>`);
 
   // "Claude now" (dashboard.js): a slim line, hidden until the server answers
-  const nowBar = `<a id="claude-now" class="claude-now" href="#/server" hidden>${claudeNowHtml(claudeNow)}</a>`;
+  // A question from the server Claude shows here too; tapping it opens #claude-ask to answer it
+  const nowBar = `<a id="claude-now" class="claude-now" href="#/server" hidden>${claudeNowHtml(claudeNow)}</a>` +
+    `<div id="claude-ask" class="claude-ask" hidden></div>`;
   return nowBar + upcomingHtml + await pinnedHtml() + sectionLabel(TEXT.groups) + rowList(groupRows);
 }
 

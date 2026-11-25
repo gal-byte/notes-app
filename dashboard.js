@@ -225,7 +225,9 @@ function setupServerScreen() {
 // GET /dashboard/now (dashboard.py now()): the server Claude on a note, a change waiting
 // for your OK, Claude in a chat changing notes, or idle with the last result.
 // Polled every 45 s while home is open and the app is in front. Tap: #/server.
-// Hidden when the server doesn't answer (outside Tailscale).
+// Hidden when the server doesn't answer (outside Tailscale), unless the server Claude
+// asked a question in a קלוד note: then it shows "קלוד שואל: ..." and a tap opens a small
+// answer panel instead (below).
 // ============================================================
 
 const NOW_WORDS = {
@@ -243,13 +245,55 @@ let claudeNowTimer = null;
 
 const hhmm = date => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
-function claudeNowParts(now) {
-  if (!now?.ok) return null;
-  if (now.state === 'working') {
+// A question from the server Claude, found in this device's own notes (works offline too):
+// an open note in the group קלוד (no טופל / בעבודה tag) whose last non-empty line starts
+// with "— Claude" ("— Claude (date): <question>", added by the to-do runner). Oldest first.
+// Gal's answer goes under it as "— תשובה (date): ...", so it stops being a question.
+const ASK_WORDS = {
+  bar: question => `קלוד שואל: ${question}`,
+  placeholder: 'התשובה שלך…',
+  send: 'שליחה',
+  sendRun: 'שליחה והרצה עכשיו',
+  saved: 'נשמר; קלוד ימשיך בריצה הבאה',
+  savedRun: 'נשמר; קלוד מתחיל עכשיו',
+  empty: 'כתוב תשובה קודם',
+};
+let claudeQuestion = null;   // { id, title, question } or null
+
+function findClaudeQuestion(items, groups) {
+  const group = groups.find(g => (g.name || '').trim() === 'קלוד');
+  if (!group) return null;
+  const asking = items.filter(item => {
+    if (item.group !== group.id) return false;
+    const tags = parseTags(item.tags);
+    if (tags.includes('טופל') || tags.includes('בעבודה')) return false;
+    const last = (item.text || '').split('\n').map(line => line.trim()).filter(Boolean).pop() || '';
+    return last.startsWith('— Claude');
+  }).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  const item = asking[0];
+  if (!item) return null;
+  const last = item.text.split('\n').map(line => line.trim()).filter(Boolean).pop();
+  const question = last.replace(/^— Claude(\s*\([^)]*\))?\s*:?\s*/, '') || last;
+  return { id: item.id, title: item.title || '', question };
+}
+
+async function refreshClaudeQuestion() {
+  try {
+    claudeQuestion = findClaudeQuestion(await getAllItems(), GROUPS);
+  } catch {
+    claudeQuestion = null;
+  }
+}
+
+// Bar priority: working > waiting (held change) > question > chat > idle
+function claudeNowParts(now, question = claudeQuestion) {
+  if (now?.ok && now.state === 'working') {
     const since = Date.parse(now.since || '');
     return { dot: 'busy', text: NOW_WORDS.working(now.title, Number.isNaN(since) ? '' : hhmm(new Date(since))) };
   }
-  if (now.state === 'waiting') return { dot: 'busy', text: NOW_WORDS.waiting((now.held_repos || []).join(', ')) };
+  if (now?.ok && now.state === 'waiting') return { dot: 'busy', text: NOW_WORDS.waiting((now.held_repos || []).join(', ')) };
+  if (question) return { dot: 'alert', text: ASK_WORDS.bar(question.question), ask: true };
+  if (!now?.ok) return null;
   if (now.state === 'chat') {
     return { dot: 'busy', text: NOW_WORDS.chat((now.title || '').replace(/^קלוד /, ''), now.body || '') };
   }
@@ -275,10 +319,80 @@ function drawClaudeNow() {
   const html = claudeNowHtml(claudeNow);
   bar.innerHTML = html;
   bar.hidden = !html;
+  const asking = Boolean(claudeNowParts(claudeNow)?.ask);
+  bar.classList.toggle('asking', asking);
+  const panel = document.getElementById('claude-ask');
+  // The question went away (answered on another device, or a run is now on it): close the panel
+  if (panel && !panel.hidden && (!asking || panel.dataset.id !== claudeQuestion?.id)) panel.hidden = true;
+}
+
+// The small answer panel under the bar: the note, the question, a box and two buttons
+function claudeAskHtml(question) {
+  return `
+    <a class="claude-ask-title" href="#/item/${encodeURIComponent(question.id)}" dir="auto">${escapeHtml(question.title || question.question)}</a>
+    <p dir="auto">${escapeHtml(question.question)}</p>
+    <textarea rows="3" dir="auto" placeholder="${escapeHtml(ASK_WORDS.placeholder)}"></textarea>
+    <div class="claude-ask-buttons">
+      <button type="button" class="pill-button approve" data-ask-send="">${escapeHtml(ASK_WORDS.send)}</button>
+      <button type="button" class="pill-button" data-ask-send="run">${escapeHtml(ASK_WORDS.sendRun)}</button>
+    </div>`;
+}
+
+async function sendClaudeAnswer(panel, runNow) {
+  const box = panel.querySelector('textarea');
+  const answer = box.value.trim().replace(/\s*\n\s*/g, ' ');
+  if (!answer) { showToast(escapeHtml(ASK_WORDS.empty)); box.focus(); return; }
+  const item = await getItem(panel.dataset.id);
+  if (!item) return;
+  panel.querySelectorAll('button').forEach(button => { button.disabled = true; });
+  // updateItem syncs through notesChanged(); the runner reads the "— תשובה" line next time
+  await updateItem(item.id, { text: `${(item.text || '').trimEnd()}\n\n— תשובה (${toISODate(new Date())}): ${answer}` });
+  haptic(8);
+  let message = ASK_WORDS.saved;
+  if (runNow) {
+    try {
+      const response = await fetch(`${SERVER}/dashboard/action`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'run-todo' }), signal: AbortSignal.timeout(10000),
+      });
+      const reply = await response.json();
+      message = reply.ok ? ASK_WORDS.savedRun : `${ASK_WORDS.saved} · ${reply.message || reply.error || '✗'}`;
+    } catch {
+      message = `${ASK_WORDS.saved} · ${DASH_WORDS.offline}`;
+    }
+  }
+  showToast(escapeHtml(message));
+  panel.hidden = true;
+  await refreshClaudeQuestion();
+  drawClaudeNow();
+  if (runNow) setTimeout(pollClaudeNow, 4000);
+}
+
+// Tap the bar: a question opens the answer panel; anything else goes on to #/server
+function setupClaudeAsk() {
+  const bar = document.getElementById('claude-now');
+  const panel = document.getElementById('claude-ask');
+  if (!bar || !panel || bar.dataset.askReady) return;
+  bar.dataset.askReady = '1';
+  bar.addEventListener('click', event => {
+    if (!bar.classList.contains('asking') || !claudeQuestion) return;
+    event.preventDefault();
+    haptic(5);
+    if (!panel.hidden && panel.dataset.id === claudeQuestion.id) { panel.hidden = true; return; }
+    panel.dataset.id = claudeQuestion.id;
+    panel.innerHTML = claudeAskHtml(claudeQuestion);
+    panel.hidden = false;
+  });
+  panel.addEventListener('click', event => {
+    const button = event.target.closest('[data-ask-send]');
+    if (button) sendClaudeAnswer(panel, button.dataset.askSend === 'run');
+  });
 }
 
 async function pollClaudeNow() {
   if (!document.getElementById('claude-now') || document.hidden) return;
+  await refreshClaudeQuestion();
+  drawClaudeNow();   // the question shows even if the server is out of reach
   try {
     const response = await fetch(`${SERVER}/dashboard/now`, { signal: AbortSignal.timeout(8000) });
     claudeNow = response.ok ? await response.json() : null;
@@ -290,6 +404,7 @@ async function pollClaudeNow() {
 
 // Called by setupHome(): draw what we know, ask again now and every 45 s while home is shown
 function startClaudeNow() {
+  setupClaudeAsk();
   drawClaudeNow();
   pollClaudeNow();
   if (claudeNowTimer) return;
