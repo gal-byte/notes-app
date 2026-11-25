@@ -28,3 +28,11 @@ the screen width. The zoom is kept on the device (localStorage `recipeTableZoom`
 - The note **🛒 רשימת קניות** (לא ממוין, written by Claude) shows its lines as checkboxes. Ticking moves an
   item to the bottom as "✓ חלב" in the text; the server's `shopping_list` ignores ✓ lines and drops them on
   its next change. The plain text is under "עריכת הרשימה".
+
+## Server screen (2026-11-25, `dashboard.js`, `#/server`)
+The shield at the top of home opens **שרת**: whether the home server's apps answer (and stopped containers,
+TV hub, memory, disk), Claude on the server (last and next run of the קלוד to-do list, its result, changes
+waiting for your OK with a **לפרוס** button), the קלוד list itself, today's Claude API spend, and the last
+notifications and server alerts. Buttons: run the to-do list now, restart an app. Data comes from notify's
+`GET /dashboard` (tailnet only, nothing kept offline); buttons `POST /dashboard/action` with an allowlisted
+name only, and a host helper on the server runs them (see notify's README, "Claude Code on the server").

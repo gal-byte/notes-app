@@ -873,3 +873,19 @@ button.setting { cursor: pointer; }
 .shop-item.done span { text-decoration: line-through; color: var(--faint); }
 .shop-edit { padding: 0; }
 .shop-edit summary { padding: 4px var(--side); }
+
+/* Server screen (dashboard.js) */
+.dash-summary { margin: 8px var(--side) 4px; padding: 10px 14px; border-radius: 12px; font-weight: 500; }
+.dash-summary.good { color: var(--accent); background: var(--accent-soft); }
+.dash-summary.bad { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.dash-row { align-items: flex-start; }
+.dash-row .row-end { align-self: center; }
+.dash-wrap { white-space: normal; overflow-wrap: anywhere; }
+.dash-bad .row-title { color: var(--danger); }
+.dash-dot { flex-shrink: 0; width: 9px; height: 9px; margin-top: 7px; border-radius: 50%; background: var(--line); }
+.dash-dot.good { background: var(--accent); }
+.dash-dot.bad { background: var(--danger); }
+.dash-dot.busy { background: #e0a23a; }
+.dash-dot.alert { background: #7a8cd6; }
+.dash-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px var(--side) 24px; }
+.label a { color: inherit; }

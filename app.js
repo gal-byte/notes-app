@@ -504,6 +504,11 @@ async function buildScreen(page, id, extra) {
   if (page === 'settings') {
     return { title: TEXT.backupScreenTitle, html: await settingsScreen(), back: '#/home', setup: setupSettings };
   }
+  // "#/server": the home server, Claude's to-do runs, costs (dashboard.js)
+  if (page === 'server') {
+    return { title: DASH_WORDS.title, html: serverScreen(), back: '#/home', setup: setupServerScreen,
+             actions: `<button type="button" class="icon-button" id="dash-refresh" aria-label="${DASH_WORDS.refresh}">${icon('sync')}</button>` };
+  }
   if (page === 'group-settings') {
     const html = groupSettingsScreen(id);
     if (html) {
@@ -528,7 +533,8 @@ async function buildScreen(page, id, extra) {
   // "#/add/<text>" also fills it in: text shared from another app (the phone app, see notes-apk)
   return {
     title: TEXT.appName, html: await homeScreen(), addTo: '', home: true,
-    actions: headerLink('#/search', 'search', TEXT.search) + headerLink('#/settings', 'sliders', TEXT.settings),
+    actions: headerLink('#/search', 'search', TEXT.search) + headerLink('#/server', 'shield', DASH_WORDS.title)
+           + headerLink('#/settings', 'sliders', TEXT.settings),
     setup: () => {
       setupHome();
       if (page !== 'add') return;

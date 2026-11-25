@@ -47,6 +47,7 @@ const APP_FILES = [
   'sync.js',
   'push.js',
   'settings.js',
+  'dashboard.js',
   'app.js',
   'manifest.json',
   'fonts/rubik-hebrew.woff2',
