@@ -23,7 +23,19 @@ const TABLE_WORDS = {
   edit: 'עריכת הטבלה',
   hint: 'שלב בכל שורה: מספרי מצרכים | מה עושים\nלמשל: 1, 2 | מערבבים\nש1, 3 | אופים 20 דק\'',
   problems: 'שורות שלא הובנו:',
+  smaller: 'הקטנת הטבלה',
+  bigger: 'הגדלת הטבלה',
+  fit: 'כל הטבלה במסך',
 };
+
+// Zoom of the table (1 = normal), kept on this device for all recipes.
+// − / + step through ZOOM_STEPS; ⤢ shrinks it to fit the screen width.
+const ZOOM_STEPS = [0.45, 0.55, 0.65, 0.75, 0.85, 1, 1.15, 1.3];
+const ZOOM_KEY = 'recipeTableZoom';
+function recipeTableZoom() {
+  const z = Number(localStorage.getItem(ZOOM_KEY));
+  return z >= ZOOM_STEPS[0] && z <= ZOOM_STEPS[ZOOM_STEPS.length - 1] ? z : 1;
+}
 
 // Text → { steps: [{ text, inputs: [{kind:'ing'|'step', n}] }], problems: [line numbers] }
 function parseRecipeTable(text, ingredientCount) {
@@ -116,7 +128,7 @@ function layoutRecipeTable(ingredientLines, steps) {
   return rows;
 }
 
-function recipeTableHtml(draft, factor = 1) {
+function recipeTableHtml(draft, factor = 1, zoom = 1) {
   let ingredients = String(draft.ingredients || '');
   if (factor !== 1 && typeof scaleIngredients === 'function') ingredients = scaleIngredients(ingredients, factor);
   const lines = ingredients.split('\n').map(l => l.trim()).filter(Boolean);
@@ -128,8 +140,15 @@ function recipeTableHtml(draft, factor = 1) {
   ).join('')}</tr>`).join('');
   return `
     <div class="recipe-table-wrap">
-      <span class="label">${TABLE_WORDS.title}</span>
-      <div class="recipe-table-scroll"><table class="recipe-table">${body}</table></div>
+      <div class="recipe-table-head">
+        <span class="label">${TABLE_WORDS.title}</span>
+        <div class="recipe-table-zoom">
+          <button type="button" data-zoom="-1" aria-label="${TABLE_WORDS.smaller}" ${zoom <= ZOOM_STEPS[0] ? 'disabled' : ''}>${icon('minus')}</button>
+          <button type="button" data-zoom="fit" aria-label="${TABLE_WORDS.fit}">⤢</button>
+          <button type="button" data-zoom="1" aria-label="${TABLE_WORDS.bigger}" ${zoom >= ZOOM_STEPS[ZOOM_STEPS.length - 1] ? 'disabled' : ''}>${icon('plus')}</button>
+        </div>
+      </div>
+      <div class="recipe-table-scroll"><table class="recipe-table" style="--rt-zoom: ${zoom}">${body}</table></div>
       ${problems.length ? `<p class="recipe-table-problems">${TABLE_WORDS.problems} ${problems.join(', ')}</p>` : ''}
     </div>`;
 }
@@ -140,7 +159,36 @@ function setupRecipeTable(form, getDraft) {
   const box = form.querySelector('#recipe-table');
   if (!box) return { update() {} };
   let factor = 1;
-  const draw = () => { box.innerHTML = recipeTableHtml(getDraft(), factor); };
+  let zoom = recipeTableZoom();
+  const draw = () => { box.innerHTML = recipeTableHtml(getDraft(), factor, zoom); };
+  const setZoom = z => {
+    zoom = Math.round(Math.min(ZOOM_STEPS[ZOOM_STEPS.length - 1], Math.max(ZOOM_STEPS[0], z)) * 100) / 100;
+    localStorage.setItem(ZOOM_KEY, String(zoom));
+    draw();
+  };
+  box.addEventListener('click', event => {
+    const button = event.target.closest('[data-zoom]');
+    if (!button) return;
+    event.preventDefault();
+    if (button.dataset.zoom === 'fit') {
+      // Shrink (never grow past 1) until the table is as wide as the screen; twice, since cell minimums round
+      for (let i = 0; i < 2; i++) {
+        const scroll = box.querySelector('.recipe-table-scroll');
+        const table = box.querySelector('.recipe-table');
+        if (!scroll || !table) return;
+        const style = getComputedStyle(scroll);
+        const room = scroll.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+        const ratio = room / table.scrollWidth;
+        if (ratio >= 0.995 && i) break;   // fits now
+        setZoom(Math.min(1, Math.floor(zoom * ratio * 100) / 100));
+        if (ratio >= 1) break;
+      }
+      return;
+    }
+    const step = Number(button.dataset.zoom);
+    const next = step < 0 ? [...ZOOM_STEPS].reverse().find(z => z < zoom - 0.001) : ZOOM_STEPS.find(z => z > zoom + 0.001);
+    setZoom(next ?? zoom);
+  });
   draw();
   return {
     update(newFactor) {

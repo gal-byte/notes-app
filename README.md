@@ -16,6 +16,8 @@ A recipe with a `table` field shows a "Cooking for Engineers" style table on top
 ingredients down the first column, each step a cell spanning what it combines. The text is under
 "עריכת הטבלה", one step per line: `1, 2 | מערבבים` (ingredient line numbers), `ש1` / `s1` = what
 step 1 made. Claude's connector fills it; the servings scaler also scales the amounts in it.
+Zoom (2026-11-25): − / + next to the title shrink or grow the table (45%–130%), ⤢ shrinks it to fit
+the screen width. The zoom is kept on the device (localStorage `recipeTableZoom`) for all recipes.
 
 ## Food (2026-11-24, `food.js`)
 - Meals go in your group **ארוחות**. The home server (notify `autofill`) adds a line
