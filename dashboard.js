@@ -36,6 +36,10 @@ const DASH_WORDS = {
   reject: 'דחייה',
   askApprove: repo => `לאשר ולפרוס את השינוי ב-${repo}?`,
   askReject: repo => `לדחות את השינוי ב-${repo}? קלוד יוותר עליו`,
+  ideaTitle: title => `קלוד מציע: ${title || 'רעיון חדש'}`,
+  ideaWhy: repo => `רעיון של קלוד, כבר בנוי ב-${repo} ועוד לא פורסם`,
+  askIdea: 'לפרסם את הרעיון של קלוד?',
+  askIdeaReject: 'לדחות את הרעיון? קלוד יזכור ולא יציע אותו שוב',
   todo: 'רשימת קלוד',
   status: { open: 'פתוח', working: 'בעבודה', done: 'טופל' },
   costs: 'עלות Claude היום',
@@ -87,6 +91,18 @@ function dashHeldCard(h) {
   const repo = escapeHtml(h.repo);
   const all = h.files || [];
   const files = all.slice(0, 4).map(escapeHtml).join(', ') + (all.length > 4 ? '…' : '');
+  if (h.why === 'idea') {   // the daily idea run: a small improvement Claude chose and built itself
+    return `
+    <div class="dash-held">
+      <b>${escapeHtml(DASH_WORDS.ideaTitle(h.title))}</b>
+      <p>${escapeHtml(h.summary || h.message || '')}</p>
+      <small>${escapeHtml(DASH_WORDS.ideaWhy(h.target || ''))}${files ? ` · ${files}` : ''}</small>
+      <div class="dash-held-buttons">
+        <button type="button" class="pill-button approve" data-dash-action="deploy:idea" data-ask="${escapeHtml(DASH_WORDS.askIdea)}">${DASH_WORDS.approve}</button>
+        <button type="button" class="pill-button" data-dash-action="reject:idea" data-ask="${escapeHtml(DASH_WORDS.askIdeaReject)}">${DASH_WORDS.reject}</button>
+      </div>
+    </div>`;
+  }
   return `
     <div class="dash-held">
       <b>${DASH_WORDS.waitingIn(repo)}</b>
@@ -291,7 +307,7 @@ function claudeNowParts(now, question = claudeQuestion) {
     const since = Date.parse(now.since || '');
     return { dot: 'busy', text: NOW_WORDS.working(now.title, Number.isNaN(since) ? '' : hhmm(new Date(since))) };
   }
-  if (now?.ok && now.state === 'waiting') return { dot: 'busy', text: NOW_WORDS.waiting((now.held_repos || []).join(', ')) };
+  if (now?.ok && now.state === 'waiting') return { dot: 'busy', text: NOW_WORDS.waiting((now.held_repos || []).map(r => r === 'idea' ? 'רעיון' : r).join(', ')) };
   if (question) return { dot: 'alert', text: ASK_WORDS.bar(question.question), ask: true };
   if (!now?.ok) return null;
   if (now.state === 'chat') {
