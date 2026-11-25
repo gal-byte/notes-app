@@ -933,3 +933,16 @@ button.setting { cursor: pointer; }
 .meal-chips .chip { color: var(--text); max-width: 100%; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .meal-chips .chip:active { transform: scale(.96); }
 .meal-chips .chip:disabled { opacity: .5; }
+/* Daily target (food.js targetBarsHtml): two thin bars under today's total */
+.target-bars { display: flex; flex-direction: column; gap: 6px; padding: 4px var(--side) 8px; width: 100%; box-sizing: border-box; }
+.food-ate .target-bars { padding: 2px 0 0; }
+.target-bar { display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: var(--muted); }
+.target-track { display: block; height: 6px; border-radius: 3px; background: var(--fill); overflow: hidden; }
+.target-fill { display: block; height: 100%; border-radius: 3px; background: var(--accent); transition: width .3s var(--ease); }
+.target-bar.over .target-fill { background: var(--star); }
+.target-bar.over .target-text { color: var(--star); }
+.target-bar.reached .target-text { color: var(--accent); }
+.target-edit { padding: 0; font-size: 13px; }
+.target-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.target-form label { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); }
+.target-form input { width: 5.5em; padding: 6px 8px; font: inherit; color: var(--text); background: var(--raised); border: 1px solid var(--line); border-radius: 8px; }

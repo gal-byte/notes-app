@@ -68,7 +68,76 @@ function mealsTodayHtml(items) {
     protein += estimate.protein;
   }
   return `<p class="todo-heading meals-today"><strong>${FOOD_WORDS.today(bigNumber(kcal), bigNumber(protein))}</strong>${
-    waiting ? FOOD_WORDS.waiting(waiting) : ''}</p>`;
+    waiting ? FOOD_WORDS.waiting(waiting) : ''}</p>${targetBarsHtml(kcal, protein)}`;
+}
+
+// ---------- Daily target (2026-11-25) ----------
+// An optional calories / protein target, kept on this device. Today's total
+// then shows two thin bars: "1,450 / 2,000 קל׳ · עוד 550".
+const TARGET_WORDS = {
+  button: '🎯 יעד יומי',
+  current: (kcal, protein) => `🎯 יעד: ${[kcal ? `${bigNumber(kcal)} קל׳` : '', protein ? `${bigNumber(protein)} ג׳ חלבון` : ''].filter(Boolean).join(' · ')}`,
+  kcal: 'קלוריות', protein: 'חלבון (ג׳)', save: 'שמירה', hint: 'ריק = בלי יעד',
+  bar: (name, done, goal, unit) => `${name} ${bigNumber(done)} / ${bigNumber(goal)}${unit}`,
+  left: (n, unit) => ` · עוד ${bigNumber(n)}${unit}`,
+  over: (n, unit) => ` · ${bigNumber(n)}${unit} מעל`,
+  reached: ' · ✓',
+};
+
+function foodTarget() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('foodTarget') || '{}');
+    const clean = n => (Number.isFinite(n) && n > 0 ? Math.round(n) : 0);
+    return { kcal: clean(saved.kcal), protein: clean(saved.protein) };
+  } catch {
+    return { kcal: 0, protein: 0 };
+  }
+}
+
+function saveFoodTarget(kcal, protein) {
+  const clean = n => (Number.isFinite(n) && n > 0 ? Math.round(n) : 0);
+  const target = { kcal: clean(kcal), protein: clean(protein) };
+  try {
+    if (target.kcal || target.protein) localStorage.setItem('foodTarget', JSON.stringify(target));
+    else localStorage.removeItem('foodTarget');
+  } catch { /* not important */ }
+  return target;
+}
+
+// Calories: going over is the thing to notice. Protein: reaching it is.
+function targetBarHtml(name, done, goal, unit, kind) {
+  const pct = Math.min(100, Math.round(done / goal * 100));
+  const rest = goal - done;
+  const note = rest > 0 ? TARGET_WORDS.left(rest, unit)
+    : kind === 'kcal' && rest < 0 ? TARGET_WORDS.over(-rest, unit) : TARGET_WORDS.reached;
+  const state = kind === 'kcal' ? (rest < 0 ? 'over' : '') : (rest <= 0 ? 'reached' : '');
+  return `<div class="target-bar ${state}"><span class="target-text">${TARGET_WORDS.bar(name, done, goal, unit)}${note}</span>
+    <span class="target-track"><span class="target-fill" style="width:${pct}%"></span></span></div>`;
+}
+
+function targetBarsHtml(kcal, protein) {
+  const target = foodTarget();
+  const bars = [];
+  if (target.kcal) bars.push(targetBarHtml('קל׳', kcal, target.kcal, '', 'kcal'));
+  if (target.protein) bars.push(targetBarHtml('חלבון', protein, target.protein, ' ג׳', 'protein'));
+  return bars.length ? `<div class="target-bars">${bars.join('')}</div>` : '';
+}
+
+// The hub's "🎯 יעד יומי" line; a tap opens two boxes in its place
+function targetButtonHtml() {
+  const target = foodTarget();
+  const label = target.kcal || target.protein ? TARGET_WORDS.current(target.kcal, target.protein) : TARGET_WORDS.button;
+  return `<button type="button" class="text-button target-edit" data-target-edit>${label}</button>`;
+}
+
+function targetFormHtml() {
+  const target = foodTarget();
+  return `<form class="target-form" data-target-form>
+    <label>${TARGET_WORDS.kcal} <input type="number" inputmode="numeric" min="0" step="50" name="kcal" value="${target.kcal || ''}"></label>
+    <label>${TARGET_WORDS.protein} <input type="number" inputmode="numeric" min="0" step="5" name="protein" value="${target.protein || ''}"></label>
+    <button type="submit" class="pill-button">${TARGET_WORDS.save}</button>
+    <span class="field-hint">${TARGET_WORDS.hint}</span>
+  </form>`;
 }
 
 // A meal with a photo and no title still gets saved: "ארוחה 13:05"
@@ -203,6 +272,7 @@ async function foodScreen() {
   const ate = meals ? `
     <div class="food-ate">
       <div id="food-today">${mealsTodayHtml(mealItems)}</div>
+      <div id="food-target">${targetButtonHtml()}</div>
       ${chips ? `<p class="field-hint">${QUICK_WORDS.again}</p><div class="meal-chips">${chips}</div>` : ''}
       <p class="field-hint">${HUB_WORDS.addHint}</p>
       <label class="pill-button">${icon('camera', 'inline')} ${HUB_WORDS.photoMeal}
@@ -296,7 +366,23 @@ function setupFoodHub() {
   const meals = mealsGroup();
   if (!hub || !meals) return;
 
+  hub.addEventListener('submit', async event => {
+    const form = event.target.closest('[data-target-form]');
+    if (!form) return;
+    event.preventDefault();
+    saveFoodTarget(Number(form.elements.kcal.value), Number(form.elements.protein.value));
+    haptic();
+    document.getElementById('food-target').innerHTML = targetButtonHtml();
+    await refreshFoodToday();
+  });
+
   hub.addEventListener('click', async event => {
+    if (event.target.closest('[data-target-edit]')) {
+      const box = document.getElementById('food-target');
+      box.innerHTML = targetFormHtml();
+      box.querySelector('input')?.focus();
+      return;
+    }
     const chip = event.target.closest('[data-repeat-meal]');
     if (!chip || chip.disabled) return;
     chip.disabled = true;   // no double meals from a double tap

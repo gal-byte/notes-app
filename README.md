@@ -50,7 +50,10 @@ the screen width. The zoom is kept on the device (localStorage `recipeTableZoom`
   editor). `#/meal` (app icon shortcut) is unchanged.
 - The home **אוכל** row shows today's "1,450 קל׳ · 82 ג׳" (or "2 ארוחות היום" while waiting for estimates),
   and the item count when nothing is logged today.
-- Not done: a daily calorie/protein target in settings.
+- Daily target (2026-11-25): **🎯 יעד יומי** under today's total on the hub opens two boxes (calories, protein;
+  empty = no target). Today's total, on the hub and in ארוחות, then shows two thin bars: "קל׳ 1,450 / 2,000 · עוד 550",
+  "חלבון 82 / 120 ג׳ · עוד 38 ג׳". Calories over the target turn amber ("250 מעל"), protein reached shows ✓.
+  Kept on the device only (localStorage `foodTarget`), so set it once per phone/tablet.
 
 ## Server screen (2026-11-25, `dashboard.js`, `#/server`)
 The shield at the top of home opens **שרת**: whether the home server's apps answer (and stopped containers,
