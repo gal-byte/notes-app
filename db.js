@@ -65,7 +65,7 @@ async function runInStore(storeName, mode, action) {
     const transaction = db.transaction(storeName, mode);
     const request = action(transaction.objectStore(storeName));
     transaction.oncomplete = () => {
-      // Something changed in your notes: let the home server know (see serverpush.js)
+      // Something changed in your notes: let the home server know (see sync.js)
       if (storeName === 'items' && mode === 'readwrite' && typeof notesChanged === 'function') notesChanged();
       resolve(request.result);
     };
@@ -96,6 +96,9 @@ async function updateItem(id, changes) {
   const item = await getItem(id);
   if (!item) return null;
   const updated = { ...item, ...changes, id, updatedAt: Date.now() };
+  // syncBase = the version the server has, sent with this change (sync.js). If the note changed on
+  // the server meanwhile (Claude marked it, another device), the server merges field by field.
+  if (typeof inSyncWithServer === 'function' && inSyncWithServer(item)) updated.syncBase = item.updatedAt;
   await runInStore('items', 'readwrite', store => store.put(updated));
   return updated;
 }

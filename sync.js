@@ -39,15 +39,26 @@ function resendEverything() {
   setSyncSetting('syncMark', 0);
 }
 
+// Is this note, as it is here, the same version the server has? (Then its updatedAt is the
+// base for the next edit, see updateItem in db.js.) Either it came from the server, or it
+// was last changed before the last sync started.
+function inSyncWithServer(item) {
+  return item.syncBase === item.updatedAt || (item.updatedAt || 0) <= syncSetting('syncMark');
+}
+
 // What changed here since the last sync ("mark" = when it started)
 async function localChangesSince(mark) {
   const changes = [];
   for (const item of await getAllItems()) {
     if ((item.updatedAt || 0) <= mark) continue;
-    const data = { ...item };
+    if (mark && item.syncBase === item.updatedAt) continue;   // (a full resend, mark 0, sends it all)
+    const { syncBase, ...data } = item;   // syncBase is this device's own bookkeeping
     if (item.photo instanceof Blob) data.photo = await blobToDataUrl(item.photo);
     if (Array.isArray(item.voices)) data.voices = await voicesToText(item.voices);
-    changes.push({ kind: 'item', id: item.id, updatedAt: item.updatedAt, data });
+    // base: the version this edit started from; the server merges if its copy changed since
+    const change = { kind: 'item', id: item.id, updatedAt: item.updatedAt, data };
+    if (typeof syncBase === 'number') change.base = syncBase;
+    changes.push(change);
   }
   for (const group of await getCustomGroups()) {
     if ((group.updatedAt || 0) <= mark) continue;
@@ -104,7 +115,8 @@ async function runSync() {
     const theirs = { items: [], groups: [], deleted: [] };
     for (const change of result.changes) {
       if (change.deleted) theirs.deleted.push({ id: change.id, deletedAt: change.updatedAt });
-      else if (change.kind === 'item') theirs.items.push(change.data);
+      // syncBase: this is the server's version (also stops it being sent back next time)
+      else if (change.kind === 'item') theirs.items.push({ ...change.data, syncBase: change.updatedAt });
       else if (change.kind === 'group') theirs.groups.push(change.data);
     }
     const local = {
