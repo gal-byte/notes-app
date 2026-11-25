@@ -36,5 +36,7 @@ waiting for your OK with a **לפרוס** button), the קלוד list itself, tod
 notifications and server alerts. Buttons: run the to-do list now, restart an app. Data comes from notify's
 `GET /dashboard` (tailnet only, nothing kept offline); buttons `POST /dashboard/action` with an allowlisted
 name only, and a host helper on the server runs them (see notify's README, "Claude Code on the server").
-Layout (calm by default): one card (all good or the problems, Claude's next run, today's spend), then only
-what needs you (failing apps, changes to approve) and the open קלוד items; the rest is folded under פרטים and פעולות.
+Layout (calm by default): one card (all good or the problems, Claude's next run, today's spend in shekels),
+then only what needs you: a card per change waiting for approval (Claude's short Hebrew summary, the files,
+אישור / דחייה), failing apps, the open קלוד items and the ones the server Claude finished on its own
+(not ones done in a session with Gal). The rest is folded under פרטים and פעולות.

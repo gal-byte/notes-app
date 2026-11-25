@@ -29,6 +29,13 @@ const DASH_WORDS = {
   nextRun: 'הריצה הבאה',
   deployed: 'נפרס',
   waiting: 'מחכה לאישור שלך',
+  waitingIn: repo => `שינוי של קלוד ב-${repo} מחכה לאישור`,
+  whyServer: 'נוגע בקבצים שרצים בשרת עצמו',
+  whyHost: 'מרכז הטלוויזיה רץ ישירות על השרת',
+  approve: 'אישור',
+  reject: 'דחייה',
+  askApprove: repo => `לאשר ולפרוס את השינוי ב-${repo}?`,
+  askReject: repo => `לדחות את השינוי ב-${repo}? קלוד יוותר עליו`,
   todo: 'רשימת קלוד',
   status: { open: 'פתוח', working: 'בעבודה', done: 'טופל' },
   costs: 'עלות Claude היום',
@@ -42,7 +49,13 @@ const DASH_WORDS = {
   refresh: 'רענון',
 };
 
-const dashDollars = n => `$${(n || 0).toFixed(n >= 0.1 ? 2 : 3)}`;
+// Shekels: "₪1.20", or agorot under a shekel ("2 אג׳", "0.4 אג׳")
+function dashShekels(ils) {
+  ils = ils || 0;
+  if (ils >= 1) return `₪${ils.toFixed(2)}`;
+  const agorot = ils * 100;
+  return `${agorot.toFixed(agorot && agorot < 1 ? 1 : 0)} אג׳`;
+}
 const dashWhen = seconds => seconds ? timeAgo(seconds * 1000) : '';
 const dashTime = iso => {
   const t = Date.parse(iso || '');
@@ -67,6 +80,23 @@ function dashRow(title, sub, end, options = {}) {
       </span>
       ${end ? `<span class="row-end">${end}</span>` : ''}
     </${options.href ? 'a' : 'div'}>`;
+}
+
+// A change Claude made that waits for you: its summary, what it touches, approve / reject
+function dashHeldCard(h) {
+  const repo = escapeHtml(h.repo);
+  const all = h.files || [];
+  const files = all.slice(0, 4).map(escapeHtml).join(', ') + (all.length > 4 ? '…' : '');
+  return `
+    <div class="dash-held">
+      <b>${DASH_WORDS.waitingIn(repo)}</b>
+      <p>${escapeHtml(h.summary || h.message || '')}</p>
+      <small>${h.why === 'tv-hub' ? DASH_WORDS.whyHost : DASH_WORDS.whyServer}${files ? ` · ${files}` : ''}</small>
+      <div class="dash-held-buttons">
+        <button type="button" class="pill-button approve" data-dash-action="deploy:${repo}" data-ask="${escapeHtml(DASH_WORDS.askApprove(h.repo))}">${DASH_WORDS.approve}</button>
+        <button type="button" class="pill-button" data-dash-action="reject:${repo}" data-ask="${escapeHtml(DASH_WORDS.askReject(h.repo))}">${DASH_WORDS.reject}</button>
+      </div>
+    </div>`;
 }
 
 function serverScreen() {
@@ -98,24 +128,16 @@ function dashHtml(d) {
     dashRow(DASH_WORDS.lastRun, escapeHtml(run.result || (run.state ? '' : DASH_WORDS.noRun)), runEnd,
             { dot: run.exit ? 'bad' : run.state === 'running' ? 'busy' : 'good' }),
     ...(run.deployed || []).map(line => dashRow(DASH_WORDS.deployed, escapeHtml(line), '', { dot: 'good' })),
-    ...(host.held || []).map(h => dashRow(`${escapeHtml(h.repo)} · ${DASH_WORDS.waiting}`,
-        `${escapeHtml(h.message || '')}<br><small>${escapeHtml(h.why || '')}</small>`,
-        `<button type="button" class="pill-button" data-dash-action="deploy:${escapeHtml(h.repo)}">לפרוס</button>`,
-        { dot: 'busy' })),
     dashRow(DASH_WORDS.nextRun, '', dashNext(run.next) || '—'),
   ];
 
   const todoGroup = GROUPS.find(g => (g.name || '').trim() === 'קלוד');
-  const todoRows = (d.todo || []).map(t => dashRow(escapeHtml(t.title),
-    t.status === 'open' ? '' : escapeHtml(t.last || ''),
-    DASH_WORDS.status[t.status], { dot: t.status === 'done' ? 'good' : t.status === 'working' ? 'busy' : 'open',
-                                   href: t.id ? `#/item/${encodeURIComponent(t.id)}` : '' }));
 
   // Costs
   const costs = d.costs || [];
-  const total = costs.reduce((sum, c) => sum + (c.today || 0), 0);
-  const costRows = costs.map(c => dashRow(escapeHtml(c.name), '', dashDollars(c.today)))
-    .concat(dashRow(`<b>${DASH_WORDS.total}</b>`, '', `<b>${dashDollars(total)}</b>`));
+  const total = costs.reduce((sum, c) => sum + (c.ils || 0), 0);
+  const costRows = costs.map(c => dashRow(escapeHtml(c.name), '', dashShekels(c.ils)))
+    .concat(dashRow(`<b>${DASH_WORDS.total}</b>`, '', `<b>${dashShekels(total)}</b>`));
 
   // Activity
   const activityRows = (d.activity || []).map(a => dashRow(escapeHtml(a.title || ''), escapeHtml(a.body || ''),
@@ -132,26 +154,28 @@ function dashHtml(d) {
     <div class="dash-card ${problems.length ? 'bad' : 'good'}">
       <b>${problems.length ? `${DASH_WORDS.problems(problems.length)}: ${escapeHtml(problems.join(', '))}` : DASH_WORDS.allGood}</b>
       <span>קלוד · ${claudeLine}</span>
-      <span>${DASH_WORDS.costs} · ${dashDollars(total)}</span>
+      <span>${DASH_WORDS.costs} · ${dashShekels(total)}</span>
     </div>`;
 
-  const needsYou = appRows.filter((_, i) => !(d.health || [])[i]?.ok)
-    .concat(machineRows.slice(1), claudeRows.filter(r => r.includes('data-dash-action')));
+  const needsYou = appRows.filter((_, i) => !(d.health || [])[i]?.ok).concat(machineRows.slice(1));
+  const heldCards = (host.held || []).map(dashHeldCard).join('');
 
-  const openTodo = (d.todo || []).filter(t => t.status !== 'done');
+  // open and in progress, plus what the server Claude finished on its own (the server picks those)
+  const openTodo = d.todo || [];
   const todoHtml = openTodo.length
     ? sectionLabel(todoGroup ? `<a href="#/group/${todoGroup.id}">${DASH_WORDS.todo}</a>` : DASH_WORDS.todo)
-      + rowList(openTodo.map(t => dashRow(escapeHtml(t.title), '', DASH_WORDS.status[t.status],
-          { dot: t.status === 'working' ? 'busy' : 'open', href: t.id ? `#/item/${encodeURIComponent(t.id)}` : '' })))
+      + rowList(openTodo.map(t => dashRow(escapeHtml(t.title), t.status === 'done' ? escapeHtml(t.last || '') : '',
+          DASH_WORDS.status[t.status], { dot: t.status === 'working' ? 'busy' : t.status === 'done' ? 'good' : 'open', href: t.id ? `#/item/${encodeURIComponent(t.id)}` : '' })))
     : '';
 
   const fold = (title, inner) => `<details class="dash-fold"><summary>${title}</summary>${inner}</details>`;
 
   return card
+    + heldCards
     + (needsYou.length ? rowList(needsYou) : '')
     + todoHtml
     + fold(DASH_WORDS.details,
-        sectionLabel(DASH_WORDS.claude) + rowList([claudeRows[0], ...claudeRows.slice(1).filter(r => !r.includes('data-dash-action'))])
+        sectionLabel(DASH_WORDS.claude) + rowList(claudeRows)
         + sectionLabel(DASH_WORDS.apps) + rowList(appRows.concat(machineRows[0]))
         + sectionLabel(DASH_WORDS.costs) + rowList(costRows)
         + sectionLabel(DASH_WORDS.activity)
@@ -179,7 +203,7 @@ function setupServerScreen() {
     const button = event.target.closest('[data-dash-action]');
     if (!button) return;
     event.preventDefault();
-    if (!confirm(DASH_WORDS.confirm(button.textContent.trim()))) return;
+    if (!confirm(button.dataset.ask || DASH_WORDS.confirm(button.textContent.trim()))) return;
     button.disabled = true;
     haptic(8);
     try {

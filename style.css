@@ -897,3 +897,10 @@ button.setting { cursor: pointer; }
 .dash-dot.alert { background: #7a8cd6; }
 .dash-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px var(--side) 24px; }
 .label a { color: inherit; }
+.dash-held { margin: 6px var(--side) 8px; padding: 14px 16px; border: 1px solid #e0a23a; border-radius: 14px;
+  background: color-mix(in srgb, #e0a23a 10%, transparent); }
+.dash-held b { display: block; font-weight: 600; }
+.dash-held p { margin: 6px 0; line-height: 1.45; }
+.dash-held small { display: block; color: var(--muted); overflow-wrap: anywhere; }
+.dash-held-buttons { display: flex; gap: 8px; margin-top: 10px; }
+.pill-button.approve { color: var(--accent-text); background: var(--accent); border-color: var(--accent); }
