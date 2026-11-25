@@ -946,3 +946,35 @@ button.setting { cursor: pointer; }
 .target-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .target-form label { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); }
 .target-form input { width: 5.5em; padding: 6px 8px; font: inherit; color: var(--text); background: var(--raised); border: 1px solid var(--line); border-radius: 8px; }
+
+/* Meal picker (mealpicker.js): exact products in a meal note */
+.meal-picker { margin: 8px var(--side) 14px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--raised); }
+.meal-picker-title { margin: 0 0 8px; font-size: 15px; }
+.pick-items { list-style: none; margin: 0; padding: 0; }
+.pick-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.pick-item .pick-name { grid-row: 1; grid-column: 1 / 3; min-width: 0; font-size: 15px; overflow-wrap: anywhere; }
+.pick-item .icon-button { grid-row: 1; grid-column: 3; width: 32px; height: 32px; margin: 0; }
+.pick-item .pick-amount { grid-row: 2; grid-column: 1; }
+.pick-item .pick-numbers { grid-row: 2; grid-column: 2; }
+.pick-item [data-pick-ok] { grid-row: 2; grid-column: 3; }
+.pick-item.guess .pick-name { color: var(--muted); }
+.pick-q { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: 12px; }
+.pick-amount { display: inline-flex; gap: 4px; align-items: center; }
+.pick-amount input { width: 4em; padding: 6px 8px; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; }
+.pick-amount select { min-width: 0; max-width: 9.5em; padding: 6px 4px; font: inherit; font-size: 14px; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; }
+.pick-numbers { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.pick-total { padding: 8px 0 4px; font-weight: 600; font-size: 14px; }
+.pick-search { position: relative; margin-top: 8px; }
+.pick-search input { width: 100%; box-sizing: border-box; padding: 10px 12px; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; }
+.pick-results { list-style: none; margin: 4px 0 0; padding: 0; }
+.pick-results button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: 10px 8px; text-align: start; font: inherit; color: var(--text); background: none; border: none; border-bottom: 1px solid var(--line); }
+.pick-results button:active { background: var(--fill); }
+.pick-results small { color: var(--muted); font-size: 12px; }
+.pick-mine { color: var(--accent) !important; font-weight: 600; }
+.pick-actions { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; }
+.pick-actions label { cursor: pointer; }
+.pick-new { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.pick-new label { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--muted); flex: 1 1 8em; }
+.pick-new input { padding: 6px 8px; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; }
+.barcode-layer { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: rgba(0, 0, 0, .85); }
+.barcode-layer video { width: min(92vw, 480px); border-radius: 12px; }

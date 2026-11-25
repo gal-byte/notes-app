@@ -41,6 +41,14 @@ the screen width. The zoom is kept on the device (localStorage `recipeTableZoom`
   "עוף עם אורז" is a main dish). To fix a recipe in the wrong category, give it a tag with the category's
   name. The tags themselves are unchanged.
 
+## Meal picker (2026-11-26, `mealpicker.js`)
+- A meal note has **מה אכלתי**: products with amounts, like a calorie-tracker app. Type "קוטג" → your own
+  products first (a copy on the device, `localStorage` `myProducts`), then צמרת / Open Food Facts from the
+  server (notify `foodapi`, README "Food"). Amount in grams or a serving ("2 × פרוסה"); **ברקוד** (camera on
+  Android Chrome, else type the digits), **צילום תווית** (the server reads it once) or **מוצר חדש**.
+- The list is the note's `foodItems`; the "≈" line follows its total. Items the server split from free text
+  show "?" until **אישור**. Picked products teach the server your usual brand and amount for that word.
+
 ## Food: quick logging (2026-11-25, `food.js`)
 - The hub shows up to 8 **"שוב?" chips**: meals from the last 30 days, most frequent then most recent
   (titles compared trimmed/lowercase; "ארוחה 13:05" photo-only titles are left out). One tap saves the meal

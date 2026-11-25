@@ -853,6 +853,7 @@ function editorHtml() {
     <form class="editor" id="editor">
       ${group === 'movies' || group === 'shows' ? posterHead(editor.id, title) : title}
       ${draft.draft ? `<div class="draft-line">${DRAFT_BADGE}</div>` : ''}
+      ${isMealsGroup(group) ? mealPickerHtml(draft) : ''}
       ${group === 'reels' ? reelHtml(draft) : ''}
       ${group === 'recipes' && (draft.url || draft.cover) ? recipeLinkHtml(draft) : ''}
       <div class="props">
@@ -1266,6 +1267,7 @@ function setupItemScreen() {
     event.currentTarget.querySelectorAll('textarea').forEach(autoGrow));
   if (editor.group === 'journal') setupJournalEditor(form, editor, saveSoon);
   if (isShoppingList(editor.group, editor.draft)) setupShopList(form);
+  if (isMealsGroup(editor.group)) setupMealPicker(form, editor, saveSoon);
   if (editor.group === 'movies' || editor.group === 'shows') {
     editor.seenBefore = !!editor.id && isSeen(editor.draft);
     markWatchDate(editor.draft, form);   // the "מתי ראיתי" row only once it's seen

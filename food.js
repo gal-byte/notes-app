@@ -390,7 +390,8 @@ function setupFoodHub() {
       const source = await getItem(chip.dataset.repeatMeal);
       if (!source) return;
       const line = (source.text || '').split('\n').find(l => ESTIMATE_LINE.test(l));
-      const item = await addItem(meals.id, { title: source.title.trim(), text: line ? line.trim() : '' });
+      const item = await addItem(meals.id, { title: source.title.trim(), text: line ? line.trim() : '',
+        ...(source.foodItems?.length ? { foodItems: source.foodItems.map(x => ({ ...x })) } : {}) });
       await refreshFoodToday();
       loggedToast(QUICK_WORDS.logged(item.title), item);
     } finally {

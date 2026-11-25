@@ -39,6 +39,7 @@ const APP_FILES = [
   'health.js',
   'sections.js',
   'food.js',
+  'mealpicker.js',
   'calendar.js',
   'groups.js',
   'search.js',
