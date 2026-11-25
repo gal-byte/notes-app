@@ -75,3 +75,9 @@ When the server Claude asked a question (an open קלוד note, not טופל / �
 opens a small panel instead: the note, the question, a box, and "שליחה" / "שליחה והרצה עכשיו". Sending
 appends "— תשובה (date): <answer>" to the note (synced as usual); the second button also asks the server
 to run the to-do list now (`run-todo`). The next run reads the answer and continues the request.
+
+**"קלוד" button** (note page, next to שיתוף; `sections.js` `askClaude`): in the group קלוד it saves and syncs
+the note, then asks the server to run the to-do list now (`run-todo`); the runner still takes the oldest open
+note first, so the toast says how many are ahead. A note tagged בעבודה / טופל is not re-run (remove טופל to
+run it again). In any other group it opens a new Claude chat (`https://claude.ai/new?q=…`, or the Claude app
+if it takes the link) with the note's text (cut at 6000 characters).

@@ -866,6 +866,7 @@ function editorHtml() {
       ${texts}
       <div class="editor-actions">
         <button type="button" class="text-button" id="share-button">${icon('share', 'inline')} ${TEXT.share}</button>
+        <button type="button" class="text-button" id="claude-button">${icon('sparkle', 'inline')} ${ASK_CLAUDE_WORDS.button}</button>
         <button type="button" class="text-button danger" id="delete-button">${TEXT.deleteItem}</button>
       </div>
       ${noteDatesHtml(draft)}
@@ -939,6 +940,71 @@ async function shareItem(group, item) {
   } catch {
     prompt('', text);
   }
+}
+
+// ============================================================
+// "קלוד" BUTTON (note page)
+// In the group קלוד: asks the server to run the to-do list now (same run-todo action as the
+// "Claude now" bar; the runner takes the oldest open note first). Anywhere else: opens Claude
+// (claude.ai/new, or the Claude app if it handles the link) with the note's text as the message.
+// ============================================================
+
+const ASK_CLAUDE_WORDS = {
+  button: 'קלוד',
+  started: 'קלוד מתחיל עכשיו',
+  queued: n => `קלוד מתחיל; קודם ${n} ישנות יותר ברשימה`,
+  working: 'קלוד כבר עובד על זה',
+  done: 'כבר טופל (הסר את התגית טופל כדי להריץ שוב)',
+  noTitle: 'כתוב כותרת קודם',
+  offline: 'השרת לא עונה (מחוץ ל-Tailscale?)',
+  intro: 'זו פתקה מאפליקציית הפתקים שלי:',
+};
+const CLAUDE_NEW_CHAT = 'https://claude.ai/new?q=';
+const CLAUDE_MAX_TEXT = 6000;   // long links get cut by browsers; the rest goes to the clipboard
+
+// How many open notes in קלוד are older than this one (the runner does those first)
+function claudeQueueAhead(items, groupId, item) {
+  return items.filter(other => other.group === groupId && other.id !== item.id
+    && !parseTags(other.tags).some(tag => tag === 'טופל' || tag === 'בעבודה')
+    && (other.createdAt || 0) < (item.createdAt || Date.now())).length;
+}
+
+function claudeChatUrl(group, item) {
+  let text = `${ASK_CLAUDE_WORDS.intro}\n\n${shareText(group, item)}`;
+  if (text.length > CLAUDE_MAX_TEXT) text = text.slice(0, CLAUDE_MAX_TEXT) + '…';
+  return CLAUDE_NEW_CHAT + encodeURIComponent(text);
+}
+
+async function askClaude(group, item, saveFirst) {
+  haptic(8);
+  if (!isClaudeGroup(findGroup(group))) {
+    window.open(claudeChatUrl(group, item), '_blank', 'noopener');
+    return;
+  }
+  const tags = parseTags(item.tags);
+  if (tags.includes('בעבודה')) { showToast(escapeHtml(ASK_CLAUDE_WORDS.working)); return; }
+  if (tags.includes('טופל')) { showToast(escapeHtml(ASK_CLAUDE_WORDS.done)); return; }
+  if (!(item.title || '').trim()) { showToast(escapeHtml(ASK_CLAUDE_WORDS.noTitle)); return; }
+  const id = await saveFirst();            // a brand-new note gets its id here
+  item = (id && await getItem(id)) || item;
+  await syncNow().catch(() => {});         // the server must have it before the run starts
+  let message;
+  try {
+    const response = await fetch(`${SERVER}/dashboard/action`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'run-todo' }), signal: AbortSignal.timeout(10000),
+    });
+    const reply = await response.json();
+    if (reply.ok) {
+      const ahead = claudeQueueAhead(await getAllItems(), group, item);
+      message = ahead ? ASK_CLAUDE_WORDS.queued(ahead) : ASK_CLAUDE_WORDS.started;
+    } else {
+      message = reply.message || reply.error || '✗';
+    }
+  } catch {
+    message = ASK_CLAUDE_WORDS.offline;
+  }
+  showToast(escapeHtml(message));
 }
 
 // Textareas grow with their text instead of scrolling inside.
@@ -1139,6 +1205,11 @@ function setupItemScreen() {
 
     if (event.target.closest('#share-button')) {
       shareItem(editor.group, editor.draft);
+      return;
+    }
+
+    if (event.target.closest('#claude-button')) {
+      askClaude(editor.group, editor.draft, async () => { await saveNow(); return editor.id; });
       return;
     }
 
