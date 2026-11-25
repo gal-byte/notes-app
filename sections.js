@@ -483,9 +483,9 @@ const REEL_TYPES = {
   recipe: 'מתכון', place: 'מקום', tip: 'טיפ', product: 'מוצר', funny: 'מצחיק', music: 'מוזיקה', news: 'חדשות', other: 'אחר',
 };
 const REEL_WORDS = {
-  new: 'בתור לקריאה', working: 'נקרא עכשיו', ready: 'מחכה לסיכום', failed: 'נכשל',
-  open: 'לפתוח את הסרטון', retry: 'לנסות שוב', summary: 'סיכום', transcript: 'תמלול',
-  caption: 'כיתוב', by: 'מאת', recipe: 'למתכון', retrying: 'ינסה שוב בדקה הקרובה',
+  new: 'בהכנה', working: 'בהכנה', ready: 'בהכנה', failed: 'לא נפתח',
+  failedLong: 'לא הצלחתי לפתוח את הסרטון', open: 'לסרטון', retry: 'לנסות שוב', transcript: 'תמלול',
+  caption: 'כיתוב', recipe: 'למתכון', retrying: 'בהכנה',
 };
 
 function coverImg(id, size = 'thumb', cls = 'thumb') {
@@ -496,11 +496,20 @@ function withCover(row, item) {
   return item.cover ? row.replace('<span class="row-main">', `${coverImg(item.cover)}<span class="row-main">`) : row;
 }
 
+// "Name • Tagline" / "@handle" → just the name
+const reelCreator = by => (by || '').split(/\s+[•|·]\s+/)[0].replace(/^@/, '').trim();
+
+// The summary is stored as "• line" per point; show it as a plain list
+function reelPoints(summary) {
+  const points = String(summary || '').split(/\n|\s•\s/).map(line => line.replace(/^[\s•\-*·]+/, '').trim()).filter(Boolean);
+  return points.length ? `<ul class="reel-points" dir="auto">${points.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul>` : '';
+}
+
 function reelsList(items) {
   return rowList(items.map(item => {
     const status = item.reelStatus || 'done';
     const end = status === 'done' ? '' : `<span class="reel-status s-${escapeHtml(status)}">${REEL_WORDS[status] || ''}</span>`;
-    const sub = [REEL_TYPES[item.reelType], item.by].filter(Boolean).map(escapeHtml).join(' · ');
+    const sub = status === 'done' ? escapeHtml(REEL_TYPES[item.reelType] || '') : '';
     return withCover(itemRow(item, sub, { end }), item);
   }));
 }
@@ -509,13 +518,12 @@ function reelsList(items) {
 function reelHtml(draft) {
   const status = draft.reelStatus || 'done';
   const url = /^https?:\/\//.test(draft.url || '') ? draft.url : '';
-  const statusLine = status === 'done' ? '' : `<div class="reel-state s-${escapeHtml(status)}">${REEL_WORDS[status] || ''}${
-    status === 'failed' && draft.reelError ? ` · ${escapeHtml(draft.reelError)}` : ''}${
+  const statusLine = status === 'done' ? '' : `<div class="reel-state s-${escapeHtml(status)}">${
+    status === 'failed' ? REEL_WORDS.failedLong : REEL_WORDS[status] || ''}${
     status === 'failed' ? ` <button type="button" class="pill-button" data-reel-retry>${icon('repeat', 'inline')} ${REEL_WORDS.retry}</button>` : ''}</div>`;
-  const facts = [REEL_TYPES[draft.reelType], draft.by && `${REEL_WORDS.by} ${draft.by}`].filter(Boolean)
+  const facts = [REEL_TYPES[draft.reelType], reelCreator(draft.by)].filter(Boolean)
     .map(f => `<span>${escapeHtml(f)}</span>`).join('');
-  const summary = draft.summary ? `<span class="label">${REEL_WORDS.summary}</span><div class="reel-summary" dir="auto">${
-    escapeHtml(draft.summary)}</div>` : '';
+  const summary = reelPoints(draft.summary);
   const place = draft.placeName ? `<div class="reel-place" dir="auto">${icon('pin', 'inline')} ${escapeHtml(draft.placeName)}</div>` : '';
   const recipe = draft.recipeId ? `<a class="pill-button" href="#/item/${escapeHtml(draft.recipeId)}">${icon('utensils', 'inline')} ${REEL_WORDS.recipe}</a>` : '';
   const more = (label, text) => text ? `<details class="reel-more"><summary>${label}</summary><div dir="auto">${escapeHtml(text)}</div></details>` : '';
@@ -535,8 +543,8 @@ const DRAFT_BADGE = '<span class="draft-badge">טיוטה</span>';
 // (recipelinks.py in notify) reads the site or video and fills it in ('ready'); Claude tidies it up
 // through the connector (fill_recipe) and clears the draft ('done'). 'failed' + recipeError otherwise.
 const RECIPE_LINK_WORDS = {
-  new: 'בתור לקריאה', working: 'נקרא עכשיו', ready: 'מחכה לסידור של קלוד', failed: 'נכשל',
-  source: 'למקור', fromSource: 'מהמקור', retry: 'לנסות שוב', retrying: 'ינסה שוב בדקה הקרובה',
+  new: 'בהכנה', working: 'בהכנה', ready: 'בהכנה', failed: 'לא נפתח',
+  source: 'למקור', fromSource: 'מהמקור', retry: 'לנסות שוב', retrying: 'בהכנה',
 };
 
 function recipeStatusPill(item) {

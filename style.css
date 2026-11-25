@@ -816,13 +816,14 @@ button.setting { cursor: pointer; }
 /* Reels (רילס) */
 .reel-status { font-size: 13px; padding: 2px 8px; border-radius: 999px; background: var(--fill); color: var(--muted); white-space: nowrap; }
 .reel-status.s-failed, .reel-state.s-failed { color: #c0392b; }
-.reel-status.s-ready { color: var(--text); }
 .reel-box { padding: 0 var(--side) 6px; }
 .reel-cover { display: block; width: 100%; max-height: 46vh; object-fit: cover; border-radius: 14px; margin-bottom: 10px; background: var(--fill); }
 .reel-cover:not(.loaded) { min-height: 120px; }
 .reel-facts { padding: 0 0 10px; }
 .reel-state { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 15px; color: var(--muted); }
-.reel-summary { white-space: pre-wrap; line-height: 1.55; margin: 4px 0 12px; }
+.reel-points { margin: 6px 0 14px; padding-inline-start: 20px; line-height: 1.55; }
+.reel-points li { margin-bottom: 6px; }
+.reel-points li::marker { color: var(--muted); }
 .reel-place { margin-bottom: 12px; }
 .todo-heading { margin: 4px 0 8px; color: var(--muted); font-size: 15px; }
 .todo-done { margin-top: 18px; }
