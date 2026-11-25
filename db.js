@@ -66,7 +66,9 @@ async function runInStore(storeName, mode, action) {
     const request = action(transaction.objectStore(storeName));
     transaction.oncomplete = () => {
       // Something changed in your notes: let the home server know (see sync.js)
-      if (storeName === 'items' && mode === 'readwrite' && typeof notesChanged === 'function') notesChanged();
+      // (groups and deletions too: a new, renamed or deleted folder syncs right away)
+      if (['items', 'groups', 'deleted'].includes(storeName) && mode === 'readwrite' &&
+          typeof notesChanged === 'function') notesChanged();
       resolve(request.result);
     };
     transaction.onerror = () => reject(transaction.error);
