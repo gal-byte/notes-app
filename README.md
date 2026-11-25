@@ -41,6 +41,17 @@ the screen width. The zoom is kept on the device (localStorage `recipeTableZoom`
   "עוף עם אורז" is a main dish). To fix a recipe in the wrong category, give it a tag with the category's
   name. The tags themselves are unchanged.
 
+## Food: quick logging (2026-11-25, `food.js`)
+- The hub shows up to 8 **"שוב?" chips**: meals from the last 30 days, most frequent then most recent
+  (titles compared trimmed/lowercase; "ארוחה 13:05" photo-only titles are left out). One tap saves the meal
+  again in ארוחות with the old note's "≈" line, so the numbers show at once (the server's autofill skips notes
+  that already have one). The message has **ביטול** (deletes the new note); today's total updates in place.
+- **צילום ארוחה** opens the camera directly and saves "ארוחה 13:05" with the photo, staying on the hub (no
+  editor). `#/meal` (app icon shortcut) is unchanged.
+- The home **אוכל** row shows today's "1,450 קל׳ · 82 ג׳" (or "2 ארוחות היום" while waiting for estimates),
+  and the item count when nothing is logged today.
+- Not done: a daily calorie/protein target in settings.
+
 ## Server screen (2026-11-25, `dashboard.js`, `#/server`)
 The shield at the top of home opens **שרת**: whether the home server's apps answer (and stopped containers,
 TV hub, memory, disk), Claude on the server (last and next run of the קלוד to-do list, its result, changes

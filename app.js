@@ -279,11 +279,13 @@ async function homeScreen() {
   counts.food = (counts.recipes || 0) + (counts[mealsGroup()?.id] || 0);
   const homeGroups = GROUPS.flatMap(group => group.id === 'recipes' ? [FOOD_HUB]
     : isFoodHubGroup(group.id) ? [] : [group]);
+  // The אוכל row shows today's numbers (food.js), or the count when nothing is logged today
+  const foodEnd = await foodHomeEnd(counts.food);
   const groupRows = homeGroups.map(group => `
     <a class="row" href="#/group/${group.id}">
       ${groupBadge(group, 'small')}
       <span class="row-main"><span class="row-title">${escapeHtml(group.name)}</span></span>
-      <span class="row-end">${counts[group.id] || ''}</span>
+      <span class="row-end">${group.id === 'food' ? foodEnd : counts[group.id] || ''}</span>
     </a>`);
   groupRows.push(`
     <a class="row row-quiet" href="#/group-settings/new">
@@ -489,7 +491,7 @@ async function buildScreen(page, id, extra) {
   // "#/food": meals, recipes, shopping list and kitchen in one place; the box at the bottom logs a meal
   if (page === 'food') {
     return { title: HUB_WORDS.title, html: await foodScreen(), back: '#/home', addTo: mealsGroup()?.id,
-             setup: () => { document.getElementById('quick-text').placeholder = HUB_WORDS.addPlaceholder; } };
+             setup: setupFoodHub };
   }
   if (page === 'group' && groupExists(id)) {
     const group = findGroup(id);

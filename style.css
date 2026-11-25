@@ -928,3 +928,8 @@ button.setting { cursor: pointer; }
 .food-ate { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin: 4px 0 14px; padding: 0 var(--side); }
 .food-ate .meals-today { padding: 0; }
 .food-ate .todo-heading, .food-ate .field-hint { margin: 0; }
+/* "שוב?" chips: one tap logs that meal again */
+.meal-chips { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; margin-bottom: 6px; }
+.meal-chips .chip { color: var(--text); max-width: 100%; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.meal-chips .chip:active { transform: scale(.96); }
+.meal-chips .chip:disabled { opacity: .5; }
