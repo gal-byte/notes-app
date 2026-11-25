@@ -328,6 +328,13 @@ function analyzeQuickAdd(text, chosenGroup = null, now = new Date()) {
     shortcutGroup = groupForShortcut(shortcut[1].trim());
     if (shortcutGroup) title = title.slice(shortcut[0].length);
   }
+  // "אכלתי שקשוקה" → a meal "שקשוקה" in ארוחות (food.js), when that group exists
+  const ate = !chosenGroup && !shortcutGroup && title.match(/^אכלתי\s+/);
+  const meals = ate && typeof mealsGroup === 'function' ? mealsGroup() : null;
+  if (meals) {
+    shortcutGroup = meals.id;
+    title = title.slice(ate[0].length);
+  }
 
   // 2 + 3. Guess from dates and words
   let wordGroup = null;

@@ -29,6 +29,16 @@ the screen width. The zoom is kept on the device (localStorage `recipeTableZoom`
   item to the bottom as "✓ חלב" in the text; the server's `shopping_list` ignores ✓ lines and drops them on
   its next change. The plain text is under "עריכת הרשימה".
 
+## Food hub (2026-11-25, `food.js`, `#/food`)
+- Home shows one **אוכל** row (where מתכונים was) instead of separate מתכונים and ארוחות rows. Inside: today's
+  total, "מה אכלתי?" (the box at the bottom adds a meal to ארוחות; **צילום ארוחה** opens `#/meal`), then rows for
+  ארוחות, מתכונים, 🛒 רשימת קניות and 🍳 מה יש במטבח (both notes stay in לא ממוין; a row shows only if the note exists).
+  Back from ארוחות / מתכונים goes to the hub. Nothing is moved or renamed.
+- Anywhere, typing "אכלתי שקשוקה" in the quick-add box saves a meal "שקשוקה" in ארוחות.
+- Recipes filter by fixed categories instead of every tag: ארוחת בוקר, קינוחים, מרקים, סלטים, מאפים ולחמים,
+  תוספות, עיקריות, אחר. Worked out from the tags and title (`RECIPE_CATEGORIES`); a tag that is exactly a
+  category name wins. The tags themselves are unchanged.
+
 ## Server screen (2026-11-25, `dashboard.js`, `#/server`)
 The shield at the top of home opens **שרת**: whether the home server's apps answer (and stopped containers,
 TV hub, memory, disk), Claude on the server (last and next run of the קלוד to-do list, its result, changes

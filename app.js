@@ -275,7 +275,11 @@ async function homeScreen() {
     ${weekStripHtml(reminders)}
     <div id="week-list">${weekDayListHtml(reminders)}</div>`;
 
-  const groupRows = GROUPS.map(group => `
+  // Recipes and meals sit together under one "אוכל" row (food.js), where recipes used to be
+  counts.food = (counts.recipes || 0) + (counts[mealsGroup()?.id] || 0);
+  const homeGroups = GROUPS.flatMap(group => group.id === 'recipes' ? [FOOD_HUB]
+    : isFoodHubGroup(group.id) ? [] : [group]);
+  const groupRows = homeGroups.map(group => `
     <a class="row" href="#/group/${group.id}">
       ${groupBadge(group, 'small')}
       <span class="row-main"><span class="row-title">${escapeHtml(group.name)}</span></span>
@@ -482,9 +486,14 @@ async function buildScreen(page, id, extra) {
   if (page === 'calendar') {
     return { title: '', html: await calendarScreen(), back: '#/home', setup: setupCalendar };
   }
+  // "#/food": meals, recipes, shopping list and kitchen in one place; the box at the bottom logs a meal
+  if (page === 'food') {
+    return { title: HUB_WORDS.title, html: await foodScreen(), back: '#/home', addTo: mealsGroup()?.id,
+             setup: () => { document.getElementById('quick-text').placeholder = HUB_WORDS.addPlaceholder; } };
+  }
   if (page === 'group' && groupExists(id)) {
     const group = findGroup(id);
-    return { title: group.name, html: await groupScreen(group), back: '#/home', addTo: group.id,
+    return { title: group.name, html: await groupScreen(group), back: isFoodHubGroup(group.id) ? '#/food' : '#/home', addTo: group.id,
              setup: group.id === 'journal' ? setupJournalScreen : undefined,
              actions: group.custom ? headerLink(`#/group-settings/${group.id}`, 'pencil', TEXT.editGroupButton) : '' };
   }

@@ -592,9 +592,10 @@ function recipeLinkHtml(draft) {
 }
 
 // Recipes and your own groups: photo, first line or tags, tag filters
-function plainList(items) {
+// Recipes filter by a few fixed categories instead of every tag (recipeCategory in food.js)
+function plainList(items, byCategory = false) {
   const allTags = [...new Set(items.flatMap(item => parseTags(item.tags)))];
-  const chips = allTags.length > 1
+  const chips = byCategory ? recipeCategoryChips(items) : allTags.length > 1
     ? filterChips(Object.fromEntries([['', TEXT.all], ...allTags.map(tag => [tag, tag])]), '')
     : '';
   return chips + rowList(items.map(item => {
@@ -602,7 +603,7 @@ function plainList(items) {
     const sub = escapeHtml((item.text || '').split('\n').filter(line => !ESTIMATE_LINE.test(line))[0] || tags.join(', '));
     const end = recipeStatusPill(item) || mealPillHtml(item) ||
       (item.calories ? `<span class="calories">${escapeHtml(TEXT.calories(String(item.calories).trim()))}</span>` : '');
-    const row = itemRow(item, sub, { photo: item.photo, filter: tags.join('|'), end, after: item.draft ? ' ' + DRAFT_BADGE : '' });
+    const row = itemRow(item, sub, { photo: item.photo, filter: byCategory ? recipeCategory(item) : tags.join('|'), end, after: item.draft ? ' ' + DRAFT_BADGE : '' });
     return item.photo ? row : withCover(row, item);
   }));
 }
@@ -643,6 +644,7 @@ async function groupScreen(group) {
     movies: items => moviesList(items, MOVIE_LISTS),
     shows: items => moviesList(items, SHOW_LISTS),
     gifts: giftsList, reels: reelsList,
+    recipes: items => plainList(items, true),
   };
   const draw = lists[group.id] || (isClaudeGroup(group) ? claudeTodoList
     : isMealsGroup(group.id) ? items => mealsTodayHtml(items) + plainList(items) : plainList);

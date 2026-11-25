@@ -144,3 +144,96 @@ function setupShopList(form) {
   box.addEventListener('input', redraw);
   form.querySelector('.shop-edit').addEventListener('toggle', () => autoGrow(box));
 }
+
+// ============================================================
+// THE FOOD HUB (#/food, 2026-11-25)
+// One "אוכל" row on home instead of separate מתכונים and ארוחות rows.
+// Inside: today's total, an easy "what I ate" (the box at the bottom adds
+// a meal, 📷 opens #/meal), then meals, recipes, the shopping list and
+// the kitchen note. Nothing moves: the notes stay in their groups.
+// ============================================================
+
+const KITCHEN_TITLE = '🍳 מה יש במטבח';
+const HUB_WORDS = {
+  title: 'אוכל',
+  photoMeal: 'צילום ארוחה',
+  addHint: 'מה אכלתי? כתבו בתיבה למטה, או צלמו',
+  addPlaceholder: 'מה אכלתי?…',
+  meals: 'ארוחות', recipes: 'מתכונים', shopping: 'רשימת קניות', kitchen: 'מה יש במטבח',
+  mealsToday: n => n ? `${n} היום` : '',
+  toBuy: n => n ? `${n} לקנות` : '',
+  items: n => n ? `${n} פריטים` : '',
+};
+const FOOD_HUB = { id: 'food', name: HUB_WORDS.title, icon: 'utensils', tint: 'green' };
+
+// Groups that live inside the hub (their own rows are left off home)
+function isFoodHubGroup(groupId) {
+  return groupId === 'recipes' || isMealsGroup(groupId);
+}
+
+async function foodNote(title) {
+  return (await getItemsInGroup('inbox')).find(item => (item.title || '').trim() === title) || null;
+}
+
+async function foodScreen() {
+  const meals = mealsGroup();
+  const mealItems = meals ? await getItemsInGroup(meals.id) : [];
+  const recipes = await getItemsInGroup('recipes');
+  const shop = await foodNote(SHOP_TITLE);
+  const kitchen = await foodNote(KITCHEN_TITLE);
+  const today = toISODate(new Date());
+  const todayCount = mealItems.filter(item => item.createdAt && toISODate(new Date(item.createdAt)) === today).length;
+  const openToBuy = shop ? shopLines(shop.text).filter(line => !line.startsWith('✓')).length : 0;
+
+  const row = (href, badge, name, end) => `
+    <a class="row" href="${href}">
+      ${groupBadge(badge, 'small')}
+      <span class="row-main"><span class="row-title">${escapeHtml(name)}</span></span>
+      <span class="row-end">${end}</span>
+    </a>`;
+  const rows = [];
+  if (meals) rows.push(row(`#/group/${meals.id}`, meals, HUB_WORDS.meals, HUB_WORDS.mealsToday(todayCount)));
+  rows.push(row('#/group/recipes', findGroup('recipes'), HUB_WORDS.recipes, recipes.length || ''));
+  if (shop) rows.push(row(`#/item/${shop.id}`, { icon: 'cart', tint: 'amber' }, HUB_WORDS.shopping, HUB_WORDS.toBuy(openToBuy)));
+  if (kitchen) rows.push(row(`#/item/${kitchen.id}`, { icon: 'home', tint: 'teal' }, HUB_WORDS.kitchen,
+    HUB_WORDS.items(shopLines(kitchen.text).length)));
+
+  const ate = meals ? `
+    <div class="food-ate">
+      ${mealsTodayHtml(mealItems)}
+      <p class="field-hint">${HUB_WORDS.addHint}</p>
+      <a class="pill-button" href="#/meal">${icon('camera', 'inline')} ${HUB_WORDS.photoMeal}</a>
+    </div>` : '';
+  return ate + rowList(rows);
+}
+
+// ---------- Recipe categories ----------
+// Recipe tags are free words (עוף, אייר פרייר, יפני…). The list's filter shows a few
+// fixed categories instead, worked out from the tags and the title. A tag that is
+// exactly a category's name wins; otherwise the first category whose words match.
+const RECIPE_CATEGORIES = [
+  ['ארוחת בוקר', ['ארוחת בוקר', 'בוקר', 'חביתה', 'שקשוקה', 'פנקייק', 'גרנולה', 'דייסה', 'טוסט']],
+  ['קינוחים', ['קינוח', 'עוג', 'שוקולד', 'גלידה', 'בראוני', 'מאפין', 'מתוק', 'פאי', 'קרם', 'ממתק']],
+  ['מרקים', ['מרק']],
+  ['סלטים', ['סלט']],
+  ['מאפים ולחמים', ['לחם', 'מאפה', 'מאפים', 'פיצה', 'בצק', 'פוקאצ', 'פיתה', 'בורקס']],
+  ['תוספות', ['תוספת', 'צ\'יפס', 'ציפס', 'בטטה', 'תפוחי אדמה', 'תפו"א', 'אורז', 'פירה', 'קוסקוס', 'פתיתים']],
+  ['עיקריות', ['עיקרית', 'עיקריות', 'עוף', 'בשר', 'דג', 'סלמון', 'פסטה', 'קציצ', 'טופו', 'סטייק', 'המבורגר', 'נודלס', 'שניצל', 'קארי', 'מוקפץ']],
+];
+const OTHER_CATEGORY = 'אחר';
+
+function recipeCategory(item) {
+  const tags = parseTags(item.tags).map(tag => tag.trim());
+  const named = RECIPE_CATEGORIES.find(([name]) => tags.includes(name));
+  if (named) return named[0];
+  const words = [...tags, item.title || ''].join(' ');
+  const found = RECIPE_CATEGORIES.find(([, keys]) => keys.some(key => words.includes(key)));
+  return found ? found[0] : OTHER_CATEGORY;
+}
+
+// "הכל" plus the categories that have recipes, in the fixed order
+function recipeCategoryChips(items) {
+  const used = new Set(items.map(recipeCategory));
+  const names = [...RECIPE_CATEGORIES.map(([name]) => name), OTHER_CATEGORY].filter(name => used.has(name));
+  return names.length > 1 ? filterChips(Object.fromEntries([['', TEXT.all], ...names.map(n => [n, n])]), '') : '';
+}
