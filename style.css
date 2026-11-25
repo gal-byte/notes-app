@@ -874,10 +874,18 @@ button.setting { cursor: pointer; }
 .shop-edit { padding: 0; }
 .shop-edit summary { padding: 4px var(--side); }
 
-/* Server screen (dashboard.js) */
+/* Server screen (dashboard.js): one card, what needs you, the rest folded */
+.dash-card { display: flex; flex-direction: column; gap: 2px; margin: 10px var(--side) 6px; padding: 14px 16px;
+  border-radius: 14px; font-size: 14px; color: var(--muted); }
+.dash-card b { font-size: 18px; font-weight: 600; margin-bottom: 2px; }
+.dash-card.good { background: var(--accent-soft); }
+.dash-card.good b { color: var(--accent); }
+.dash-card.bad { background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.dash-card.bad b { color: var(--danger); }
 .dash-summary { margin: 8px var(--side) 4px; padding: 10px 14px; border-radius: 12px; font-weight: 500; }
-.dash-summary.good { color: var(--accent); background: var(--accent-soft); }
 .dash-summary.bad { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.dash-fold { margin-top: 6px; }
+.dash-fold summary { cursor: pointer; padding: 10px var(--side); color: var(--muted); font-size: 15px; }
 .dash-row { align-items: flex-start; }
 .dash-row .row-end { align-self: center; }
 .dash-wrap { white-space: normal; overflow-wrap: anywhere; }

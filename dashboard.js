@@ -34,6 +34,7 @@ const DASH_WORDS = {
   costs: 'עלות Claude היום',
   total: 'סה״כ',
   activity: 'מה קרה',
+  details: 'פרטים',
   nothing: 'שום דבר עדיין',
   actions: 'פעולות',
   confirm: label => `${label}?`,
@@ -124,18 +125,38 @@ function dashHtml(d) {
   const buttons = (d.actions || []).filter(a => !a.id.startsWith('deploy:')).map(a =>
     `<button type="button" class="pill-button" data-dash-action="${escapeHtml(a.id)}">${escapeHtml(a.label)}</button>`).join('');
 
-  const summary = problems.length
-    ? `<p class="dash-summary bad">${DASH_WORDS.problems(problems.length)}: ${escapeHtml(problems.join(', '))}</p>`
-    : `<p class="dash-summary good">${DASH_WORDS.allGood}</p>`;
+  // Calm by default: one card, then only what needs you. Everything else is folded away.
+  const claudeLine = run.state === 'running' ? DASH_WORDS.running
+    : `${DASH_WORDS.nextRun} ${dashNext(run.next) || '—'}`;
+  const card = `
+    <div class="dash-card ${problems.length ? 'bad' : 'good'}">
+      <b>${problems.length ? `${DASH_WORDS.problems(problems.length)}: ${escapeHtml(problems.join(', '))}` : DASH_WORDS.allGood}</b>
+      <span>קלוד · ${claudeLine}</span>
+      <span>${DASH_WORDS.costs} · ${dashDollars(total)}</span>
+    </div>`;
 
-  return summary
-    + sectionLabel(DASH_WORDS.apps) + rowList(appRows.concat(machineRows))
-    + sectionLabel(DASH_WORDS.claude) + rowList(claudeRows)
-    + sectionLabel(todoGroup ? `<a href="#/group/${todoGroup.id}">${DASH_WORDS.todo}</a>` : DASH_WORDS.todo)
-    + rowList(todoRows.length ? todoRows : [dashRow(DASH_WORDS.nothing, '', '')])
-    + sectionLabel(DASH_WORDS.costs) + rowList(costRows)
-    + sectionLabel(DASH_WORDS.activity) + rowList(activityRows.length ? activityRows : [dashRow(DASH_WORDS.nothing, '', '')])
-    + sectionLabel(DASH_WORDS.actions) + `<div class="dash-actions">${buttons}</div>`;
+  const needsYou = appRows.filter((_, i) => !(d.health || [])[i]?.ok)
+    .concat(machineRows.slice(1), claudeRows.filter(r => r.includes('data-dash-action')));
+
+  const openTodo = (d.todo || []).filter(t => t.status !== 'done');
+  const todoHtml = openTodo.length
+    ? sectionLabel(todoGroup ? `<a href="#/group/${todoGroup.id}">${DASH_WORDS.todo}</a>` : DASH_WORDS.todo)
+      + rowList(openTodo.map(t => dashRow(escapeHtml(t.title), '', DASH_WORDS.status[t.status],
+          { dot: t.status === 'working' ? 'busy' : 'open', href: t.id ? `#/item/${encodeURIComponent(t.id)}` : '' })))
+    : '';
+
+  const fold = (title, inner) => `<details class="dash-fold"><summary>${title}</summary>${inner}</details>`;
+
+  return card
+    + (needsYou.length ? rowList(needsYou) : '')
+    + todoHtml
+    + fold(DASH_WORDS.details,
+        sectionLabel(DASH_WORDS.claude) + rowList([claudeRows[0], ...claudeRows.slice(1).filter(r => !r.includes('data-dash-action'))])
+        + sectionLabel(DASH_WORDS.apps) + rowList(appRows.concat(machineRows[0]))
+        + sectionLabel(DASH_WORDS.costs) + rowList(costRows)
+        + sectionLabel(DASH_WORDS.activity)
+        + rowList(activityRows.length ? activityRows.slice(0, 8) : [dashRow(DASH_WORDS.nothing, '', '')]))
+    + fold(DASH_WORDS.actions, `<div class="dash-actions">${buttons}</div>`);
 }
 
 async function loadDashboard() {
