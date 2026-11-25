@@ -219,3 +219,83 @@ function setupServerScreen() {
     setTimeout(loadDashboard, 4000);
   });
 }
+
+// ============================================================
+// "CLAUDE NOW" BAR (top of home): what Claude is doing right now, from notify's light
+// GET /dashboard/now (dashboard.py now()): the server Claude on a note, a change waiting
+// for your OK, Claude in a chat changing notes, or idle with the last result.
+// Polled every 45 s while home is open and the app is in front. Tap: #/server.
+// Hidden when the server doesn't answer (outside Tailscale).
+// ============================================================
+
+const NOW_WORDS = {
+  working: (title, since) => `קלוד עובד על ${title ? `"${title}"` : 'משימה מהרשימה'}${since ? ` · מ-${since}` : ''}`,
+  waiting: repos => `שינוי של קלוד מחכה לאישור שלך${repos ? ` (${repos})` : ''}`,
+  chat: (what, body) => `קלוד בשיחה · ${what}${body ? `: ${body}` : ''}`,
+  idle: 'קלוד פנוי',
+  failed: 'הריצה האחרונה נכשלה',
+  question: 'שאלה מחכה לך ב-קלוד',
+  last: line => `אחרון: ${line}`,
+};
+const NOW_POLL_MS = 45000;
+let claudeNow = null;     // the last answer, so home redraws show it at once
+let claudeNowTimer = null;
+
+const hhmm = date => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+function claudeNowParts(now) {
+  if (!now?.ok) return null;
+  if (now.state === 'working') {
+    const since = Date.parse(now.since || '');
+    return { dot: 'busy', text: NOW_WORDS.working(now.title, Number.isNaN(since) ? '' : hhmm(new Date(since))) };
+  }
+  if (now.state === 'waiting') return { dot: 'busy', text: NOW_WORDS.waiting((now.held_repos || []).join(', ')) };
+  if (now.state === 'chat') {
+    return { dot: 'busy', text: NOW_WORDS.chat((now.title || '').replace(/^קלוד /, ''), now.body || '') };
+  }
+  const last = now.last || {};
+  const ended = Date.parse(last.ended || '');
+  const fresh = !Number.isNaN(ended) && Date.now() - ended < 36 * 3600 * 1000;
+  if (fresh && last.failed) return { dot: 'bad', text: `${NOW_WORDS.idle} · ${NOW_WORDS.failed}` };
+  if (fresh && last.status === 'skipped') return { dot: 'alert', text: `${NOW_WORDS.idle} · ${NOW_WORDS.question}` };
+  if (fresh && last.line) return { dot: 'good', text: `${NOW_WORDS.idle} · ${NOW_WORDS.last(last.line)}` };
+  return { dot: 'good', text: NOW_WORDS.idle };
+}
+
+function claudeNowHtml(now) {
+  const parts = claudeNowParts(now);
+  return parts
+    ? `<i class="dash-dot ${parts.dot}"></i><span>${escapeHtml(parts.text)}</span>`
+    : '';
+}
+
+function drawClaudeNow() {
+  const bar = document.getElementById('claude-now');
+  if (!bar) return;
+  const html = claudeNowHtml(claudeNow);
+  bar.innerHTML = html;
+  bar.hidden = !html;
+}
+
+async function pollClaudeNow() {
+  if (!document.getElementById('claude-now') || document.hidden) return;
+  try {
+    const response = await fetch(`${SERVER}/dashboard/now`, { signal: AbortSignal.timeout(8000) });
+    claudeNow = response.ok ? await response.json() : null;
+  } catch {
+    claudeNow = null;
+  }
+  drawClaudeNow();
+}
+
+// Called by setupHome(): draw what we know, ask again now and every 45 s while home is shown
+function startClaudeNow() {
+  drawClaudeNow();
+  pollClaudeNow();
+  if (claudeNowTimer) return;
+  claudeNowTimer = setInterval(() => {
+    if (!document.getElementById('claude-now')) { clearInterval(claudeNowTimer); claudeNowTimer = null; return; }
+    pollClaudeNow();
+  }, NOW_POLL_MS);
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) pollClaudeNow(); });

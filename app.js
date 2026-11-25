@@ -287,7 +287,9 @@ async function homeScreen() {
       <span class="row-main"><span class="row-title">${TEXT.newGroup}</span></span>
     </a>`);
 
-  return upcomingHtml + await pinnedHtml() + sectionLabel(TEXT.groups) + rowList(groupRows);
+  // "Claude now" (dashboard.js): a slim line, hidden until the server answers
+  const nowBar = `<a id="claude-now" class="claude-now" href="#/server" hidden>${claudeNowHtml(claudeNow)}</a>`;
+  return nowBar + upcomingHtml + await pinnedHtml() + sectionLabel(TEXT.groups) + rowList(groupRows);
 }
 
 // Pinned notes from every group, newest change first
@@ -303,6 +305,7 @@ async function pinnedHtml() {
 
 // Tap a day in the strip: show that day. Swipe down on the strip: the whole month.
 function setupHome() {
+  startClaudeNow();
   const week = document.querySelector('.week');
   if (!week) return;
   week.addEventListener('click', async event => {

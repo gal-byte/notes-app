@@ -904,3 +904,10 @@ button.setting { cursor: pointer; }
 .dash-held small { display: block; color: var(--muted); overflow-wrap: anywhere; }
 .dash-held-buttons { display: flex; gap: 8px; margin-top: 10px; }
 .pill-button.approve { color: var(--accent-text); background: var(--accent); border-color: var(--accent); }
+
+/* "Claude now" bar at the top of home (dashboard.js) */
+.claude-now { display: flex; align-items: center; gap: 8px; margin: 6px var(--side) 2px; padding: 7px 12px;
+  border-radius: 999px; background: var(--fill); color: var(--muted); font-size: 13px; text-decoration: none; }
+.claude-now[hidden] { display: none; }
+.claude-now .dash-dot { margin-top: 0; width: 7px; height: 7px; }
+.claude-now span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

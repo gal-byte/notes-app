@@ -40,3 +40,9 @@ Layout (calm by default): one card (all good or the problems, Claude's next run,
 then only what needs you: a card per change waiting for approval (Claude's short Hebrew summary, the files,
 אישור / דחייה), failing apps, the open קלוד items and the ones the server Claude finished on its own
 (not ones done in a session with Gal). The rest is folded under פרטים and פעולות.
+
+**"Claude now" bar** (top of home, `dashboard.js` `startClaudeNow`): one slim line with what Claude is doing:
+idle (with the last run's result, a waiting question or a failure from the last 36 hours) / working on
+"<note>" since <time> / a change waiting for your approval / Claude in a chat changing notes (last 15 minutes).
+It polls notify's light `GET /dashboard/now` every 45 s while home is open and the app is in front, and is
+hidden when the server doesn't answer. Tapping it opens `#/server`.
