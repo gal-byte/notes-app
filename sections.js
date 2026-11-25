@@ -486,6 +486,7 @@ const REEL_WORDS = {
   new: 'בהכנה', working: 'בהכנה', ready: 'בהכנה', failed: 'לא נפתח',
   failedLong: 'לא הצלחתי לפתוח את הסרטון', open: 'לסרטון', retry: 'לנסות שוב', transcript: 'תמלול',
   caption: 'כיתוב', recipe: 'למתכון', retrying: 'בהכנה',
+  finish: 'סיימתי עם זה', unfinish: 'להחזיר לרשימה', finished: n => `טופלו (${n})`,
 };
 
 function coverImg(id, size = 'thumb', cls = 'thumb') {
@@ -505,7 +506,18 @@ function reelPoints(summary) {
   return points.length ? `<ul class="reel-points" dir="auto">${points.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul>` : '';
 }
 
+// A reel tagged טופל (by you, or by Claude through mark_notes) is done with: it folds away at the bottom
+const REEL_DONE_TAG = 'טופל';
+const reelFinished = item => parseTags(item.tags).includes(REEL_DONE_TAG);
+
 function reelsList(items) {
+  const done = items.filter(reelFinished);
+  const open = items.filter(item => !done.includes(item));
+  return reelRows(open) +
+    (done.length ? `<details class="todo-done"><summary>${REEL_WORDS.finished(done.length)}</summary>${reelRows(done)}</details>` : '');
+}
+
+function reelRows(items) {
   return rowList(items.map(item => {
     const status = item.reelStatus || 'done';
     const end = status === 'done' ? '' : `<span class="reel-status s-${escapeHtml(status)}">${REEL_WORDS[status] || ''}</span>`;
@@ -526,14 +538,19 @@ function reelHtml(draft) {
   const summary = reelPoints(draft.summary);
   const place = draft.placeName ? `<div class="reel-place" dir="auto">${icon('pin', 'inline')} ${escapeHtml(draft.placeName)}</div>` : '';
   const recipe = draft.recipeId ? `<a class="pill-button" href="#/item/${escapeHtml(draft.recipeId)}">${icon('utensils', 'inline')} ${REEL_WORDS.recipe}</a>` : '';
+  const finish = `<button type="button" class="pill-button" data-reel-finish>${reelFinishLabel(draft)}</button>`;
   const more = (label, text) => text ? `<details class="reel-more"><summary>${label}</summary><div dir="auto">${escapeHtml(text)}</div></details>` : '';
   return `<div class="reel-box">
       ${draft.cover ? coverImg(draft.cover, 'full', 'reel-cover') : ''}
       ${facts ? `<div class="movie-meta reel-facts">${facts}</div>` : ''}
-      <div class="movie-actions">${url ? `<a class="pill-button reel-open" href="${escapeHtml(url)}" target="_blank" rel="noopener">${icon('play', 'inline')} ${REEL_WORDS.open}</a>` : ''}${recipe}</div>
+      <div class="movie-actions">${url ? `<a class="pill-button reel-open" href="${escapeHtml(url)}" target="_blank" rel="noopener">${icon('play', 'inline')} ${REEL_WORDS.open}</a>` : ''}${recipe}${finish}</div>
       ${statusLine}${summary}${place}
       ${more(REEL_WORDS.transcript, draft.transcript)}${more(REEL_WORDS.caption, draft.caption)}
     </div>`;
+}
+
+function reelFinishLabel(item) {
+  return reelFinished(item) ? `${icon('repeat', 'inline')} ${REEL_WORDS.unfinish}` : `${icon('check', 'inline')} ${REEL_WORDS.finish}`;
 }
 
 // A recipe Claude made from a reel stays a draft (טיוטה) until it's checked
@@ -1082,6 +1099,18 @@ function setupItemScreen() {
       editor.draft[box.dataset.key] = rating;
       box.querySelectorAll('button').forEach(b => b.classList.toggle('on', Number(b.dataset.value) <= rating));
       saveSoon();
+      return;
+    }
+
+    const finishButton = event.target.closest('[data-reel-finish]');
+    if (finishButton) {
+      const tags = parseTags(editor.draft.tags).filter(tag => tag !== REEL_DONE_TAG);
+      if (!reelFinished(editor.draft)) tags.unshift(REEL_DONE_TAG);
+      editor.draft.tags = tags.join(', ');
+      const tagsBox = form.querySelector('[data-key="tags"]');
+      if (tagsBox) tagsBox.value = editor.draft.tags;
+      finishButton.innerHTML = reelFinishLabel(editor.draft);
+      saveNow();
       return;
     }
 
