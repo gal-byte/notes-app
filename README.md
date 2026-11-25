@@ -37,7 +37,9 @@ the screen width. The zoom is kept on the device (localStorage `recipeTableZoom`
 - Anywhere, typing "אכלתי שקשוקה" in the quick-add box saves a meal "שקשוקה" in ארוחות.
 - Recipes filter by fixed categories instead of every tag: ארוחת בוקר, קינוחים, מרקים, סלטים, מאפים ולחמים,
   תוספות, עיקריות, אחר. Worked out from the tags and title (`RECIPE_CATEGORIES`); a tag that is exactly a
-  category name wins. The tags themselves are unchanged.
+  category name wins, then keywords in the tags, then in the title. עיקריות is checked before תוספות (so
+  "עוף עם אורז" is a main dish). To fix a recipe in the wrong category, give it a tag with the category's
+  name. The tags themselves are unchanged.
 
 ## Server screen (2026-11-25, `dashboard.js`, `#/server`)
 The shield at the top of home opens **שרת**: whether the home server's apps answer (and stopped containers,

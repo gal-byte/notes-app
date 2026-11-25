@@ -217,8 +217,9 @@ const RECIPE_CATEGORIES = [
   ['מרקים', ['מרק']],
   ['סלטים', ['סלט']],
   ['מאפים ולחמים', ['לחם', 'מאפה', 'מאפים', 'פיצה', 'בצק', 'פוקאצ', 'פיתה', 'בורקס']],
+  // before תוספות, so "עוף עם אורז" is a main dish and not a side
+  ['עיקריות', ['עיקרית', 'עיקריות', 'עוף', 'בשר', ' דג ', 'דגים', 'סלמון', 'פסטה', 'קציצ', 'טופו', 'סטייק', 'המבורגר', 'נודלס', 'שניצל', 'קארי', 'מוקפץ']],
   ['תוספות', ['תוספת', 'צ\'יפס', 'ציפס', 'בטטה', 'תפוחי אדמה', 'תפו"א', 'אורז', 'פירה', 'קוסקוס', 'פתיתים']],
-  ['עיקריות', ['עיקרית', 'עיקריות', 'עוף', 'בשר', 'דג', 'סלמון', 'פסטה', 'קציצ', 'טופו', 'סטייק', 'המבורגר', 'נודלס', 'שניצל', 'קארי', 'מוקפץ']],
 ];
 const OTHER_CATEGORY = 'אחר';
 
@@ -226,9 +227,14 @@ function recipeCategory(item) {
   const tags = parseTags(item.tags).map(tag => tag.trim());
   const named = RECIPE_CATEGORIES.find(([name]) => tags.includes(name));
   if (named) return named[0];
-  const words = [...tags, item.title || ''].join(' ');
-  const found = RECIPE_CATEGORIES.find(([, keys]) => keys.some(key => words.includes(key)));
-  return found ? found[0] : OTHER_CATEGORY;
+  // the tags say more than the title, so look at them first; spaces around the
+  // text let a short key like ' דג ' match a whole word only
+  for (const text of [tags.join(' '), item.title || '']) {
+    const padded = ` ${text.replace(/[,.;:!?()]/g, ' ')} `;
+    const found = RECIPE_CATEGORIES.find(([, keys]) => keys.some(key => padded.includes(key)));
+    if (found) return found[0];
+  }
+  return OTHER_CATEGORY;
 }
 
 // "הכל" plus the categories that have recipes, in the fixed order
