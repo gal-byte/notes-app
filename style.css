@@ -801,6 +801,8 @@ button.setting { cursor: pointer; }
   background: var(--fill); border-radius: 14px; font-size: 14px; color: var(--text);
 }
 .health-day small { color: var(--muted); font-size: 12px; }
+a.journal-food { text-decoration: none; }
+a.journal-food span + span { color: var(--muted); }
 .workouts { display: flex; flex-direction: column; gap: 8px; padding: 2px var(--side) 8px; }
 .workout {
   display: flex; align-items: center; gap: 12px; padding: 10px 12px;

@@ -22,6 +22,10 @@ const FOOD_WORDS = {
   waiting: n => n === 1 ? ' · ארוחה אחת מחכה להערכה' : ` · ${n} ארוחות מחכות להערכה`,
   numbers: (kcal, protein) => `${kcal} קל׳ · ${protein} ג׳`,
   meal: 'ארוחה',
+  dayLabel: 'אוכל',
+  protein: 'חלבון',
+  oneMeal: 'ארוחה אחת',
+  meals: n => `${n} ארוחות`,
   editList: 'עריכת הרשימה',
   emptyList: 'הרשימה ריקה',
 };
@@ -69,6 +73,28 @@ function mealsTodayHtml(items) {
   }
   return `<p class="todo-heading meals-today"><strong>${FOOD_WORDS.today(bigNumber(kcal), bigNumber(protein))}</strong>${
     waiting ? FOOD_WORDS.waiting(waiting) : ''}</p>${targetBarsHtml(kcal, protein)}`;
+}
+
+// The journal day (2026-11-26): "🍽 1,450 קל׳ · 82 ג׳ חלבון · 3 ארוחות" from
+// that date's meals, the target bars under it; a tap opens ארוחות
+async function mealsDayHtml(iso) {
+  const meals = mealsGroup();
+  if (!meals || !iso) return '';
+  const day = (await getItemsInGroup(meals.id))
+    .filter(item => item.createdAt && toISODate(new Date(item.createdAt)) === iso);
+  if (!day.length) return '';
+  let kcal = 0, protein = 0, waiting = 0;
+  for (const meal of day) {
+    const estimate = mealEstimate(meal);
+    if (!estimate) { waiting++; continue; }
+    kcal += estimate.kcal;
+    protein += estimate.protein;
+  }
+  const count = day.length === 1 ? FOOD_WORDS.oneMeal : FOOD_WORDS.meals(day.length);
+  const numbers = day.length > waiting
+    ? `<span>🍽 ${bigNumber(kcal)} קל׳ · ${bigNumber(protein)} ג׳ ${FOOD_WORDS.protein}</span>` : '<span>🍽</span>';
+  return `${sectionLabel(FOOD_WORDS.dayLabel)}<a class="health-day journal-food" href="#/group/${meals.id}">${numbers}<span>${count}${
+    waiting ? FOOD_WORDS.waiting(waiting) : ''}</span></a>${day.length > waiting ? targetBarsHtml(kcal, protein) : ''}`;
 }
 
 // ---------- Daily target (2026-11-25) ----------

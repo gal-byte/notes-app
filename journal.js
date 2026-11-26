@@ -442,6 +442,7 @@ function journalEditorHtml(draft) {
         <div class="score-buttons">${scoreButtons(draft.score)}</div>
       </div>
       <div id="journal-workouts"></div>
+      <div id="journal-food"></div>
       <div id="journal-movies"></div>
       ${area('answer', escapeHtml(question))}
       ${area('happened', JOURNAL_WORDS.happened)}
@@ -573,6 +574,7 @@ function setupJournalEditor(form, editor, saveSoon) {
     savedDate = iso;
     form.querySelector('#journal-title').textContent = journalTitle(iso);
     showWorkouts(iso);
+    showFood(iso);
     showMovies(iso);
   });
 
@@ -582,6 +584,12 @@ function setupJournalEditor(form, editor, saveSoon) {
     form.querySelector('#journal-workouts').innerHTML = dayActivityHtml(day, workouts);
   }
   showWorkouts(draft.date);
+
+  // That day's calories and protein from ארוחות (read-only; tap opens the meals)
+  async function showFood(iso) {
+    form.querySelector('#journal-food').innerHTML = await mealsDayHtml(iso || toISODate(new Date()));
+  }
+  showFood(draft.date);
 
   // Movies and shows seen that day (their "מתי ראיתי"; read-only here, tap one to open it)
   async function showMovies(iso) {

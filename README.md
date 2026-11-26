@@ -23,6 +23,8 @@ the screen width. The zoom is kept on the device (localStorage `recipeTableZoom`
 - Meals go in your group **ארוחות**. The home server (notify `autofill`) adds a line
   "≈ 650 קל׳ · 28 ג׳ חלבון (הערכה)" to each meal note; the group shows today's total on top
   ("היום: 1,450 קל׳ · 82 ג׳ חלבון", and how many still wait for an estimate) and each row its numbers.
+- The journal (יומן) entry shows that day's meals under "אוכל": "🍽 1,450 קל׳ · 82 ג׳ חלבון · 3 ארוחות"
+  (meals by creation date; the daily target bars too, if set). Tap it to open ארוחות (2026-11-26, `mealsDayHtml`).
 - Long-press the app icon → **מה אכלתי 📷** (`#/meal`): a new meal with the photo button highlighted
   (phones only open the camera after a tap). A meal that is only a photo is saved as "ארוחה 13:05".
 - The note **🛒 רשימת קניות** (לא ממוין, written by Claude) shows its lines as checkboxes. Ticking moves an
