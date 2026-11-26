@@ -51,6 +51,13 @@ the screen width. The zoom is kept on the device (localStorage `recipeTableZoom`
 - The list is the note's `foodItems`; the "≈" line follows its total. Items the server split from free text
   show "?" until **אישור**. Picked products teach the server your usual brand and amount for that word.
 
+## A meal from a recipe (2026-11-26, `food.js`)
+- Each row in מתכונים has a **+** (only when the group ארוחות exists). It opens a small form under the row:
+  **כמה מנות אכלתי** (1 by default; 0.5 = חצי מנה) and **שינויים** (optional, e.g. "חצי מהשיבולת שועל, ובמקומה
+  חצי בננה"). **הוספה** saves a meal with the recipe's title in ארוחות; its text says the portion, the changes and
+  the recipe's servings and ingredients, so the server's estimate (notify `autofill`) counts the dish as changed.
+  The message has **ביטול** (deletes the new meal). A second tap on + or ביטול closes the form.
+
 ## Food: quick logging (2026-11-25, `food.js`)
 - The hub shows up to 8 **"שוב?" chips**: meals from the last 30 days, most frequent then most recent
   (titles compared trimmed/lowercase; "ארוחה 13:05" photo-only titles are left out). One tap saves the meal

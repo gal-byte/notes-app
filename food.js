@@ -480,3 +480,107 @@ function recipeCategoryChips(items) {
   const names = [...RECIPE_CATEGORIES.map(([name]) => name), OTHER_CATEGORY].filter(name => used.has(name));
   return names.length > 1 ? filterChips(Object.fromEntries([['', TEXT.all], ...names.map(n => [n, n])]), '') : '';
 }
+
+// ---------- A meal from a recipe (2026-11-26) ----------
+// Each recipe row has a "+": it opens a small form under the row (how many servings, and
+// an optional sentence of changes, like "חצי מהשיבולת שועל, במקום זה חצי בננה") and saves
+// a meal in ארוחות. The meal's text carries the recipe's ingredients and servings, so the
+// server's estimate (notify autofill) counts the right dish and the changes.
+
+const FROM_RECIPE_WORDS = {
+  add: 'להוסיף לארוחות',
+  servings: 'כמה מנות אכלתי',
+  changes: 'שינויים (לא חובה)',
+  changesHint: 'למשל: חצי מכמות השיבולת שועל, ובמקומה חצי בננה',
+  save: 'הוספה',
+  cancel: 'ביטול',
+  portion: n => n === 1 ? 'מנה אחת' : n === 0.5 ? 'חצי מנה' : `${n} מנות`,
+  line: (portion, title, servings) => `${portion} מהמתכון "${title}"${servings ? ` (המתכון ל-${servings} מנות)` : ''}`,
+  changesLine: text => `שינויים: ${text}`,
+  ingredients: 'מצרכים (לכל המתכון)',
+  logged: title => `נוסף לארוחות: ${escapeHtml(title)}`,
+};
+const INGREDIENTS_MAX = 1500;
+
+function addMealButtonHtml(item) {
+  if (!mealsGroup()) return '';
+  return `<span class="add-meal" role="button" tabindex="0" data-add-meal="${escapeHtml(item.id)}"
+    aria-label="${FROM_RECIPE_WORDS.add}" title="${FROM_RECIPE_WORDS.add}">${icon('plus')}</span>`;
+}
+
+// The meal note's text: the portion, the changes, then the recipe's ingredients
+function mealFromRecipeText(recipe, portion, changes) {
+  const servings = String(recipe.servings || '').trim();
+  const ingredients = (recipe.ingredients || '').split('\n').map(line => line.trim()).filter(Boolean).join(' · ');
+  return [
+    FROM_RECIPE_WORDS.line(FROM_RECIPE_WORDS.portion(portion), (recipe.title || '').trim(), servings),
+    changes ? FROM_RECIPE_WORDS.changesLine(changes) : '',
+    ingredients ? `${FROM_RECIPE_WORDS.ingredients}: ${ingredients.slice(0, INGREDIENTS_MAX)}` : '',
+  ].filter(Boolean).join('\n');
+}
+
+function addMealFormHtml(recipeId, filter) {
+  return `<form class="add-meal-form" data-add-meal-form="${escapeHtml(recipeId)}"${
+    filter !== undefined ? ` data-filter-values="${escapeHtml(filter)}"` : ''}>
+    <label>${FROM_RECIPE_WORDS.servings} <input type="number" inputmode="decimal" min="0.25" step="0.25" name="portion" value="1"></label>
+    <label class="add-meal-changes">${FROM_RECIPE_WORDS.changes}
+      <input type="text" name="changes" dir="auto" placeholder="${FROM_RECIPE_WORDS.changesHint}"></label>
+    <span class="add-meal-buttons">
+      <button type="submit" class="pill-button">${icon('plus', 'inline')} ${FROM_RECIPE_WORDS.save}</button>
+      <button type="button" class="pill-button" data-add-meal-cancel>${FROM_RECIPE_WORDS.cancel}</button>
+    </span>
+  </form>`;
+}
+
+function openAddMealForm(button) {
+  const row = button.closest('.row');
+  if (!row) return;
+  const open = row.nextElementSibling?.matches('[data-add-meal-form]') ? row.nextElementSibling : null;
+  document.querySelectorAll('[data-add-meal-form]').forEach(form => form.remove());
+  if (open) return;   // a second tap closes it
+  row.insertAdjacentHTML('afterend', addMealFormHtml(button.dataset.addMeal, row.dataset.filterValues));
+  row.nextElementSibling.querySelector('[name=changes]')?.focus();
+}
+
+document.addEventListener('click', event => {
+  const button = event.target.closest('[data-add-meal]');
+  if (button) {
+    event.preventDefault();   // the "+" sits inside the recipe's row link
+    event.stopPropagation();
+    haptic(5);
+    openAddMealForm(button);
+    return;
+  }
+  if (event.target.closest('[data-add-meal-cancel]')) event.target.closest('[data-add-meal-form]')?.remove();
+}, true);
+
+document.addEventListener('keydown', event => {
+  const button = event.target.closest?.('[data-add-meal]');
+  if (!button || (event.key !== 'Enter' && event.key !== ' ')) return;
+  event.preventDefault();
+  openAddMealForm(button);
+});
+
+document.addEventListener('submit', async event => {
+  const form = event.target.closest('[data-add-meal-form]');
+  if (!form) return;
+  event.preventDefault();
+  const meals = mealsGroup();
+  const submit = form.querySelector('[type=submit]');
+  if (!meals || submit.disabled) return;
+  submit.disabled = true;   // no double meals from a double tap
+  try {
+    const recipe = await getItem(form.dataset.addMealForm);
+    if (!recipe) return;
+    const portion = Number(form.elements.portion.value) > 0 ? Number(form.elements.portion.value) : 1;
+    const changes = form.elements.changes.value.trim().replace(/\s+/g, ' ');
+    const item = await addItem(meals.id, {
+      title: (recipe.title || '').trim() || FOOD_WORDS.meal,
+      text: mealFromRecipeText(recipe, portion, changes),
+    });
+    form.remove();
+    loggedToast(FROM_RECIPE_WORDS.logged(item.title), item);
+  } finally {
+    submit.disabled = false;
+  }
+});
