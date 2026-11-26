@@ -301,7 +301,6 @@ const HUB_WORDS = {
   photoMeal: 'צילום ארוחה',
   addPlaceholder: 'מה אכלתי?…',
   meals: 'ארוחות', recipes: 'מתכונים', shopping: 'רשימת קניות', kitchen: 'מה יש במטבח',
-  mealsToday: n => n ? `${n} היום` : '',
   toBuy: n => n ? `${n} לקנות` : '',
   items: n => n ? `${n} פריטים` : '',
 };
@@ -333,20 +332,19 @@ async function foodScreen() {
       <span class="row-main"><span class="row-title">${escapeHtml(name)}</span></span>
       <span class="row-end">${end}</span>
     </a>`;
+  // ארוחות has no row of its own (2026-11-26): the small "N ארוחות היום" chip next to the photo opens it
   const rows = [];
-  if (meals) rows.push(row(`#/group/${meals.id}`, meals, HUB_WORDS.meals, HUB_WORDS.mealsToday(todayCount)));
   rows.push(row('#/group/recipes', findGroup('recipes'), HUB_WORDS.recipes, recipes.length || ''));
   if (shop) rows.push(row(`#/item/${shop.id}`, { icon: 'cart', tint: 'amber' }, HUB_WORDS.shopping, HUB_WORDS.toBuy(openToBuy)));
   if (kitchen) rows.push(row(`#/item/${kitchen.id}`, { icon: 'home', tint: 'teal' }, HUB_WORDS.kitchen,
     HUB_WORDS.items(shopLines(kitchen.text).length)));
 
-  const chips = repeatMeals(mealItems).map(meal =>
-    `<button type="button" class="chip meal-chip" data-repeat-meal="${meal.id}" dir="auto">${escapeHtml(meal.title.trim())}</button>`).join('');
   const ate = meals ? `
     <div class="food-ate">
       <div id="food-today">${mealsTodayHtml(mealItems)}</div>
       <div id="food-target">${targetButtonHtml()}</div>
-      <div class="meal-chips">${chips ? `<span class="chips-label">${QUICK_WORDS.again}</span>${chips}` : ''}
+      <div class="meal-chips">
+        <a class="chip" id="food-count" href="#/group/${meals.id}">${mealsCountText(todayCount)}</a>
         <label class="chip photo-chip">${icon('camera', 'inline')} ${HUB_WORDS.photoMeal}
           <input type="file" accept="image/*" capture="environment" hidden data-meal-photo></label></div>
     </div>` : '';
@@ -356,45 +354,19 @@ async function foodScreen() {
 // ============================================================
 // QUICK LOGGING (2026-11-25)
 // Logging a meal in one tap, so it actually gets done:
-//   - "שוב" chips on the hub: meals eaten often lately. A tap saves the
-//     same meal again with its "≈" line, so the numbers show at once (the
-//     server skips notes that already have one). Undo in the message.
+//   - (the "שוב" repeat chips were removed on 2026-11-26: they cluttered the hub)
 //   - the camera button saves "ארוחה 13:05" with the photo right away
 //     (no editor); the server estimates it from the photo later.
 //   - the home אוכל row shows today's numbers.
 // ============================================================
 
 const QUICK_WORDS = {
-  again: 'שוב:',
-  logged: title => `נרשם: ${escapeHtml(title)}`,
   photoLogged: 'הארוחה נשמרה עם התמונה',
   mealsToday: n => n === 1 ? 'ארוחה היום' : `${n} ארוחות היום`,
 };
-const REPEAT_DAYS = 30;
-const REPEAT_MAX = 4;   // was 8; fewer chips keep the hub calm
-const PHOTO_ONLY_TITLE = /^ארוחה \d{1,2}:\d{2}$/;   // "ארוחה 13:05" says nothing to repeat
 
-const mealKey = title => (title || '').trim().replace(/\s+/g, ' ').toLowerCase();
-
-// The meals worth a chip: most often first, then most recent; one note per meal
-// (the newest one that has numbers, so the copy shows them at once)
-function repeatMeals(items) {
-  const since = Date.now() - REPEAT_DAYS * 86400000;
-  const byMeal = new Map();
-  for (const item of items) {
-    const key = mealKey(item.title);
-    if (!key || PHOTO_ONLY_TITLE.test(key) || !(item.createdAt >= since)) continue;
-    const entry = byMeal.get(key) || { count: 0, last: 0, source: null };
-    entry.count++;
-    entry.last = Math.max(entry.last, item.createdAt);
-    const better = !entry.source || (!!mealEstimate(item) > !!mealEstimate(entry.source))
-      || (!!mealEstimate(item) === !!mealEstimate(entry.source) && item.createdAt > entry.source.createdAt);
-    if (better) entry.source = item;
-    byMeal.set(key, entry);
-  }
-  return [...byMeal.values()].sort((a, b) => b.count - a.count || b.last - a.last)
-    .slice(0, REPEAT_MAX).map(entry => entry.source);
-}
+// The hub chip that opens ארוחות
+const mealsCountText = n => (n ? QUICK_WORDS.mealsToday(n) : HUB_WORDS.meals);
 
 function todayMeals(items) {
   const today = toISODate(new Date());
@@ -422,7 +394,10 @@ async function refreshFoodToday() {
   const meals = mealsGroup();
   if (!box || !meals) return;
   await loadFoodTarget();
-  box.innerHTML = mealsTodayHtml(await getItemsInGroup(meals.id));
+  const items = await getItemsInGroup(meals.id);
+  box.innerHTML = mealsTodayHtml(items);
+  const count = document.getElementById('food-count');
+  if (count) count.textContent = mealsCountText(todayMeals(items).length);
 }
 
 function loggedToast(text, item) {
@@ -455,21 +430,6 @@ function setupFoodHub() {
       const box = document.getElementById('food-target');
       box.innerHTML = targetFormHtml();
       box.querySelector('input')?.focus();
-      return;
-    }
-    const chip = event.target.closest('[data-repeat-meal]');
-    if (!chip || chip.disabled) return;
-    chip.disabled = true;   // no double meals from a double tap
-    try {
-      const source = await getItem(chip.dataset.repeatMeal);
-      if (!source) return;
-      const line = (source.text || '').split('\n').find(l => ESTIMATE_LINE.test(l));
-      const item = await addItem(meals.id, { title: source.title.trim(), text: line ? line.trim() : '',
-        ...(source.foodItems?.length ? { foodItems: source.foodItems.map(x => ({ ...x })) } : {}) });
-      await refreshFoodToday();
-      loggedToast(QUICK_WORDS.logged(item.title), item);
-    } finally {
-      setTimeout(() => { chip.disabled = false; }, 800);
     }
   });
 

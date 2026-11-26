@@ -59,10 +59,9 @@ the screen width. The zoom is kept on the device (localStorage `recipeTableZoom`
   The message has **ביטול** (deletes the new meal). A second tap on + or ביטול closes the form.
 
 ## Food: quick logging (2026-11-25, `food.js`)
-- The hub shows up to 8 **"שוב?" chips**: meals from the last 30 days, most frequent then most recent
-  (titles compared trimmed/lowercase; "ארוחה 13:05" photo-only titles are left out). One tap saves the meal
-  again in ארוחות with the old note's "≈" line, so the numbers show at once (the server's autofill skips notes
-  that already have one). The message has **ביטול** (deletes the new note); today's total updates in place.
+- Hub layout (2026-11-26, decluttered): target bars (tap to edit; plain total when no target), then one row of two
+  chips — **"N ארוחות היום"** (opens ארוחות, which has no hub row any more) and **צילום ארוחה** — then
+  מתכונים / רשימת קניות / מטבח. The "שוב?" repeat chips were removed (clutter); recipes' + still adds a meal.
 - **צילום ארוחה** opens the camera directly and saves "ארוחה 13:05" with the photo, staying on the hub (no
   editor). `#/meal` (app icon shortcut) is unchanged.
 - The home **אוכל** row shows today's "1,450 קל׳ · 82 ג׳" (or "2 ארוחות היום" while waiting for estimates),
