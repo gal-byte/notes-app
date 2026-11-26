@@ -58,6 +58,15 @@ the screen width. The zoom is kept on the device (localStorage `recipeTableZoom`
   the recipe's servings and ingredients, so the server's estimate (notify `autofill`) counts the dish as changed.
   The message has **ביטול** (deletes the new meal). A second tap on + or ביטול closes the form.
 
+## Confirming estimates (2026-11-26, `food.js`)
+- A meal whose ≈ line still says "(הערכה)" has a small **✓** at the end of its row (no other row does). A tap =
+  "the estimate is right": its `foodItems` become ok (an item with no productId is first saved as your own
+  product via `/food/product`, or an own product of the same name is reused; if that fails, e.g. offline, nothing changes and a message says to try later),
+  and "(הערכה)" is dropped; the numbers stay. The server then counts those products as your foods. No AI call.
+  The message has **ביטול** (puts the note back). Wrong numbers: open the meal and fix them in the picker.
+- `#/meals-check`: every estimated meal of the last 14 days, each with its ✓. The server (notify `autofill`)
+  sends one notification opening it when meals wait 3+ days.
+
 ## Food: quick logging (2026-11-25, `food.js`)
 - Hub layout (2026-11-26, decluttered): target bars (tap to edit; plain total when no target), then one row of two
   chips — **"N ארוחות היום"** (opens ארוחות, which has no hub row any more) and **צילום ארוחה** — then

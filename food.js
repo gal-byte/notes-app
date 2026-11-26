@@ -571,6 +571,128 @@ document.addEventListener('keydown', event => {
   openAddMealForm(button);
 });
 
+// ---------- Confirming an estimate (2026-11-26) ----------
+// A meal the server estimated ("≈ … (הערכה)") gets a small ✓ at the end of its row; nothing else does.
+// One tap = "the estimate is right": the products become confirmed (ok), so the server records them as
+// your own foods (food.sync_meals → meal_items) and the next estimate starts from them. A product Haiku
+// made up (no productId) is saved as your own product first (per 100 g, as Haiku counted it). With no
+// product list the ✓ only drops "(הערכה)". No AI call either way. #/meals-check lists every meal still
+// waiting from the last two weeks; the server sends one calm notification when some wait 3+ days.
+
+const CHECK_WORDS = {
+  confirm: 'ההערכה נכונה',
+  confirmed: 'אושר',
+  failed: 'אין חיבור לשרת. אפשר לנסות שוב אחר כך.',
+  title: 'ארוחות לאישור',
+  none: 'אין ארוחות שמחכות לאישור',
+  hint: '✓ = ההערכה נכונה. משהו לא נכון? לפתוח את הארוחה ולתקן.',
+};
+const CHECK_DAYS = 14;
+
+// The "≈" line still says "(הערכה)"
+function isEstimatedMeal(item) {
+  return (item.text || '').split('\n').some(line => ESTIMATE_LINE.test(line) && line.includes('(הערכה)'));
+}
+
+function mealCheckButtonHtml(item) {
+  if (!isMealsGroup(item.group) || !isEstimatedMeal(item)) return '';
+  return `<span class="meal-check" role="button" tabindex="0" data-meal-check="${escapeHtml(item.id)}"
+    aria-label="${CHECK_WORDS.confirm}" title="${CHECK_WORDS.confirm}">${icon('check')}</span>`;
+}
+
+// Your own product with this name (the copy on this device), else a new one on the server; null offline
+async function ownProductId(x) {
+  const name = String(x.name || '').trim().slice(0, 120);
+  if (!name || x.per?.kcal == null || !(Number(x.per.kcal) >= 0)) return null;
+  const same = myProducts().find(p => p.source !== 'tzameret' && (p.name || '').trim() === name);
+  if (same && Number.isInteger(same.id)) return same.id;
+  try {
+    const { product } = await foodApi('/food/product', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, kcal: Number(x.per.kcal) || 0, protein: Number(x.per.protein) || 0 }) });
+    return Number.isInteger(product?.id) ? product.id : null;
+  } catch {
+    return null;
+  }
+}
+
+const confirming = new Set();   // no double products from a double tap
+
+async function confirmMeal(id) {
+  if (confirming.has(id)) return;
+  confirming.add(id);
+  try {
+    const item = await getItem(id);
+    if (!item || !isEstimatedMeal(item)) return;
+    const listBefore = JSON.stringify(item.foodItems || null);
+    let foodItems;
+    if (Array.isArray(item.foodItems) && item.foodItems.length) {
+      const made = new Map();   // the same unmatched name twice in one meal: one product
+      foodItems = [];
+      for (const x of item.foodItems) {
+        if (!x || typeof x !== 'object') { foodItems.push(x); continue; }
+        const done = { ...x, ok: true };
+        if (!Number.isInteger(x.productId)) {
+          const name = String(x.name || '').trim();
+          const productId = made.has(name) ? made.get(name) : await ownProductId(x);
+          // Not saved (offline, server refused): leave the meal waiting, so its ✓ can be tapped again
+          if (productId === null) { showToast(CHECK_WORDS.failed); return; }
+          made.set(name, productId);
+          done.productId = productId;
+        }
+        foodItems.push(done);
+      }
+      if (made.size) refreshMyProducts(true).catch(() => {});
+    }
+    // Read again after the server calls: a change meanwhile (another device, a new estimate) wins
+    const now = await getItem(id);
+    if (!now || !isEstimatedMeal(now) || JSON.stringify(now.foodItems || null) !== listBefore) return;
+    const before = { text: now.text, foodItems: now.foodItems };
+    // The numbers stay as they are (they already add up the list); only "(הערכה)" goes
+    const changes = { text: now.text.split('\n')
+      .map(line => (ESTIMATE_LINE.test(line) ? line.replace(/\s*\(הערכה\)/, '') : line)).join('\n') };
+    if (foodItems) changes.foodItems = foodItems;
+    await updateItem(id, changes);
+    haptic(5);
+    showScreen(true);
+    showToast(`${CHECK_WORDS.confirmed} ✓`, {
+      action: TEXT.undo, ms: 5000,
+      onAction: async () => { await updateItem(id, before); showScreen(true); },
+    });
+  } finally {
+    confirming.delete(id);
+  }
+}
+
+// "#/meals-check" (the server's "meals waiting" notification): every estimated meal of the last two weeks
+async function mealsCheckScreen() {
+  const meals = mealsGroup();
+  const since = Date.now() - CHECK_DAYS * 86400000;
+  const waiting = meals ? (await getItemsInGroup(meals.id))
+    .filter(item => (item.createdAt || 0) >= since && isEstimatedMeal(item)) : [];
+  if (!waiting.length) return `<div class="empty">${icon('check')}<span>${CHECK_WORDS.none}</span></div>`;
+  rowDateKey = 'createdAt';
+  try {
+    return `<p class="field-hint meals-check-hint">${CHECK_WORDS.hint}</p>` + plainList(sortItems(waiting, 'created'));
+  } finally {
+    rowDateKey = null;
+  }
+}
+
+document.addEventListener('click', event => {
+  const button = event.target.closest('[data-meal-check]');
+  if (!button) return;
+  event.preventDefault();   // the ✓ sits inside the meal's row link
+  event.stopPropagation();
+  confirmMeal(button.dataset.mealCheck);
+}, true);
+
+document.addEventListener('keydown', event => {
+  const button = event.target.closest?.('[data-meal-check]');
+  if (!button || (event.key !== 'Enter' && event.key !== ' ')) return;
+  event.preventDefault();
+  confirmMeal(button.dataset.mealCheck);
+});
+
 document.addEventListener('submit', async event => {
   const form = event.target.closest('[data-add-meal-form]');
   if (!form) return;

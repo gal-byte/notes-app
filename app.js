@@ -518,6 +518,10 @@ async function buildScreen(page, id, extra) {
     return { title: '', html: newItemScreen(meals), back: `#/group/${meals}`, actions: pinButtonHtml(),
              setup: () => { setupItemScreen(); askForMealPhoto(); } };
   }
+  // "#/meals-check" (the server's notification): estimated meals waiting for a ✓ (food.js)
+  if (page === 'meals-check') {
+    return { title: CHECK_WORDS.title, html: await mealsCheckScreen(), back: '#/food' };
+  }
   if (page === 'settings') {
     return { title: TEXT.backupScreenTitle, html: await settingsScreen(), back: '#/home', setup: setupSettings };
   }

@@ -603,7 +603,7 @@ function plainList(items, byCategory = false) {
     const sub = escapeHtml((item.text || '').split('\n').filter(line => !ESTIMATE_LINE.test(line))[0] || tags.join(', '));
     const end = (recipeStatusPill(item) || mealPillHtml(item) ||
       (item.calories ? `<span class="calories">${escapeHtml(TEXT.calories(String(item.calories).trim()))}</span>` : ''))
-      + (byCategory ? addMealButtonHtml(item) : '');
+      + (byCategory ? addMealButtonHtml(item) : mealCheckButtonHtml(item));
     const row = itemRow(item, sub, { photo: item.photo, filter: byCategory ? recipeCategory(item) : tags.join('|'), end, after: item.draft ? ' ' + DRAFT_BADGE : '' });
     return item.photo ? row : withCover(row, item);
   }));

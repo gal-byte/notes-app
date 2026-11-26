@@ -993,6 +993,15 @@ a.journal-food span + span { color: var(--muted); }
 }
 .add-meal svg { width: 18px; height: 18px; }
 .add-meal:active { transform: scale(.92); }
+/* The ✓ on an estimated meal (food.js mealCheckButtonHtml): quieter than the recipe "+" */
+.meal-check {
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  width: 30px; height: 30px; margin-inline-start: 6px; border-radius: 50%;
+  color: var(--muted); border: 1px solid var(--line); cursor: pointer;
+}
+.meal-check svg { width: 16px; height: 16px; }
+.meal-check:active { transform: scale(.92); }
+.meals-check-hint { padding: 0 var(--side); }
 .add-meal-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 4px var(--side) 12px; }
 .add-meal-form label { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); }
 .add-meal-form .add-meal-changes { flex: 1 1 100%; flex-direction: column; align-items: stretch; }
