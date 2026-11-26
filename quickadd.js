@@ -284,7 +284,7 @@ function removeFromTitle(title, piece) {
 // Returns { group, fields } — ready to save with addItem(group, fields)
 // Reels and Shorts shared from Instagram, YouTube or TikTok → רילס. The server reads them
 // (reels.py in notify: download, speech to text, cover); Claude writes the summary later.
-const REEL_LINK = /https?:\/\/(?:[\w-]+\.)?(?:instagram\.com\/(?:[\w.]+\/)?(?:reels?|p|tv)\/[\w-]+|youtube\.com\/shorts\/[\w-]+|youtu\.be\/[\w-]+|tiktok\.com\/\S+)\S*/i;
+const REEL_LINK = /https?:\/\/(?:[\w-]+\.)?(?:instagram\.com\/(?:[\w.]+\/)?(?:reels?|p|tv|share)\/[\w-]+|youtube\.com\/shorts\/[\w-]+|youtu\.be\/[\w-]+|tiktok\.com\/\S+)\S*/i;
 const REEL_PLACEHOLDER = 'רילס חדש';
 
 // A recipe from a link: any link typed with "מ:" / "מתכון:" or the מתכונים chip (or "מתכון מקישור")
