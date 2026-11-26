@@ -99,8 +99,10 @@ async function mealsDayHtml(iso) {
   const count = day.length === 1 ? FOOD_WORDS.oneMeal : FOOD_WORDS.meals(day.length);
   const numbers = day.length > waiting
     ? `<span>🍽 ${bigNumber(kcal)} קל׳ · ${bigNumber(protein)} ג׳ ${FOOD_WORDS.protein}</span>` : '<span>🍽</span>';
-  return `${sectionLabel(FOOD_WORDS.dayLabel)}<a class="health-day journal-food" href="#/group/${meals.id}">${numbers}<span>${count}${
-    waiting ? FOOD_WORDS.waiting(waiting) : ''}</span></a>${day.length > waiting ? targetBarsHtml(kcal, protein) : ''}`;
+  // ארוחות shows today only, so only today's line opens it
+  const tag = iso === toISODate(new Date()) ? `a href="#/group/${meals.id}"` : 'div';
+  return `${sectionLabel(FOOD_WORDS.dayLabel)}<${tag} class="health-day journal-food">${numbers}<span>${count}${
+    waiting ? FOOD_WORDS.waiting(waiting) : ''}</span></${tag.split(' ')[0]}>${day.length > waiting ? targetBarsHtml(kcal, protein) : ''}`;
 }
 
 // ---------- Daily target (2026-11-25) ----------

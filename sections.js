@@ -636,7 +636,17 @@ function claudeTodoList(items) {
 
 async function groupScreen(group) {
   const items = await getItemsInGroup(group.id);
-  if (isMealsGroup(group.id)) await loadFoodTarget();
+  // ארוחות shows today's meals only (2026-11-26): the hub chip says "N ארוחות היום", so that's what opens
+  if (isMealsGroup(group.id)) {
+    await loadFoodTarget();
+    const today = todayMeals(items);
+    rowDateKey = 'createdAt';
+    try {
+      return mealsTodayHtml(today) + (today.length ? plainList(sortItems(today, 'created')) : '');
+    } finally {
+      rowDateKey = null;
+    }
+  }
   if (group.id === 'journal') return journalScreen(items);
   if (!items.length) {
     return `<div class="empty">${groupBadge(group, 'large')}<span>${TEXT.nothingHere}</span></div>`;
