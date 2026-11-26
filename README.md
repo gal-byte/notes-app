@@ -70,7 +70,9 @@ the screen width. The zoom is kept on the device (localStorage `recipeTableZoom`
 - Daily target (2026-11-25): **🎯 יעד יומי** under today's total on the hub opens two boxes (calories, protein;
   empty = no target). Today's total, on the hub and in ארוחות, then shows two thin bars: "קל׳ 1,450 / 2,000 · עוד 550",
   "חלבון 82 / 120 ג׳ · עוד 38 ג׳". Calories over the target turn amber ("250 מעל"), protein reached shows ✓.
-  Kept on the device only (localStorage `foodTarget`), so set it once per phone/tablet.
+  Since 2026-11-26 it is the note "🎯 יעד יומי" in לא ממוין ("קלוריות: 2300" / "חלבון: 120"), so it syncs to every
+  device and Claude can set it (connector tool `set_food_target`); editing the note by hand works too.
+  localStorage `foodTarget` keeps a copy so the bars draw at once (and an older device-only target counts until a note exists).
 
 ## Server screen (2026-11-25, `dashboard.js`, `#/server`)
 The shield at the top of home opens **שרת**: whether the home server's apps answer (and stopped containers,

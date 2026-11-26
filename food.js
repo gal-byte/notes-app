@@ -120,13 +120,53 @@ function foodTarget() {
   }
 }
 
-function saveFoodTarget(kcal, protein) {
+function cacheFoodTarget(kcal, protein) {
   const clean = n => (Number.isFinite(n) && n > 0 ? Math.round(n) : 0);
   const target = { kcal: clean(kcal), protein: clean(protein) };
   try {
     if (target.kcal || target.protein) localStorage.setItem('foodTarget', JSON.stringify(target));
     else localStorage.removeItem('foodTarget');
   } catch { /* not important */ }
+  return target;
+}
+
+// The target itself is the note "🎯 יעד יומי" in לא ממוין ("קלוריות: 2300" / "חלבון: 120"), so it
+// syncs to every device and Claude can set it (set_food_target in notify/food.py). localStorage keeps
+// a copy so the bars draw without waiting; with no note yet, a target set before 2026-11-26 still counts.
+const TARGET_TITLE = '🎯 יעד יומי';
+
+function parseFoodTarget(text) {
+  const num = word => {
+    const m = (text || '').match(new RegExp(`${word}\\s*:?\\s*(\\d[\\d,]*)`));
+    return m ? Number(m[1].replace(/,/g, '')) : 0;
+  };
+  return { kcal: num('קלוריות'), protein: num('חלבון') };
+}
+
+async function loadFoodTarget() {
+  const note = await foodNote(TARGET_TITLE);
+  let seen = false;
+  try { seen = localStorage.getItem('foodTargetNote') === '1'; } catch { /* not important */ }
+  if (note) {
+    const t = parseFoodTarget(note.text);
+    cacheFoodTarget(t.kcal, t.protein);
+    try { localStorage.setItem('foodTargetNote', '1'); } catch { /* not important */ }
+  } else if (seen) {
+    cacheFoodTarget(0, 0);   // the note was deleted (here or on another device): no target
+  }
+  return foodTarget();
+}
+
+async function saveFoodTarget(kcal, protein) {
+  const target = cacheFoodTarget(kcal, protein);
+  const text = [target.kcal ? `קלוריות: ${target.kcal}` : '', target.protein ? `חלבון: ${target.protein}` : '']
+    .filter(Boolean).join('\n');
+  const note = await foodNote(TARGET_TITLE);
+  if (note) {
+    if ((note.text || '') !== text) await updateItem(note.id, { text });
+  } else if (text) {
+    await addItem('inbox', { title: TARGET_TITLE, text });
+  }
   return target;
 }
 
@@ -276,6 +316,7 @@ async function foodScreen() {
   const recipes = await getItemsInGroup('recipes');
   const shop = await foodNote(SHOP_TITLE);
   const kitchen = await foodNote(KITCHEN_TITLE);
+  await loadFoodTarget();
   const today = toISODate(new Date());
   const todayCount = mealItems.filter(item => item.createdAt && toISODate(new Date(item.createdAt)) === today).length;
   const openToBuy = shop ? shopLines(shop.text).filter(line => !line.startsWith('✓')).length : 0;
@@ -374,7 +415,9 @@ async function foodHomeEnd(fallback) {
 async function refreshFoodToday() {
   const box = document.getElementById('food-today');
   const meals = mealsGroup();
-  if (box && meals) box.innerHTML = mealsTodayHtml(await getItemsInGroup(meals.id));
+  if (!box || !meals) return;
+  await loadFoodTarget();
+  box.innerHTML = mealsTodayHtml(await getItemsInGroup(meals.id));
 }
 
 function loggedToast(text, item) {
@@ -396,7 +439,7 @@ function setupFoodHub() {
     const form = event.target.closest('[data-target-form]');
     if (!form) return;
     event.preventDefault();
-    saveFoodTarget(Number(form.elements.kcal.value), Number(form.elements.protein.value));
+    await saveFoodTarget(Number(form.elements.kcal.value), Number(form.elements.protein.value));
     haptic();
     document.getElementById('food-target').innerHTML = targetButtonHtml();
     await refreshFoodToday();

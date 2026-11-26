@@ -636,6 +636,7 @@ function claudeTodoList(items) {
 
 async function groupScreen(group) {
   const items = await getItemsInGroup(group.id);
+  if (isMealsGroup(group.id)) await loadFoodTarget();
   if (group.id === 'journal') return journalScreen(items);
   if (!items.length) {
     return `<div class="empty">${groupBadge(group, 'large')}<span>${TEXT.nothingHere}</span></div>`;
