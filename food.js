@@ -63,7 +63,6 @@ function mealPillHtml(item) {
 function mealsTodayHtml(items) {
   const today = toISODate(new Date());
   const meals = items.filter(item => item.createdAt && toISODate(new Date(item.createdAt)) === today);
-  if (!meals.length) return `<p class="todo-heading meals-today">${FOOD_WORDS.noneToday}</p>`;
   let kcal = 0, protein = 0, waiting = 0;
   for (const meal of meals) {
     const estimate = mealEstimate(meal);
@@ -71,6 +70,13 @@ function mealsTodayHtml(items) {
     kcal += estimate.kcal;
     protein += estimate.protein;
   }
+  // With a target the bars already say "קל׳ 1,450 / 2,300", so they replace the total line (2026-11-26)
+  const target = foodTarget();
+  if (target.kcal || target.protein) {
+    return targetBarsHtml(kcal, protein)
+      + (waiting ? `<p class="field-hint meals-wait">${FOOD_WORDS.waiting(waiting).replace(/^ · /, '')}</p>` : '');
+  }
+  if (!meals.length) return `<p class="todo-heading meals-today">${FOOD_WORDS.noneToday}</p>`;
   return `<p class="todo-heading meals-today"><strong>${FOOD_WORDS.today(bigNumber(kcal), bigNumber(protein))}</strong>${
     waiting ? FOOD_WORDS.waiting(waiting) : ''}</p>${targetBarsHtml(kcal, protein)}`;
 }
@@ -186,14 +192,15 @@ function targetBarsHtml(kcal, protein) {
   const bars = [];
   if (target.kcal) bars.push(targetBarHtml('קל׳', kcal, target.kcal, '', 'kcal'));
   if (target.protein) bars.push(targetBarHtml('חלבון', protein, target.protein, ' ג׳', 'protein'));
-  return bars.length ? `<div class="target-bars">${bars.join('')}</div>` : '';
+  return bars.length ? `<div class="target-bars" data-target-edit>${bars.join('')}</div>` : '';
 }
 
-// The hub's "🎯 יעד יומי" line; a tap opens two boxes in its place
+// The hub's "🎯 יעד יומי" line, only while there is no target; a tap opens two boxes in its place.
+// With a target, a tap on the bars opens them (data-target-edit above).
 function targetButtonHtml() {
   const target = foodTarget();
-  const label = target.kcal || target.protein ? TARGET_WORDS.current(target.kcal, target.protein) : TARGET_WORDS.button;
-  return `<button type="button" class="text-button target-edit" data-target-edit>${label}</button>`;
+  if (target.kcal || target.protein) return '';
+  return `<button type="button" class="text-button target-edit" data-target-edit>${TARGET_WORDS.button}</button>`;
 }
 
 function targetFormHtml() {
@@ -292,7 +299,6 @@ const KITCHEN_TITLE = '🍳 מה יש במטבח';
 const HUB_WORDS = {
   title: 'אוכל',
   photoMeal: 'צילום ארוחה',
-  addHint: 'מה אכלתי? כתבו בתיבה למטה, או צלמו',
   addPlaceholder: 'מה אכלתי?…',
   meals: 'ארוחות', recipes: 'מתכונים', shopping: 'רשימת קניות', kitchen: 'מה יש במטבח',
   mealsToday: n => n ? `${n} היום` : '',
@@ -340,10 +346,9 @@ async function foodScreen() {
     <div class="food-ate">
       <div id="food-today">${mealsTodayHtml(mealItems)}</div>
       <div id="food-target">${targetButtonHtml()}</div>
-      ${chips ? `<p class="field-hint">${QUICK_WORDS.again}</p><div class="meal-chips">${chips}</div>` : ''}
-      <p class="field-hint">${HUB_WORDS.addHint}</p>
-      <label class="pill-button">${icon('camera', 'inline')} ${HUB_WORDS.photoMeal}
-        <input type="file" accept="image/*" capture="environment" hidden data-meal-photo></label>
+      <div class="meal-chips">${chips ? `<span class="chips-label">${QUICK_WORDS.again}</span>${chips}` : ''}
+        <label class="chip photo-chip">${icon('camera', 'inline')} ${HUB_WORDS.photoMeal}
+          <input type="file" accept="image/*" capture="environment" hidden data-meal-photo></label></div>
     </div>` : '';
   return ate + rowList(rows);
 }
@@ -360,13 +365,13 @@ async function foodScreen() {
 // ============================================================
 
 const QUICK_WORDS = {
-  again: 'שוב? נגיעה אחת רושמת',
+  again: 'שוב:',
   logged: title => `נרשם: ${escapeHtml(title)}`,
   photoLogged: 'הארוחה נשמרה עם התמונה',
   mealsToday: n => n === 1 ? 'ארוחה היום' : `${n} ארוחות היום`,
 };
 const REPEAT_DAYS = 30;
-const REPEAT_MAX = 8;
+const REPEAT_MAX = 4;   // was 8; fewer chips keep the hub calm
 const PHOTO_ONLY_TITLE = /^ארוחה \d{1,2}:\d{2}$/;   // "ארוחה 13:05" says nothing to repeat
 
 const mealKey = title => (title || '').trim().replace(/\s+/g, ' ').toLowerCase();

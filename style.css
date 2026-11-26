@@ -936,6 +936,11 @@ a.journal-food span + span { color: var(--muted); }
 .meal-chips .chip { color: var(--text); max-width: 100%; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .meal-chips .chip:active { transform: scale(.96); }
 .meal-chips .chip:disabled { opacity: .5; }
+.meal-chips { align-items: center; }
+.meal-chips .chips-label { font-size: 13px; color: var(--muted); }
+.meal-chips .photo-chip { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); }
+.food-ate .target-bars[data-target-edit] { cursor: pointer; }
+.food-ate .meals-wait { font-size: 13px; }
 /* Daily target (food.js targetBarsHtml): two thin bars under today's total */
 .target-bars { display: flex; flex-direction: column; gap: 6px; padding: 4px var(--side) 8px; width: 100%; box-sizing: border-box; }
 .food-ate .target-bars { padding: 2px 0 0; }
