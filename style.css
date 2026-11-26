@@ -846,6 +846,7 @@ a.journal-food span + span { color: var(--muted); }
   color: #8a5a00; background: #fdf0cf; }
 @media (prefers-color-scheme: dark) { .draft-badge { color: #f5c96a; background: #3a2e12; } }
 .draft-line { padding: 0 var(--side) 6px; }
+.claude-run-line { padding: 2px var(--side) 10px; }
 
 /* ---------- Dates, sorting and pins ---------- */
 .row-sub.with-date { display: flex; gap: 8px; }

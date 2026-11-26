@@ -844,6 +844,9 @@ function editorHtml() {
   // The shopping list: its lines as checkboxes, the text folded underneath (food.js)
   if (isShoppingList(group, draft)) texts = shopListHtml(texts, draft.text);
 
+  // A request in קלוד: a clear "הרצה עכשיו" button under the title instead of the small קלוד one
+  const claudeTask = isClaudeGroup(findGroup(group));
+
   const groupOptions = GROUPS.map(g =>
     `<option value="${g.id}" ${g.id === group ? 'selected' : ''}>${groupTitle(g)}</option>`
   ).join('');
@@ -853,6 +856,7 @@ function editorHtml() {
     <form class="editor" id="editor">
       ${group === 'movies' || group === 'shows' ? posterHead(editor.id, title) : title}
       ${draft.draft ? `<div class="draft-line">${DRAFT_BADGE}</div>` : ''}
+      ${claudeTask ? `<div class="claude-run-line"><button type="button" class="pill-button approve" id="claude-button">▶ ${ASK_CLAUDE_WORDS.runNow}</button></div>` : ''}
       ${isMealsGroup(group) ? mealPickerHtml(draft) : ''}
       ${group === 'reels' ? reelHtml(draft) : ''}
       ${group === 'recipes' && (draft.url || draft.cover) ? recipeLinkHtml(draft) : ''}
@@ -867,7 +871,7 @@ function editorHtml() {
       ${texts}
       <div class="editor-actions">
         <button type="button" class="text-button" id="share-button">${icon('share', 'inline')} ${TEXT.share}</button>
-        <button type="button" class="text-button" id="claude-button">${icon('sparkle', 'inline')} ${ASK_CLAUDE_WORDS.button}</button>
+        ${claudeTask ? '' : `<button type="button" class="text-button" id="claude-button">${icon('sparkle', 'inline')} ${ASK_CLAUDE_WORDS.button}</button>`}
         <button type="button" class="text-button danger" id="delete-button">${TEXT.deleteItem}</button>
       </div>
       ${noteDatesHtml(draft)}
@@ -945,13 +949,14 @@ async function shareItem(group, item) {
 
 // ============================================================
 // "קלוד" BUTTON (note page)
-// In the group קלוד: asks the server to run the to-do list now (same run-todo action as the
+// In the group קלוד it is a "▶ הרצה עכשיו" pill under the title: asks the server to run the to-do list now (same run-todo action as the
 // "Claude now" bar; the runner takes the oldest open note first). Anywhere else: opens Claude
 // (claude.ai/new, or the Claude app if it handles the link) with the note's text as the message.
 // ============================================================
 
 const ASK_CLAUDE_WORDS = {
   button: 'קלוד',
+  runNow: 'הרצה עכשיו',
   started: 'קלוד מתחיל עכשיו',
   queued: n => `קלוד מתחיל; קודם ${n} ישנות יותר ברשימה`,
   working: 'קלוד כבר עובד על זה',
